@@ -123,3 +123,39 @@ body.bagopen #veil{padding-bottom:calc(var(--hb) + 74px)}
   #act,#joy{bottom:calc(var(--hb) + 130px)}
   body.bagopen #veil{padding-bottom:calc(var(--hb) + 130px)}
 }
+
+/* ===== Stage 2B: fishing overlay + fish log ===== */
+body.fishing #act{z-index:7;background:#2f7f9a}
+#fishui[hidden],#fishui [hidden]{display:none!important}
+#fishveil{position:fixed;inset:0;z-index:6;background:rgba(20,50,60,.12);touch-action:none}
+#fishx{position:fixed;z-index:8;top:calc(env(safe-area-inset-top,0px) + 8px);right:calc(env(safe-area-inset-right,0px) + 8px)}
+#fishmsg{position:fixed;z-index:8;left:50%;top:calc(env(safe-area-inset-top,0px) + 70px);transform:translateX(-50%);max-width:calc(100vw - 24px);
+  padding:9px 16px;border-radius:18px;background:var(--bark);color:var(--paper);font:800 15px/1.25 var(--ui);text-align:center;
+  box-shadow:0 3px 0 rgba(0,0,0,.2);pointer-events:none;overflow:hidden}
+#fishmsg.bad{background:var(--clay)}
+#fishmsg.hot{background:#d9382b;font-size:18px;animation:fhot .35s ease-in-out infinite alternate}
+#fishmsg.hot::after{content:"";position:absolute;left:0;bottom:0;height:4px;width:calc(var(--left,1)*100%);background:#fff3d6}
+@keyframes fhot{from{transform:translateX(-50%) scale(1)}to{transform:translateX(-50%) scale(1.07)}}
+#reel{position:fixed;z-index:8;top:50%;left:calc(50% + clamp(56px,16vw,150px));height:clamp(150px,44vh,320px);width:62px;transform:translateY(-50%);
+  display:flex;gap:8px;pointer-events:none}
+#reelbar{position:relative;flex:0 0 40px;height:100%;border-radius:14px;border:3px solid var(--paper);background:rgba(20,50,60,.7);overflow:hidden;box-shadow:0 3px 0 rgba(0,0,0,.25)}
+#reelzone{position:absolute;left:0;right:0;background:rgba(106,168,79,.75);border-top:2px solid #b7e08f;border-bottom:2px solid #b7e08f}
+#reelzone.in{background:#7fd957;box-shadow:0 0 10px #b7ff8a}
+#reelmark{position:absolute;left:2px;right:2px;height:10px;margin-bottom:-5px;border-radius:5px;background:var(--paper);border:2px solid var(--clay)}
+#reelprog{flex:0 0 12px;height:100%;border-radius:6px;border:2px solid var(--paper);background:rgba(20,50,60,.7);position:relative;overflow:hidden}
+#reelprog b{position:absolute;left:0;right:0;bottom:0;background:#f2b84a;display:block;height:0}
+#fishpop{position:fixed;z-index:8;left:50%;top:50%;transform:translate(-50%,-50%);width:min(300px,calc(100vw - 24px));max-height:calc(100vh - 24px);
+  overflow:auto;background:var(--paper);color:var(--bark);border:3px solid #c79a62;border-radius:20px;box-shadow:0 6px 0 rgba(74,51,38,.35);
+  padding:12px;text-align:center;font-family:var(--ui);animation:fpop .25s ease-out}
+#fishpop canvas{display:block;margin:0 auto;max-width:100%;background:radial-gradient(circle at 50% 60%,#bfe9f4,#7cc6dc);border-radius:14px}
+#fishpop h3{margin:8px 0 2px;font:800 20px/1.2 var(--ui)}
+#fishpop p{margin:2px 0;font:700 15px/1.3 var(--ui)}
+#popnote{font-size:13px!important;opacity:.8}
+#fishpop .pbtn{margin-top:8px;min-height:48px;padding:0 24px}
+@keyframes fpop{from{opacity:0;transform:translate(-50%,-46%) scale(.92)}to{opacity:1;transform:translate(-50%,-50%)}}
+.prow.fl{min-height:72px} .flcv{flex:0 0 96px;width:96px;height:56px;border-radius:10px;background:#d4eef5}
+.prow.unk{opacity:.8} .prow.unk b{letter-spacing:.2em}
+@media (max-height:430px){
+  #fishmsg{top:calc(env(safe-area-inset-top,0px) + 8px);left:calc(50% - 24px);font-size:13px;padding:6px 12px}
+  #reel{height:56vh} #fishpop{padding:8px} #fishpop h3{font-size:17px;margin-top:4px}
+}

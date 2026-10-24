@@ -26,6 +26,7 @@
 <script src="js/crafting.js"></script>
 <script src="js/sfx.js"></script>
 <script src="js/ui.js"></script>
+<script src="js/fishing.js"></script>
 <script>
 // Start once the props are placed (so collision is final), but never wait more than 6 s on a slow connection.
 Promise.race([Game.Models.ready, new Promise(function (r) { setTimeout(r, 6000); })]).then(function () { Game.start(); });
