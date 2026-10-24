@@ -1,0 +1,33 @@
+:root{--u:clamp(5px,min(.55vw,1vh),10px);--bark:#4a3326;--paper:#fff3d6;--clay:#c9573a}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;overflow:hidden;background:#9fd8f0;overscroll-behavior:none;touch-action:none;
+  -webkit-user-select:none;user-select:none;font-family:ui-rounded,"Nunito","Segoe UI",system-ui,sans-serif}
+#game{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
+
+#hud{position:fixed;top:calc(env(safe-area-inset-top,0px) + var(--u)*2);left:calc(env(safe-area-inset-left,0px) + var(--u)*2);
+  display:flex;gap:calc(var(--u)*1.6);align-items:center;padding:calc(var(--u)*.9) calc(var(--u)*2.2);
+  background:var(--paper);color:var(--bark);border-radius:calc(var(--u)*3);font-size:calc(var(--u)*2.6);font-weight:700;
+  box-shadow:0 calc(var(--u)*.4) 0 rgba(74,51,38,.25);pointer-events:none}
+#hud::before{content:"\2600";color:#e8a33d}
+#hud[data-phase="night"]::before{content:"\263E";color:#5a6aa8}
+#hud-time{font-variant-numeric:tabular-nums}
+
+#joy{display:none;position:fixed;left:calc(env(safe-area-inset-left,0px) + var(--u)*7);
+  bottom:calc(env(safe-area-inset-bottom,0px) + var(--u)*7);width:calc(var(--u)*20);height:calc(var(--u)*20);
+  border-radius:50%;background:rgba(255,243,214,.25);border:calc(var(--u)*.4) solid rgba(255,243,214,.55);
+  pointer-events:none;opacity:.5;transition:opacity .15s}
+#joy.on{opacity:1}
+#joy-knob{position:absolute;left:50%;top:50%;width:42%;height:42%;margin:-21% 0 0 -21%;border-radius:50%;
+  background:var(--paper);box-shadow:0 calc(var(--u)*.4) 0 rgba(74,51,38,.3)}
+
+#act{display:none;position:fixed;right:calc(env(safe-area-inset-right,0px) + var(--u)*8);
+  bottom:calc(env(safe-area-inset-bottom,0px) + var(--u)*8);width:calc(var(--u)*13);height:calc(var(--u)*13);
+  border-radius:50%;border:calc(var(--u)*.5) solid var(--paper);background:var(--clay);color:var(--paper);
+  font:700 calc(var(--u)*3) ui-rounded,"Segoe UI",system-ui,sans-serif;touch-action:manipulation;
+  box-shadow:0 calc(var(--u)*.6) 0 rgba(74,51,38,.3)}
+#act:active{transform:translateY(calc(var(--u)*.4))}
+body.touch #joy,body.touch #act{display:block}
+
+#loading{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#f6e7c1;
+  color:var(--bark);font-size:calc(var(--u)*3.4);font-weight:700;transition:opacity .5s;z-index:9}
+#loading.hide{opacity:0;pointer-events:none}

@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#9fd8f0">
+<title>Thung Lũng Làng</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="hud" data-phase="day"><span id="hud-day"></span><span id="hud-time"></span></div>
+<div id="joy"><div id="joy-knob"></div></div>
+<button id="act" type="button">Dùng</button>
+<div id="loading">Đang mở cổng làng…</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="js/core.js"></script>
+<script src="js/world.js"></script>
+<script src="js/player.js"></script>
+<script>Game.start();</script>
+</body>
+</html>
