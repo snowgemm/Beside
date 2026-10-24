@@ -175,7 +175,7 @@
     m.position.set(x, y, z); m.rotation.y = ry; scene.add(m);
   }
 
-  const S = new Builder();
+  const S = new Builder(), S2 = new Builder(); // S2: procedural crate only, hidden when the Kenney crate loads
   // House (tiles 8..11 x 7..9): red clay hip roof, door on the south face
   S.box(8, 0.5, 6, 20, 0, 17, 0xbfae94).box(7.2, 3, 5.2, 20, 0.5, 17, 0xf4e7c6);
   S.roof(9.6, 7.4, 20, 3.45, 17, 0xb8452e, 0xc9573a, 4, 0.75);
@@ -199,8 +199,8 @@
   S.box(0.12, 1.0, 3.8, 45.62, 2.85, 28, 0x5a3a24);
   sign('Quán tạp hóa', 3.6, 0.9, '#6b3f26', '#fff3d6', 45.53, 3.35, 28, -Math.PI / 2);
   // Shipping crate at tile (13,11)
-  S.box(1.6, 1.2, 1.6, 27, 0, 23, 0xc99a5b).box(1.72, 0.12, 1.72, 27, 1.2, 23, 0xa87b45).box(1.64, 0.22, 1.64, 27, 0.5, 23, 0xb3452e);
-  [[-0.8, -0.8], [0.8, -0.8], [-0.8, 0.8], [0.8, 0.8]].forEach(function (o) { S.box(0.16, 1.2, 0.16, 27 + o[0], 0, 23 + o[1], 0x8a5a36); });
+  S2.box(1.6, 1.2, 1.6, 27, 0, 23, 0xc99a5b).box(1.72, 0.12, 1.72, 27, 1.2, 23, 0xa87b45).box(1.64, 0.22, 1.64, 27, 0.5, 23, 0xb3452e);
+  [[-0.8, -0.8], [0.8, -0.8], [-0.8, 0.8], [0.8, 0.8]].forEach(function (o) { S2.box(0.16, 1.2, 0.16, 27 + o[0], 0, 23 + o[1], 0x8a5a36); });
   // Village gate "cổng làng" at tile row 37
   [39, 43].forEach(function (x) { S.box(1.3, 0.7, 1.3, x, 0, 75, 0xbfae94).box(0.9, 3.3, 0.9, x, 0.7, 75, 0xe9d6aa); });
   S.box(5.6, 0.6, 0.9, 41, 4, 75, 0xa83f2c).roof(6.6, 2.2, 41, 4.6, 75, 0xb8452e, 0xc9573a, 3, 0.45);
@@ -224,6 +224,7 @@
   }
   const statics = new THREE.Mesh(S.geo(), vcMat);
   statics.castShadow = true; statics.receiveShadow = true; scene.add(statics);
+  const fallback = new THREE.Mesh(S2.geo(), vcMat); fallback.castShadow = fallback.receiveShadow = true; scene.add(fallback);
 
   // ---------- instanced scenery ----------
   function inst(geo, n, shadow, vc) {
@@ -289,12 +290,13 @@
     for (let k = 0; k < 3; k++) put(cocN, cx + rr(-0.3, 0.3), cy - 0.3, cz + rr(-0.3, 0.3), 0, 0, 1, 1, 1, k ? 0x6b4a2b : 0x8a6a3a);
   });
   // lotus on the pond (pads + blossoms)
+  const padSpots = [];
   const pads = inst(flat(new THREE.CylinderGeometry(0.5, 0.5, 0.05, 8)), 28, false);
   const blooms = inst(flat(new THREE.ConeGeometry(0.2, 0.35, 6).translate(0, 0.17, 0)), 12, false);
   for (let i = 0, n = 0; n < 28 && i < 200; i++) {
     const a = rr(0, 6.28), r = Math.sqrt(rnd()) * 0.8, x = 21 + Math.cos(a) * r * 6.6, z = 53 + Math.sin(a) * r * 5.4;
     if (Math.abs(z - 53) < 1.5) continue;
-    const s = rr(0.7, 1.3); put(pads, x, -0.07, z, rr(0, 6.28), 0, s, 1, s, [0x5fa86a, 0x6fb872, 0x4f9a5a][ri(0, 2)]);
+    const s = rr(0.7, 1.3); padSpots.push({ x: x, z: z, s: s }); put(pads, x, -0.07, z, rr(0, 6.28), 0, s, 1, s, [0x5fa86a, 0x6fb872, 0x4f9a5a][ri(0, 2)]);
     if (n % 2 === 0 && blooms.userData.i < 12) put(blooms, x + 0.1, -0.06, z, 0, 0, 1, 1, 1, rnd() < 0.6 ? 0xf2a1c0 : 0xfff3f0);
     n++;
   }
@@ -345,6 +347,19 @@
 
   // ---------- public API ----------
   W.add = function (o) { scene.add(o); return o; };
+  W.EXT = EXT;
+  W.isPond = function (tx, tz) { return inb(tx, tz) && pond[ix(tx, tz)] === 1; };
+  // Ground height at a world position (exact on the flat-shaded terrain triangles; clamps outside the mesh).
+  W.heightAt = function (x, z) {
+    let gx = x / TS, gz = z / TS, i = Math.floor(gx), j = Math.floor(gz);
+    i = clamp(i, -EXT, N + EXT - 1); j = clamp(j, -EXT, N + EXT - 1);
+    const fx = clamp(gx - i, 0, 1), fz = clamp(gz - j, 0, 1);
+    const h00 = H(i, j), h10 = H(i + 1, j), h01 = H(i, j + 1), h11 = H(i + 1, j + 1);
+    return fz >= fx ? h00 + (fz - fx) * (h01 - h00) + fx * (h11 - h00) : h00 + (fx - fz) * (h10 - h00) + fz * (h11 - h00);
+  };
+  // Scenery collision: props mark a tile solid / free it again. Only touches plain grass tiles.
+  W.block = function (tx, tz) { if (!inb(tx, tz) || grid[ix(tx, tz)] !== T.GRASS || obj[ix(tx, tz)]) return false; obj[ix(tx, tz)] = 1; return true; };
+  W.unblock = function (tx, tz) { if (inb(tx, tz) && grid[ix(tx, tz)] === T.GRASS) obj[ix(tx, tz)] = 0; };
   W.tileAt = function (tx, tz) { return inb(tx, tz) ? grid[ix(tx, tz)] : T.BLOCKED; };
   W.isBlocked = function (tx, tz) {
     if (!inb(tx, tz)) return true;
@@ -372,6 +387,8 @@
     for (let z = 0; z < N; z++) for (let x = 0; x < N; x++) if (grid[ix(x, z)] !== base[ix(x, z)]) { grid[ix(x, z)] = base[ix(x, z)]; recolor(x, z); }
   };
   G.Save.register('world', W, 'world');
+
+  W.parts = { cocT: cocT, cocL: cocL, cocN: cocN, pads: pads, fallback: fallback, coconuts: coconuts, padSpots: padSpots, tufts: tufts, flowers: flowers };
 
   // ---------- per-frame view updates (never mutate world state here) ----------
   const hud = document.getElementById('hud'), hDay = document.getElementById('hud-day'), hTime = document.getElementById('hud-time');

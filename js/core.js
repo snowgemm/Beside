@@ -175,6 +175,14 @@ window.Game = window.Game || {};
       const m = Math.floor(this.hour * 60) % 1440, p = function (n) { return (n < 10 ? '0' : '') + n; };
       return p(Math.floor(m / 60)) + ':' + p(m % 60);
     },
+    // Sleep: jump to 07:00 of the next morning. If midnight already passed, it is the same calendar day, so no extra day starts.
+    skipToMorning: function () {
+      const newDay = this.t >= START;
+      if (newDay) { this.day++; G.Rand.seedDay(); }
+      this.t = START; this._h = -1; this.compute();
+      if (newDay) G.Events.emit('day:new', { day: this.day });
+      G.Events.emit('day:started', { day: this.day });
+    },
     save: function () { return { day: this.day, t: +this.t.toFixed(5) }; },
     load: function (d) { this.day = (d.day | 0) || 1; this.t = Number(d.t); if (!(this.t >= 0 && this.t < 1)) this.t = START; this.compute(); G.Rand.seedDay(); },
     reset: function () { this.day = 1; this.t = START; this.compute(); G.Rand.seedDay(); }
