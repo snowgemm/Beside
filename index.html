@@ -14,9 +14,21 @@
 <button id="act" type="button">Dùng</button>
 <div id="loading">Đang mở cổng làng…</div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 <script src="js/core.js"></script>
 <script src="js/world.js"></script>
+<script src="js/assets.js"></script>
+<script src="js/models.js"></script>
 <script src="js/player.js"></script>
-<script>Game.start();</script>
+<script src="js/inventory.js"></script>
+<script src="js/farm.js"></script>
+<script src="js/resources.js"></script>
+<script src="js/crafting.js"></script>
+<script src="js/sfx.js"></script>
+<script src="js/ui.js"></script>
+<script>
+// Start once the props are placed (so collision is final), but never wait more than 6 s on a slow connection.
+Promise.race([Game.Models.ready, new Promise(function (r) { setTimeout(r, 6000); })]).then(function () { Game.start(); });
+</script>
 </body>
 </html>
