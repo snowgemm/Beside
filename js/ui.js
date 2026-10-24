@@ -26,15 +26,16 @@
 
   // top-right buttons
   const tools = el('div'); tools.id = 'toolbtns';
-  const bagBtn = el('button', 'tbtn', '🎒'), muteBtn = el('button', 'tbtn');
-  bagBtn.type = muteBtn.type = 'button'; bagBtn.setAttribute('aria-label', 'Túi đồ'); muteBtn.setAttribute('aria-label', 'Âm thanh');
-  tools.appendChild(bagBtn); tools.appendChild(muteBtn); document.body.appendChild(tools);
+  const bagBtn = el('button', 'tbtn', '🎒'), fishBtn = el('button', 'tbtn', '🐟'), muteBtn = el('button', 'tbtn');
+  bagBtn.type = fishBtn.type = muteBtn.type = 'button'; bagBtn.setAttribute('aria-label', 'Túi đồ'); fishBtn.setAttribute('aria-label', 'Sổ cá'); muteBtn.setAttribute('aria-label', 'Âm thanh');
+  tools.appendChild(bagBtn); tools.appendChild(fishBtn); tools.appendChild(muteBtn); document.body.appendChild(tools);
   function refreshMute() { muteBtn.textContent = St.muted ? '🔇' : '🔊'; }
   muteBtn.addEventListener('pointerdown', function (e) {
     e.preventDefault(); if (!G.Sfx) return;
     const m = G.Sfx.toggleMute(); refreshMute(); if (!m) sfx('click'); G.Save.save();
   });
   bagBtn.addEventListener('pointerdown', function (e) { e.preventDefault(); if (panel.kind === 'bag') UI.close(); else UI.openBag(); });
+  fishBtn.addEventListener('pointerdown', function (e) { e.preventDefault(); if (panel.kind === 'fishlog') UI.close(); else UI.openFishLog(); });
   E.on('sfx:mute', refreshMute);
 
   // ---------- toasts ----------
@@ -104,6 +105,7 @@
     const m = /^(?:Digit|Numpad)([1-8])$/.exec(e.code);
     if (m) { UI.selectSlot(+m[1] - 1); e.preventDefault(); }
     else if (e.code === 'KeyI' || e.code === 'KeyB') { if (panel.kind === 'bag') UI.close(); else UI.openBag(); e.preventDefault(); }
+    else if (e.code === 'KeyF') { if (panel.kind === 'fishlog') UI.close(); else if (!Farm.sleeping()) UI.openFishLog(); e.preventDefault(); }
   });
 
   // ---------- panels (one at a time; tap outside or Esc closes) ----------
@@ -221,6 +223,31 @@
   }
   UI.openBench = function () { open('bench', renderBench); };
 
+  // Fish log "Sổ cá": 5 species, caught count, best length; silhouettes until discovered (data + art from Game.Fishing)
+  function drawOn(cv, id, w, h, sil) {
+    const d = Math.min(window.devicePixelRatio || 1, 2);
+    cv.width = Math.round(w * d); cv.height = Math.round(h * d); cv.style.width = w + 'px'; cv.style.height = h + 'px';
+    const c = cv.getContext('2d'); c.scale(d, d); c.clearRect(0, 0, w, h);
+    if (G.Fishing) G.Fishing.draw(c, id, w, h, sil);
+  }
+  function renderFishLog() {
+    const F = G.Fishing; box.innerHTML = ''; box.className = 'fishlog'; box.appendChild(head('Sổ cá'));
+    if (!F) { box.appendChild(el('p', 'pempty', 'Chưa có cần câu nào ở đây.')); return; }
+    const found = F.ORDER.filter(function (id) { return F.entry(id); }).length;
+    box.appendChild(el('p', 'phint', 'Đã gặp ' + found + '/' + F.ORDER.length + ' loài · câu được ' + F.total() + ' con'));
+    const list = el('div', 'plist');
+    F.ORDER.forEach(function (id) {
+      const e = F.entry(id), it = Inv.item(id);
+      const r = el('div', 'prow fl' + (e ? '' : ' unk'), '<canvas class="flcv"></canvas><span class="pt"><b></b><small></small></span>');
+      r.querySelector('b').textContent = e ? it.name : '???';
+      r.querySelector('small').textContent = e ? 'Đã câu ×' + e.n + ' · Dài nhất ' + e.best + ' cm · bán ' + money(it.sell) : 'Chưa câu được loài này';
+      drawOn(r.querySelector('canvas'), id, 96, 56, !e);
+      list.appendChild(r);
+    });
+    box.appendChild(list);
+  }
+  UI.openFishLog = function () { open('fishlog', renderFishLog); };
+
   // ---------- action routing ----------
   const FD = { n: [0, -1], s: [0, 1], e: [1, 0], w: [-1, 0] };
   function hitAt(f) {
@@ -287,6 +314,43 @@
     const text = label || 'Dùng';
     if (text !== lastLabel) { lastLabel = text; act.textContent = text; act.classList.toggle('idle', !label); }
   }, 70);
+
+  // ---------- fishing overlay (state comes from Game.Fishing.view(); input is handled in fishing.js) ----------
+  const fx = el('div'); fx.id = 'fishui'; fx.hidden = true;
+  fx.innerHTML = '<div id="fishveil"></div><button type="button" id="fishx" class="tbtn" aria-label="Thu cần">✕</button>' +
+    '<div id="fishmsg"></div>' +
+    '<div id="reel" hidden><div id="reelbar"><i id="reelzone"></i><i id="reelmark"></i></div><div id="reelprog"><b></b></div></div>' +
+    '<div id="fishpop" hidden><canvas id="popcv"></canvas><h3 id="popname"></h3><p id="poplen"></p><p id="popnote"></p><button type="button" id="popok" class="pbtn">Tuyệt!</button></div>';
+  document.body.appendChild(fx);
+  const fMsg = $('fishmsg'), fReel = $('reel'), fZone = $('reelzone'), fMark = $('reelmark'), fProg = $('reelprog').firstChild, fPop = $('fishpop');
+  $('fishveil').addEventListener('pointerdown', function (e) { e.preventDefault(); });
+  $('fishx').addEventListener('pointerdown', function (e) { e.preventDefault(); e.stopPropagation(); if (G.Fishing) G.Fishing.cancel(); });
+  $('popok').addEventListener('pointerdown', function (e) { e.preventDefault(); e.stopPropagation(); if (G.Fishing) G.Fishing.dismiss(); });
+  let fxOn = false, fxMsg = '', fxShown = null;
+  function setMsg(text, cls) { const k = text + '|' + cls; if (k === fxMsg) return; fxMsg = k; fMsg.textContent = text; fMsg.className = cls || ''; fMsg.hidden = !text; }
+  G.Loop.onRender(function () {
+    const F = G.Fishing; if (!F) return;
+    const v = F.view();
+    if (v.active !== fxOn) { fxOn = v.active; fx.hidden = !fxOn; if (!fxOn) { fxMsg = ''; fxShown = null; fReel.hidden = true; fPop.hidden = true; } }
+    if (!fxOn) return;
+    fReel.hidden = v.phase !== 'reel'; fPop.hidden = v.phase !== 'result';
+    if (v.phase === 'cast' || v.phase === 'wait') setMsg('Chờ cá cắn câu…', '');
+    else if (v.phase === 'bite') { setMsg('❗ Cá cắn câu! Bấm ngay!', 'hot'); fMsg.style.setProperty('--left', v.biteLeft.toFixed(3)); }
+    else if (v.phase === 'reel') {
+      setMsg('Giữ nút để nâng, thả để hạ — giữ vạch trong vùng xanh!', '');
+      fZone.style.bottom = ((v.c - v.h / 2) * 100).toFixed(2) + '%'; fZone.style.height = (v.h * 100).toFixed(2) + '%';
+      fZone.classList.toggle('in', v.inZone); fMark.style.bottom = (v.m * 100).toFixed(2) + '%';
+      fProg.style.height = (v.p * 100).toFixed(1) + '%';
+    } else if (v.phase === 'end') setMsg(v.msg, 'bad');
+    else setMsg('', '');
+    if (v.phase === 'result' && v.result !== fxShown) {
+      fxShown = v.result; const r = v.result, it = Inv.item(r.id);
+      drawOn($('popcv'), r.id, 200, 112, false);
+      $('popname').textContent = it.name;
+      $('poplen').textContent = r.junk ? 'Chỉ là đồ bỏ đi…' : r.length + ' cm';
+      $('popnote').textContent = (r.first ? '✨ Loài mới! Đã ghi vào Sổ cá · ' : r.record ? '🏆 Kỷ lục mới! · ' : '') + 'bán ' + money(it.sell);
+    }
+  }, 72);
 
   E.on('save:loaded', function () {
     if (!hotLoaded) migrate();                       // save from 1B (no hotbar key yet)

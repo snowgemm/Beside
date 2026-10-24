@@ -12,6 +12,7 @@
     { id: 'plank',       where: 'bench', out: 'plank',       n: 1, in: { wood: 2 } },
     { id: 'fence',       where: 'bench', out: 'fence',       n: 1, in: { plank: 2 } },
     { id: 'chest',       where: 'bench', out: 'chest',       n: 1, in: { plank: 4 } },
+    { id: 'rod',         where: 'bench', out: 'rod',         n: 1, in: { bamboo: 3, plank: 1 } },
     { id: 'ingot',       where: 'bench', out: 'ingot',       n: 1, in: { ore: 2, bamboo: 1 }, note: 'tre làm nhiên liệu' },
     { id: 'axe_copper',  where: 'bench', out: 'axe_copper',  n: 1, in: { ingot: 2, plank: 2 } },
     { id: 'pick_copper', where: 'bench', out: 'pick_copper', n: 1, in: { ingot: 3, plank: 2 } }

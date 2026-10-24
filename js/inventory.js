@@ -26,7 +26,16 @@
     pick_copper: { id: 'pick_copper', name: 'Cuốc chim đồng', kind: 'tool', tool: 'pick', tier: 2, icon: '⚒️' },
     plank:  { id: 'plank',  name: 'Ván gỗ',  kind: 'material', icon: '🟫', sell: 20 },
     fence:  { id: 'fence',  name: 'Hàng rào', kind: 'material', icon: '🚧' },
-    chest:  { id: 'chest',  name: 'Rương',    kind: 'material', icon: '📦' }
+    chest:  { id: 'chest',  name: 'Rương',    kind: 'material', icon: '📦' },
+    // Stage 2B: fishing (rod is a tool without .tool, so fishing.js registers its action; fish and junk sell in the shop)
+    rod:        { id: 'rod',        name: 'Cần câu',     kind: 'tool', icon: '🎣' },
+    fish_ro:    { id: 'fish_ro',    name: 'Cá rô đồng',  kind: 'fish', icon: '🐟', sell: 25 },
+    fish_chep:  { id: 'fish_chep',  name: 'Cá chép',     kind: 'fish', icon: '🐟', sell: 40 },
+    fish_tre:   { id: 'fish_tre',   name: 'Cá trê',      kind: 'fish', icon: '🐟', sell: 55 },
+    fish_loc:   { id: 'fish_loc',   name: 'Cá lóc',      kind: 'fish', icon: '🐟', sell: 90 },
+    fish_dieu:  { id: 'fish_dieu',  name: 'Cá diêu hồng', kind: 'fish', icon: '🐠', sell: 160 },
+    junk_shoe:  { id: 'junk_shoe',  name: 'Giày cũ',     kind: 'junk', icon: '👟', sell: 2 },
+    junk_weed:  { id: 'junk_weed',  name: 'Rong',        kind: 'junk', icon: '🍃', sell: 1 }
   };
   Object.keys(CROPS).forEach(function (k) {
     const c = CROPS[k];

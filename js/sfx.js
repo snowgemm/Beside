@@ -7,7 +7,9 @@
   const MAP = {
     click: ['click', 0.5], open: ['open', 0.5], till: ['till', 0.8], water: ['water', 0.6], plant: ['plant', 0.7],
     harvest: ['harvest', 0.7], coin: ['coin', 0.6], sleep: ['sleep', 0.6], error: ['error', 0.45],
-    chop: ['chop', 0.8], mine: ['mine', 0.8], pickup: ['pickup', 0.6], craft: ['craft', 0.7]
+    chop: ['chop', 0.8], mine: ['mine', 0.8], pickup: ['pickup', 0.6], craft: ['craft', 0.7],
+    // Stage 2B fishing (Kenney Impact / Interface sounds)
+    cast: ['cast', 0.6], bite: ['bite', 0.8], reel: ['reel', 0.5], splash: ['splash', 0.7]
   };
   const pool = {}, lastAt = {};
   let unlocked = false;
@@ -54,7 +56,8 @@
   const mine = function (e) { return e.by === G.Net.playerId; };
   [['soil:tilled', 'till'], ['soil:watered', 'water'], ['crop:planted', 'plant'], ['crop:harvested', 'harvest'],
     ['shop:transaction', 'coin'], ['farm:denied', 'error'], ['player:sleep', 'sleep'],
-    ['item:picked', 'pickup'], ['item:crafted', 'craft']].forEach(function (m) {
+    ['item:picked', 'pickup'], ['item:crafted', 'craft'],
+    ['fish:cast', 'cast'], ['fish:bite', 'bite'], ['fish:caught', 'splash'], ['fish:escaped', 'splash']].forEach(function (m) {
     G.Events.on(m[0], function (e) { if (mine(e)) S.play(m[1]); });
   });
   // wood nodes (tree, bamboo) chop, stone nodes (rock, copper) mine
