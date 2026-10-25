@@ -1,17 +1,35 @@
 # Besidevalley: Dungeons — STATE
 
-Files: index.html, css/style.css, js/{save,world,player,input,combat,enemies,items,inventory,main}.js
+## Current architecture
+- Browser game: Three.js r128, vanilla JavaScript, mobile-first touch controls.
+- Entry point loads assets, save, overworld, player/input/combat/enemies/items/inventory, dungeon rooms, dungeon generator, boss, minimap, build mode, settings menu and main loop.
+- Global API is namespaced under `window.Game`; avoid introducing duplicate global state.
 
-APIs (global `Game`):
-- world: getHeight, getBlock, solid, seed, chunk hooks
-- player: equip, recalc(), weapon, dr, crit, speedMult
-- input: attackQ/dodgeQ/invToggle
-- combat: attack, dodge, hurtPlayer (armor mitigation), number; audio.play(name); events
-- enemies: TYPES, list, hurt
-- items: generate, valid, STAT/RARITIES; loot: roll(level, source, seed), spawnDrop, levelAt, sources
-- inventory: slots, add, equip, drop; toast(text,color)
-- save: register(key, ser, des), request, saveNow, newGame
+## Systems in this build
+- Procedural overworld with chunk loading, player movement, camera modes, combat and enemy AI.
+- Equipment, item rarity/affixes, loot, 24-slot inventory, save/load.
+- Dungeon room templates, connected rooms, doors, treasure chests, boss encounter and exit portal.
+- Optional overworld block editing with placement/breaking restrictions.
+- Settings menu, pause, audio volume, draw distance, minimap toggle and save reset.
+- Optional GLB/SFX assets; missing assets should fall back to primitive meshes/synthesized sounds.
 
-Done: stages 1–3. Three enemy types, melee combat, critical hits, armor mitigation, rarity-based equipment, loot drops, inventory/equipment UI, touch controls and local save. Inventory overlay pauses simulation.
+## Key APIs
+- `world`: getHeight, getBlock, solid, seed, chunk hooks, setColumn, serializeEdits/loadEdits, useProvider/hold.
+- `player`: equip, recalc, weapon, armor mitigation, critical chance and movement modifiers.
+- `input`: attackQ, dodgeQ, invToggle, interactQ, buildMode.
+- `combat`: attack, dodge, hurtPlayer; audio.play/setVolume; events.
+- `enemies`: spawn, list, hurt, swap, clear.
+- `items/loot`: generate, valid, STAT/RARITIES, roll, spawnDrop, levelAt.
+- `inventory`: slots, add, equip, drop; toast notifications.
+- `save`: register, request, saveNow, newGame.
+- `rooms/dungeon`: templates, run, gateItems, isCleared, visuals, update, respawnPoint, afterLoad.
+- `boss`: spawn, cleanup.
+- `minimap`: update, setEnabled.
+- `build`: setMode, breakBlock, placeBlock, raycast, update.
+- `menu`: settings and pause handling.
 
-Next: stage 4 room dungeons; chests should call loot.roll and dungeon state should be registered with save.
+## Validation status
+The source archive describes headless tests for dungeon progression, save/reload, build edits and settings. Those tests have not been independently rerun against the live repository in this session. Browser rendering, real-device touch layout, GLB loading, audio decoding and boss combat still require live-browser verification.
+
+## Caution
+Treat the uploaded ZIP as the source of truth. When syncing, replace same-path files, add new paths, and retain repository files not present in the archive. Do not claim runtime validation based on syntax checks alone.
