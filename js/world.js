@@ -1,6 +1,6 @@
 (function () {
   var G = window.Game = window.Game || {};
-  var CS = 16, SEA = 10, MAXH = 32, SEED = 1337;
+  var CS = 16, SEA = 10, MAXH = 32, SEED = G.seed || 1337;
   var AIR = 0, GRASS = 1, SAND = 2, STONE = 3, SNOW = 4, WATER = 5;
   var TOP = { 1: [.36, .65, .25], 2: [.86, .79, .52], 3: [.5, .5, .53], 4: [.95, .97, 1] };
   var SIDE = { 1: [.46, .33, .2], 2: [.76, .68, .44], 3: [.4, .4, .43], 4: [.72, .78, .88] };
