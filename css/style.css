@@ -33,3 +33,28 @@ body.touch #btn-bag{top:calc(env(safe-area-inset-top,0px) + 80px);bottom:auto;ri
 #inv-detail{margin-top:8px;min-height:92px;background:#12151f;border-radius:8px;padding:8px}.iname{font-weight:700;font-size:14px}.sub{color:#9aa3b8;font-size:11px;margin-bottom:4px}
 .good{color:#5fe05f}.bad{color:#ff6a6a}.inv-btns{margin-top:8px;display:flex;gap:8px}.inv-foot{margin-top:8px;text-align:right}
 @media (max-height:520px){#inv-grid{grid-template-columns:repeat(8,1fr)}.slot .ico{font-size:18px}}
+
+/* Dungeon HUD, minimap, settings and build controls */
+#room-hud{display:none;position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:5;padding:7px 12px;border:1px solid #7774;border-radius:8px;background:#0b0d12c9;color:#fff;font:600 13px system-ui;pointer-events:none}
+#boss-bar{display:none;position:fixed;top:46px;left:50%;transform:translateX(-50%);width:min(360px,68vw);height:22px;z-index:6;border:1px solid #e7b7b7;border-radius:6px;background:#28151de8;overflow:hidden;text-align:center;color:#fff;font:600 12px system-ui}
+#boss-fill{position:absolute;inset:0 auto 0 0;width:100%;background:#b72d49;transition:width .12s}
+#boss-name{position:relative;z-index:1;line-height:20px;text-shadow:0 1px 2px #000}
+#minimap{position:fixed;right:12px;top:12px;width:110px;height:110px;z-index:4;border:1px solid #9ca3af80;border-radius:8px;image-rendering:pixelated;pointer-events:none}
+#btn-interact{display:none;position:fixed;left:50%;bottom:calc(100px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:12;padding:11px 18px;border:1px solid #b4f3d0;background:#173c2c;color:#eafff2;border-radius:10px;font-weight:700}
+#btn-interact.show{display:block}
+#btn-build,#btn-break,#btn-place,#btn-menu{position:fixed;z-index:12;right:12px;border:1px solid #ffffff3d;background:#18231e;color:#f4fff7;border-radius:10px;padding:10px 12px;font:600 13px system-ui}
+#btn-build{bottom:calc(210px + env(safe-area-inset-bottom))}
+#btn-break{display:none;bottom:calc(160px + env(safe-area-inset-bottom))}
+#btn-place{display:none;bottom:calc(110px + env(safe-area-inset-bottom))}
+.building #btn-break,.building #btn-place{display:block}
+#btn-build.on{background:#28754b;border-color:#8af0b5}
+#btn-menu{top:12px;left:12px;right:auto;font-size:18px}
+#menu{display:none;position:fixed;inset:0;z-index:30;background:#050806b9;align-items:center;justify-content:center;padding:18px;box-sizing:border-box}
+#menu.open{display:flex}
+.menu-panel{width:min(420px,100%);box-sizing:border-box;background:#111a15;border:1px solid #456454;border-radius:16px;padding:18px;color:#eefbf2;font:14px system-ui;box-shadow:0 16px 50px #0009}
+.menu-head{display:flex;justify-content:space-between;align-items:center;font-size:20px;margin-bottom:18px}
+.menu-head button,.menu-btns button{border:1px solid #ffffff30;background:#24352b;color:#fff;border-radius:8px;padding:8px 12px}
+.menu-row{display:flex;gap:12px;align-items:center;justify-content:space-between;margin:16px 0}
+.menu-row span{flex:1}.menu-row input[type=range]{width:48%;accent-color:#58c987}.menu-row input[type=checkbox]{accent-color:#58c987;width:20px;height:20px}
+.menu-btns{display:flex;gap:10px;margin-top:20px}.menu-btns button{flex:1}
+@media(max-width:600px){#minimap{top:8px;right:8px;width:96px;height:96px}#btn-menu{top:8px;left:8px}#room-hud{top:116px}}
