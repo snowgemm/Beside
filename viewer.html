@@ -1,38 +1,58 @@
 <!DOCTYPE html>
 <html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Besidevalley – Xem nhân vật</title>
-<style>html,body{margin:0;height:100%;overflow:hidden;background:#8ecbf2;font-family:sans-serif}
+<title>Besidevalley – Character Rig Viewer</title>
+<style>
+html,body{margin:0;height:100%;overflow:hidden;background:#8ecbf2;font-family:system-ui,sans-serif}
 #bar{position:fixed;left:0;right:0;bottom:0;display:flex;gap:6px;justify-content:center;flex-wrap:wrap;padding:8px}
-button{font-size:16px;padding:10px 14px;border:0;border-radius:8px;background:#222;color:#fff}
-#lbl{position:fixed;top:6px;left:8px;font-size:12px;color:#123}</style></head><body>
-<div id="bar"></div><div id="lbl">player · slime · goblin · archer · wolf · skeleton · bat · spider · mushroom · boss</div>
+button{font-size:15px;padding:10px 14px;border:0;border-radius:8px;background:#222;color:#fff}
+#lbl{position:fixed;top:8px;left:10px;font-size:12px;color:#123}
+</style></head><body>
+<div id="bar"></div><div id="lbl">Character Rig Viewer · player · slime · goblin · archer · stone boss</div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="js/rig.js"></script><script src="js/items.js"></script><script src="js/player.js"></script>
-<script src="js/enemies.js"></script><script src="js/boss.js"></script>
 <script>
 (function () {
-  var G = Game, scene = new THREE.Scene(), rigs = [], T = G.enemies.types, clock = new THREE.Clock();
-  var cam = new THREE.PerspectiveCamera(50, innerWidth / innerHeight, 0.1, 200), ren = new THREE.WebGLRenderer({ antialias: true });
-  ren.setSize(innerWidth, innerHeight); ren.setPixelRatio(Math.min(devicePixelRatio || 1, 2)); document.body.appendChild(ren.domElement);
-  var floor = new THREE.Mesh(new THREE.PlaneGeometry(60, 12), new THREE.MeshBasicMaterial({ color: 0x6cbf5a })); floor.rotation.x = -Math.PI / 2; scene.add(floor);
-  var specs = [G.player.makeSpec({ name: 'Kiếm sắt', rarity: 3 }), T.slime.spec, T.goblin.spec, T.archer.spec, T.wolf.spec, T.skeleton.spec, T.bat.spec, T.spider.spec, T.mushroom.spec, G.boss.spec];
-  specs.forEach(function (sp, i) {
-    var r = G.rig.build(sp, 0); r.group.position.set((i - 4.5) * 2.7 + (i === 9 ? 1 : 0), 0, 0); scene.add(r.group); rigs.push(r);
-  });
-  function fit() {
-    cam.aspect = innerWidth / innerHeight; cam.position.set(0, 5, Math.max(22, 30 / cam.aspect)); cam.lookAt(0, 1.4, 0);
-    cam.updateProjectionMatrix(); ren.setSize(innerWidth, innerHeight);
-  }
-  addEventListener('resize', fit); fit();
-  var acts = { 'Đứng yên': ['idle'], 'Đi': ['walk', { speed: 3.5 }], 'Đánh': ['attack', { dur: 0.9, windup: 0.4 }], 'Bị đau': ['hurt'], 'Chết': ['death'] };
-  Object.keys(acts).forEach(function (n) {
-    var b = document.createElement('button'); b.textContent = n; document.getElementById('bar').appendChild(b);
-    b.onclick = function () { rigs.forEach(function (r) { r.play(acts[n][0], acts[n][1]); }); };
-  });
-  (function loop() {
-    requestAnimationFrame(loop); var dt = Math.min(clock.getDelta(), 0.05);
-    rigs.forEach(function (r) { r.group.rotation.y += dt * 0.5; r.update(dt); });
-    ren.render(scene, cam);
-  })();
+  var G=window.Game,S=G.rig.part,scene=new THREE.Scene(),rigs=[],clock=new THREE.Clock();
+  var cam=new THREE.PerspectiveCamera(50,innerWidth/innerHeight,.1,200);
+  var ren=new THREE.WebGLRenderer({antialias:true});ren.setSize(innerWidth,innerHeight);ren.setPixelRatio(Math.min(devicePixelRatio||1,2));document.body.appendChild(ren.domElement);
+  scene.background=new THREE.Color(0x8ecbf2);
+  var floor=new THREE.Mesh(new THREE.PlaneGeometry(60,16),new THREE.MeshBasicMaterial({color:0x6cbf5a}));floor.rotation.x=-Math.PI/2;scene.add(floor);
+  var specs=[
+    {label:'Player',spec:G.player.makeSpec(null)},
+    {label:'Slime',spec:{height:1,gait:{hop:true},parts:[
+      S('body',null,[.9,.65,.9],[0,0,0],[0,.4,0],0x4cc94c),
+      S('eyeL','body',[.13,.15,.05],[0,0,0],[-.2,.08,-.43],0x173117,{flat:true}),
+      S('eyeR','body',[.13,.15,.05],[0,0,0],[.2,.08,-.43],0x173117,{flat:true})]}},
+    {label:'Goblin',spec:{height:1.5,parts:[
+      S('legL',null,[.2,.45,.2],[0,-.22,0],[-.13,.23,0],0x4a3a22),
+      S('legR',null,[.2,.45,.2],[0,-.22,0],[.13,.23,0],0x4a3a22),
+      S('torso',null,[.5,.55,.3],[0,.27,0],[0,.7,0],0x6a8f3a),
+      S('head','torso',[.45,.42,.42],[0,.2,0],[0,.55,0],0x7fa84a),
+      S('armL','torso',[.17,.5,.17],[0,-.2,0],[-.34,.38,0],0x6a8f3a),
+      S('armR','torso',[.17,.5,.17],[0,-.2,0],[.34,.38,0],0x6a8f3a)]}},
+    {label:'Archer',spec:{height:1.6,parts:[
+      S('legL',null,[.2,.45,.2],[0,-.22,0],[-.13,.23,0],0x3a2a1a),
+      S('legR',null,[.2,.45,.2],[0,-.22,0],[.13,.23,0],0x3a2a1a),
+      S('torso',null,[.5,.65,.3],[0,.3,0],[0,.7,0],0x8a5a2a),
+      S('head','torso',[.4,.4,.4],[0,.2,0],[0,.55,0],0xd8a878),
+      S('armL','torso',[.14,.48,.14],[0,-.2,0],[-.32,.4,0],0x8a5a2a),
+      S('armR','torso',[.14,.48,.14],[0,-.2,0],[.32,.4,0],0x8a5a2a),
+      S('bow','armL',[.05,.6,.05],[0,0,0],[0,-.1,-.08],0x5a3a1a)]}},
+    {label:'Stone Boss',spec:{height:2.8,center:1.4,scale:1.35,atk:['armR'],parts:[
+      S('legL',null,[.42,.7,.42],[0,-.35,0],[-.32,.35,0],0x4d505a,{color2:0x383b44}),
+      S('legR',null,[.42,.7,.42],[0,-.35,0],[.32,.35,0],0x4d505a,{color2:0x383b44}),
+      S('torso',null,[1.15,1.1,.75],[0,.55,0],[0,1.05,0],0x6b6f7a,{color2:0x515560}),
+      S('head','torso',[.8,.7,.7],[0,.35,0],[0,.9,0],0x8a8f9c),
+      S('eyeL','head',[.15,.15,.05],[0,0,0],[-.22,.08,-.36],0xff4422,{flat:true}),
+      S('eyeR','head',[.15,.15,.05],[0,0,0],[.22,.08,-.36],0xff4422,{flat:true}),
+      S('armL','torso',[.35,.9,.35],[0,-.4,0],[-.75,.35,0],0x6b6f7a),
+      S('armR','torso',[.35,.9,.35],[0,-.4,0],[.75,.35,0],0x6b6f7a)]}}
+  ];
+  specs.forEach(function(item,i){var r=G.rig.build(item.spec,0);r.group.position.set((i-2)*3,0,0);scene.add(r.group);rigs.push(r);});
+  function fit(){cam.aspect=innerWidth/innerHeight;cam.position.set(0,5,Math.max(15,20/cam.aspect));cam.lookAt(0,1.3,0);cam.updateProjectionMatrix();ren.setSize(innerWidth,innerHeight);}
+  addEventListener('resize',fit);fit();
+  var acts={'Đứng yên':['idle'], 'Đi':['walk',{speed:3.5}], 'Đánh':['attack',{dur:.9,windup:.4}], 'Bị đau':['hurt'], 'Chết':['death']};
+  Object.keys(acts).forEach(function(label){var b=document.createElement('button');b.textContent=label;document.getElementById('bar').appendChild(b);b.onclick=function(){rigs.forEach(function(r){r.play(acts[label][0],acts[label][1]);});};});
+  (function loop(){requestAnimationFrame(loop);var dt=Math.min(clock.getDelta(),.05);rigs.forEach(function(r){r.group.rotation.y+=dt*.18;r.update(dt);});ren.render(scene,cam);})();
 })();
 </script></body></html>
