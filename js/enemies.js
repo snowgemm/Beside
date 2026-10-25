@@ -23,13 +23,19 @@
     projGeo=new THREE.BoxGeometry(.22,.22,.22); projMat=new THREE.MeshBasicMaterial({color:0xffdd44});
     W.onChunkLoad=onLoad; W.onChunkUnload=onUnload;
   };
-  function spawn(name,x,y,z) {
-    var def=TYPES[name],g=new THREE.Group(),meshes=[];
+  function spawn(name,x,y,z,overrideDef) {
+    var def=overrideDef||TYPES[name],g=new THREE.Group(),meshes=[];
     def.parts.forEach(function(p){ var m=new THREE.Mesh(geo(p[0],p[1],p[2]),mat(p[6])); m.position.set(p[3],p[4],p[5]); m.userData.base=m.material; if(p[7])m.userData.arm=true; g.add(m); meshes.push(m); });
     g.position.set(x,y,z); scene.add(g);
     var e={type:name,def:def,x:x,y:y,z:z,hp:def.hp,group:g,meshes:meshes,state:'idle',t:Math.random()*2,hop:0,hopY:0,dirx:0,dirz:0,walking:false,kx:0,kz:0,flash:0,alerted:false,dead:false,deathT:0,bar:null,cd:1+Math.random()};
     E.list.push(e); return e;
   }
+  E.spawn = spawn;
+  E.clear = function () { var a=E.list.slice(); for(var i=0;i<a.length;i++) removeEnemy(a[i]); E.list.length=0; };
+  E.swap = function (next) {
+    if(next===null){var old=E.list.slice();old.forEach(function(e){e.group.visible=false;if(e.bar)e.bar.visible=false;});E.list.length=0;return old;}
+    E.clear();E.list=Array.isArray(next)?next:[];E.list.forEach(function(e){e.group.visible=true;if(e.bar)e.bar.visible=true;});return E.list;
+  };
   function removeEnemy(e) { scene.remove(e.group); if(e.bar)scene.remove(e.bar); var i=E.list.indexOf(e); if(i>=0)E.list.splice(i,1); }
   function onLoad(cx,cz) {
     var k=cx+','+cz; if(byChunk[k])return;
