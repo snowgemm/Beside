@@ -33,7 +33,7 @@
   E.spawn = spawn;
   E.clear = function () { var a=E.list.slice(); for(var i=0;i<a.length;i++) removeEnemy(a[i]); E.list.length=0; };
   E.swap = function (next) {
-    if(next===null){var old=E.list.slice();old.forEach(function(e){e.group.visible=false;if(e.bar)e.bar.visible=false;});E.list.length=0;return old;}
+    if(next===null){var old=E.list;old.forEach(function(e){e.group.visible=false;if(e.bar)e.bar.visible=false;});E.list.length=0;return old;}
     E.clear();E.list=Array.isArray(next)?next:[];E.list.forEach(function(e){e.group.visible=true;if(e.bar)e.bar.visible=true;});return E.list;
   };
   function removeEnemy(e) { scene.remove(e.group); if(e.bar)scene.remove(e.bar); var i=E.list.indexOf(e); if(i>=0)E.list.splice(i,1); }
