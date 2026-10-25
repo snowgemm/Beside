@@ -11,13 +11,19 @@
 <div id="touch"></div>
 <div id="joy"><div id="joy-knob"></div></div>
 <div id="hud">FPS --</div>
-<div id="hint">Nhấp để chơi<br><small>WASD: di chuyển · Space: nhảy · V: đổi góc nhìn</small></div>
+<div id="hp"><div id="hp-fill"></div><span id="hp-text">100/100</span></div>
+<div id="fade"></div>
+<div id="hint">Nhấp để chơi<br><small>WASD: di chuyển · Space: nhảy · V: đổi góc nhìn · J/Click: đánh · Shift: lăn</small></div>
 <button id="btn-view" type="button">Góc nhìn</button>
+<button id="btn-attack" type="button">Đánh</button>
+<button id="btn-dodge" type="button">Lăn</button>
 <button id="btn-jump" type="button">Nhảy</button>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="js/world.js"></script>
 <script src="js/player.js"></script>
 <script src="js/input.js"></script>
+<script src="js/combat.js"></script>
+<script src="js/enemies.js"></script>
 <script src="js/main.js"></script>
 </body>
 </html>
