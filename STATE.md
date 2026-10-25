@@ -1,14 +1,17 @@
 # Besidevalley: Dungeons — STATE
 
-Files: index.html, css/style.css, js/{world,player,input,combat,enemies,main}.js
+Files: index.html, css/style.css, js/{save,world,player,input,combat,enemies,items,inventory,main}.js
 
 APIs (global `Game`):
-- world: getHeight, getBlock, solid, update, preload, setDrawDistance, findSpawn, onChunkLoad/onChunkUnload hooks
-- player: init, update, respawn; health, weapon{damage,reach,cooldown}, rollT, kb, shake
-- input: poll(); moveX/moveZ/jump/look*/viewToggle/attackQ/dodgeQ
-- combat: attack, dodge, hurtPlayer, number, update; Game.audio.play; Game.events
-- enemies: list, types, hurt(e,dmg,kx,kz), update
+- world: getHeight, getBlock, solid, seed, chunk hooks
+- player: equip, recalc(), weapon, dr, crit, speedMult
+- input: attackQ/dodgeQ/invToggle
+- combat: attack, dodge, hurtPlayer (armor mitigation), number; audio.play(name); events
+- enemies: TYPES, list, hurt
+- items: generate, valid, STAT/RARITIES; loot: roll(level, source, seed), spawnDrop, levelAt, sources
+- inventory: slots, add, equip, drop; toast(text,color)
+- save: register(key, ser, des), request, saveNow, newGame
 
-Completed: terrain generation and chunk streaming; first/third-person player movement; touch controls; melee attacks, dodge roll, generated sound effects, health UI, damage numbers, respawn; three enemy types (slime, goblin, archer), enemy AI, telegraphed attacks, archer projectiles, health bars and enemyDied event.
+Done: stages 1–3. Three enemy types, melee combat, critical hits, armor mitigation, rarity-based equipment, loot drops, inventory/equipment UI, touch controls and local save. Inventory overlay pauses simulation.
 
-Next: loot/inventory/save — listen to `enemyDied`, add drops and weapon upgrades, then persist player progress.
+Next: stage 4 room dungeons; chests should call loot.roll and dungeon state should be registered with save.
