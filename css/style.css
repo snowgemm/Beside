@@ -23,3 +23,14 @@ body.touch #btn-jump{display:block}
 #btn-view{width:64px;height:64px;font-size:12px;
 right:calc(env(safe-area-inset-right,0px) + 120px);bottom:calc(env(safe-area-inset-bottom,0px) + 36px)}
 body:not(.touch) #btn-view{right:calc(env(safe-area-inset-right,0px) + 16px);bottom:calc(env(safe-area-inset-bottom,0px) + 16px);border-radius:10px;width:auto;height:auto;padding:8px 12px}
+#hp{position:fixed;z-index:2;pointer-events:none;left:50%;transform:translateX(-50%);width:160px;height:16px;
+background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.5);border-radius:8px;overflow:hidden;
+top:calc(env(safe-area-inset-top,0px) + 8px)}
+#hp-fill{position:absolute;left:0;top:0;bottom:0;width:100%;background:#d33}
+#hp-text{position:absolute;inset:0;text-align:center;color:#fff;font-size:11px;line-height:16px}
+#fade{position:fixed;inset:0;z-index:4;background:#000;opacity:0;transition:opacity .8s;pointer-events:none}
+.dmg{position:fixed;left:0;top:0;z-index:2;pointer-events:none;font-weight:700;font-size:16px;text-shadow:0 1px 2px #000,0 0 3px #000;display:none}
+#btn-attack,#btn-dodge{display:none}
+body.touch #btn-attack{display:block;width:84px;height:84px;right:calc(env(safe-area-inset-right,0px) + 24px);bottom:calc(env(safe-area-inset-bottom,0px) + 128px);background:rgba(200,50,50,.45)}
+body.touch #btn-dodge{display:block;width:64px;height:64px;right:calc(env(safe-area-inset-right,0px) + 120px);bottom:calc(env(safe-area-inset-bottom,0px) + 40px)}
+body.touch #btn-view{top:calc(env(safe-area-inset-top,0px) + 8px);bottom:auto;right:calc(env(safe-area-inset-right,0px) + 8px)}
