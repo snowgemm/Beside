@@ -23,6 +23,12 @@
     document.addEventListener('pointerlockchange', function () { hint.style.display = (document.pointerLockElement === canvas || isTouch) ? 'none' : 'block'; });
     document.addEventListener('mousemove', function (e) { if (document.pointerLockElement === canvas) { I.lookDX += e.movementX * 0.0022; I.lookDY += e.movementY * 0.0022; } });
     document.addEventListener('mousedown', function (e) { if (e.button === 0 && document.pointerLockElement === canvas && !I.buildMode) I.attackQ = true; });
+    document.addEventListener('wheel', function (e) {
+      var P = G.player;
+      if (!P || !P.third || document.pointerLockElement !== canvas) return;
+      P.camDist = Math.max(2.5, Math.min(12, (P.camDist || 4.6) + (e.deltaY > 0 ? 0.7 : -0.7)));
+      e.preventDefault();
+    }, { passive: false });
     var bv = document.getElementById('btn-view'), bj = document.getElementById('btn-jump');
     bv.addEventListener('click', function () { I.viewToggle = true; });
     bv.addEventListener('touchstart', function (e) { e.preventDefault(); e.stopPropagation(); I.viewToggle = true; }, { passive: false });
