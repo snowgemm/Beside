@@ -95,7 +95,7 @@
     for(i=list.length-1;i>=0;i--){
       var e=list[i];
       if(e.dead){e.deathT+=dt;if(e.deathT>=.35){removeEnemy(e);continue;}var s=e.deathT<.1?1+e.deathT/.1*.25:1.25*(1-(e.deathT-.1)/.25);e.group.scale.setScalar(Math.max(0,s));continue;}
-      var dx=px-e.x,dz=pz-e.z,d=Math.sqrt(dx*dx+dz*dz);if(d>AI_RANGE)continue;
+      var dx=px-e.x,dz=pz-e.z,d=Math.sqrt(dx*dx+dz*dz);if(typeof e.update==='function'){e.update(e,dt,dx,dz,d,px,py,pz);continue;}if(d>AI_RANGE)continue;
       if(e.flash>0){e.flash-=dt;if(e.flash<=0)restore(e);}
       if(e.kx||e.kz){step(e,e.kx*dt,e.kz*dt);var kd=Math.exp(-8*dt);e.kx*=kd;e.kz*=kd;if(Math.abs(e.kx)+Math.abs(e.kz)<.05)e.kx=e.kz=0;}
       ai(e,dt,dx,dz,d,px,py,pz);
