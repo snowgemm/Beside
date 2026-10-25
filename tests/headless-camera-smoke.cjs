@@ -60,6 +60,7 @@ const window = {
 class Vector3 {
   constructor() { this.x = 0; this.y = 0; this.z = 0; }
   set(x, y, z) { this.x = x; this.y = y; this.z = z; return this; }
+  setScalar(v) { this.x = this.y = this.z = v; return this; }
 }
 
 class Object3D {
@@ -71,12 +72,20 @@ class Object3D {
     };
     this.children = [];
     this.visible = true;
+    this.scale = new Vector3(); this.userData = {}; this.parent = null;
   }
-  add(...objects) { this.children.push(...objects); }
+  add(...objects) { for (const object of objects) { object.parent = this; this.children.push(object); } }
+  remove(object) { this.children = this.children.filter((child) => child !== object); object.parent = null; }
 }
 
-class Geometry {}
-class Material {}
+class Geometry {
+  constructor() {
+    this.attributes = { normal: { count: 6, getY(i) { return i === 0 ? 1 : i === 1 ? -1 : 0; }, getX(i) { return i === 2 ? 1 : 0; } } };
+  }
+  setAttribute(name, value) { this.attributes[name] = value; }
+}
+class BufferAttribute { constructor(array, itemSize) { this.array = array; this.itemSize = itemSize; } }
+class Material { constructor(options = {}) { Object.assign(this, options); } }
 class Mesh extends Object3D {
   constructor(geometry, material) {
     super();
@@ -89,6 +98,7 @@ const THREE = {
   Group: Object3D,
   Mesh,
   BoxGeometry: Geometry,
+  BufferAttribute,
   MeshBasicMaterial: Material
 };
 const context = vm.createContext({ window, document, navigator: { maxTouchPoints: 0 }, THREE });
@@ -99,6 +109,7 @@ function load(relativePath) {
 }
 
 load('input.js');
+load('rig.js');
 load('player.js');
 
 let wall = false;
