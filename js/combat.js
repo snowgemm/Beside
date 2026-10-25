@@ -42,10 +42,12 @@
     else if (n === 'hit') { tone('square', 220, 70, 0.12, 0.35); noise(0.08, 0.4, 1500, 500); }
     else if (n === 'hurt') tone('sawtooth', 320, 110, 0.28, 0.4);
     else if (n === 'death') { tone('square', 420, 50, 0.4, 0.35); noise(0.3, 0.4, 1200, 200); }
+    else if (n === 'pickup') tone('sine', 600, 1000, 0.12, 0.3);
+    else if (n === 'equip') tone('triangle', 300, 520, 0.1, 0.3);
   };
   var C = G.combat = {};
   var COS_HALF_ARC = Math.cos(50 * Math.PI / 180);
-  var cam, hpFill, hpText, fade, lastHp = -1, attackCd = 0, dodgeCd = 0, deadT = 0, nums = [];
+  var cam, hpFill, hpText, fade, lastHp = -1, lastMax = -1, attackCd = 0, dodgeCd = 0, deadT = 0, nums = [];
   var pv = null;
   C.init = function (camera) {
     cam = camera; pv = new THREE.Vector3();
@@ -53,7 +55,7 @@
   };
   C.number = function (x, y, z, v, color) {
     var el = document.createElement('div');
-    el.className = 'dmg'; el.textContent = Math.round(v); el.style.color = color || '#fff';
+    el.className = 'dmg'; el.textContent = Math.round(v) + (C.critHit ? '!' : ''); el.style.color = C.critHit ? '#ffd34d' : (color || '#fff');
     document.body.appendChild(el); nums.push({ el: el, x: x, y: y, z: z, t: 0 });
     if (nums.length > 16) { var o = nums.shift(); o.el.remove(); }
   };
@@ -68,7 +70,9 @@
       var dx = e.x - P.pos.x, dz = e.z - P.pos.z, d = Math.max(0.001, Math.sqrt(dx * dx + dz * dz));
       if (d > w.reach + e.def.radius || Math.abs(e.y - P.pos.y) > 2) continue;
       if ((dx * fx + dz * fz) / d < COS_HALF_ARC && d > e.def.radius + 0.3) continue;
-      G.enemies.hurt(e, w.damage, dx / d * 6, dz / d * 6);
+      var crit = Math.random() < P.crit; C.critHit = crit;
+      G.enemies.hurt(e, Math.round(w.damage * (crit ? 2 : 1)), dx / d * 6, dz / d * 6);
+      C.critHit = false;
     }
   };
   C.dodge = function () {
@@ -82,6 +86,7 @@
   C.hurtPlayer = function (dmg, fx, fz) {
     var P = G.player;
     if (P.dead || P.rollT > 0 || P.iframes > 0) return false;
+    dmg = Math.max(1, Math.round(dmg * (1 - P.dr)));
     P.health = Math.max(0, P.health - dmg); P.iframes = 0.6;
     var dx = P.pos.x - fx, dz = P.pos.z - fz, d = Math.max(0.001, Math.sqrt(dx * dx + dz * dz));
     P.kb.x += dx / d * 9; P.kb.z += dz / d * 9; P.shake = 0.3;
@@ -102,8 +107,8 @@
       if (I.dodgeQ) C.dodge();
     }
     I.attackQ = I.dodgeQ = false;
-    if (P.health !== lastHp) {
-      lastHp = P.health;
+    if (P.health !== lastHp || P.maxHealth !== lastMax) {
+      lastHp = P.health; lastMax = P.maxHealth;
       hpFill.style.width = (P.health / P.maxHealth * 100) + '%';
       hpText.textContent = Math.ceil(P.health) + '/' + P.maxHealth;
     }
