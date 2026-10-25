@@ -29,7 +29,11 @@
 - `menu`: settings and pause handling.
 
 ## Validation status
-The source archive describes headless tests for dungeon progression, save/reload, build edits and settings. Those tests have not been independently rerun against the live repository in this session. Browser rendering, real-device touch layout, GLB loading, audio decoding and boss combat still require live-browser verification.
+- 2026-10-26: all 16 JavaScript files in `js/` passed syntax parsing.
+- 2026-10-26: headless camera/input tests using a minimal mock Three.js passed 8/8 checks: wheel zoom in/out, zoom limits (2.5–12), input gating, first-person isolation, and camera shortening before a mock terrain wall.
+- Reproducible test: `node tests/headless-camera-smoke.cjs`. GitHub Actions runs it on pushes, pull requests and manual dispatch.
+- Not verified on a real browser/device: camera feel, visual clipping from all angles, mouse-wheel behavior with actual pointer lock, touch layout, GLB loading, audio decoding and boss combat. The mocked test is a regression check, not a substitute for a WebGL playtest.
+- Dungeon progression, save/reload, build edits and settings tests described in the source archive have not been independently rerun against the live repository.
 
 ## Caution
-Treat the uploaded ZIP as the source of truth. When syncing, replace same-path files, add new paths, and retain repository files not present in the archive. Do not claim runtime validation based on syntax checks alone.
+Treat the uploaded ZIP as a reference, not proof of current runtime correctness. When syncing, compare files rather than assuming the repository is byte-identical to the archive. Do not claim real-browser validation based on syntax checks or mocked tests alone.
