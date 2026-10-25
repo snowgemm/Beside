@@ -8,14 +8,15 @@
       emit: function (n, d) { var a = h[n]; if (a) for (var i = 0; i < a.length; i++) a[i](d); }
     };
   })();
-  var A = G.audio = { ctx: null, master: null, noise: null };
+  var A = G.audio = { ctx: null, master: null, noise: null, volume: 1 };
+  A.setVolume = function (v) { A.volume = Math.max(0, Math.min(1, Number(v) || 0)); if (A.master) A.master.gain.value = 0.35 * A.volume; };
   var EV = ['keydown', 'mousedown', 'touchstart', 'touchend', 'click'];
   function detach() { if (A.ctx && A.ctx.state === 'running') EV.forEach(function (e) { window.removeEventListener(e, unlock, true); }); }
   function unlock() {
     if (!A.ctx) {
       var C = window.AudioContext || window.webkitAudioContext;
       if (!C) return;
-      A.ctx = new C(); A.master = A.ctx.createGain(); A.master.gain.value = 0.35; A.master.connect(A.ctx.destination);
+      A.ctx = new C(); A.master = A.ctx.createGain(); A.master.gain.value = 0.35 * A.volume; A.master.connect(A.ctx.destination);
       var sr = A.ctx.sampleRate, b = A.ctx.createBuffer(1, sr >> 1, sr), d = b.getChannelData(0);
       for (var i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
       A.noise = b;
