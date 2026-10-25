@@ -1,7 +1,7 @@
 (function () {
   var G = window.Game = window.Game || {};
   var isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
-  var I = G.input = { isTouch: isTouch, moveX: 0, moveZ: 0, jump: false, lookDX: 0, lookDY: 0, viewToggle: false, attackQ: false, dodgeQ: false, invToggle: false };
+  var I = G.input = { isTouch: isTouch, moveX: 0, moveZ: 0, jump: false, lookDX: 0, lookDY: 0, viewToggle: false, attackQ: false, dodgeQ: false, invToggle: false, interactQ: false, buildMode: false };
   var k = {}, joy = { x: 0, z: 0 }, jumpT = false;
   function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
   I.poll = function () { I.moveX = clamp((k.r ? 1 : 0) - (k.l ? 1 : 0) + joy.x, -1, 1); I.moveZ = clamp((k.f ? 1 : 0) - (k.b ? 1 : 0) + joy.z, -1, 1); I.jump = !!(k.j || jumpT); };
@@ -13,6 +13,8 @@
       else if (e.code === 'KeyV' && !e.repeat) I.viewToggle = true;
       else if (e.code === 'KeyJ' && !e.repeat) I.attackQ = true;
       else if (e.code === 'KeyI' && !e.repeat) I.invToggle = true;
+      else if (e.code === 'KeyE' && !e.repeat) I.interactQ = true;
+      else if (e.code === 'KeyB' && !e.repeat) I.buildToggle = true;
       else if ((e.code === 'ShiftLeft' || e.code === 'ShiftRight') && !e.repeat) I.dodgeQ = true;
     });
     window.addEventListener('keyup', function (e) { if (map[e.code]) k[map[e.code]] = false; });
@@ -20,7 +22,7 @@
     canvas.addEventListener('click', function () { if (!isTouch && document.pointerLockElement !== canvas && canvas.requestPointerLock) canvas.requestPointerLock(); });
     document.addEventListener('pointerlockchange', function () { hint.style.display = (document.pointerLockElement === canvas || isTouch) ? 'none' : 'block'; });
     document.addEventListener('mousemove', function (e) { if (document.pointerLockElement === canvas) { I.lookDX += e.movementX * 0.0022; I.lookDY += e.movementY * 0.0022; } });
-    document.addEventListener('mousedown', function (e) { if (e.button === 0 && document.pointerLockElement === canvas) I.attackQ = true; });
+    document.addEventListener('mousedown', function (e) { if (e.button === 0 && document.pointerLockElement === canvas && !I.buildMode) I.attackQ = true; });
     var bv = document.getElementById('btn-view'), bj = document.getElementById('btn-jump');
     bv.addEventListener('click', function () { I.viewToggle = true; });
     bv.addEventListener('touchstart', function (e) { e.preventDefault(); e.stopPropagation(); I.viewToggle = true; }, { passive: false });
@@ -29,7 +31,9 @@
     bj.addEventListener('touchend', jEnd, { passive: false }); bj.addEventListener('touchcancel', jEnd, { passive: false });
     function tb(id, flag) { document.getElementById(id).addEventListener('touchstart', function (e) { e.preventDefault(); e.stopPropagation(); I[flag] = true; }, { passive: false }); }
     tb('btn-attack', 'attackQ'); tb('btn-dodge', 'dodgeQ'); tb('btn-bag', 'invToggle');
+    tb('btn-interact', 'interactQ');
     document.getElementById('btn-bag').addEventListener('click', function () { I.invToggle = true; });
+    document.getElementById('btn-interact').addEventListener('click', function () { I.interactQ = true; });
     var layer = document.getElementById('touch'), jb = document.getElementById('joy'), kn = document.getElementById('joy-knob');
     var joyId = null, jcx = 0, jcy = 0, lookId = null, lx = 0, ly = 0, R = 56;
     function setJoy(x, y) {
