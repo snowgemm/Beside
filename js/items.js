@@ -12,7 +12,7 @@
   var STAT = {
     damage: { label: 'Sát thương', fmt: function (v) { return String(Math.round(v)); } },
     cdMult: { label: 'Hồi chiêu', fmt: function (v) { return '×' + v.toFixed(2); }, lower: true },
-    reach: { label: 'Tầm đánh', fmt: function (v) { return v.toFixed(1); },
+    reach: { label: 'Tầm đánh', fmt: function (v) { return v.toFixed(1); } },
     dr: { label: 'Giảm sát thương', fmt: pct },
     hp: { label: 'Máu tối đa', fmt: function (v) { return String(Math.round(v)); } },
     speed: { label: 'Tốc độ chạy', fmt: pct },
