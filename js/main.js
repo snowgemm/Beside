@@ -11,14 +11,14 @@
     renderer.setSize(window.innerWidth, window.innerHeight);
     camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix();
   });
-
   G.world.drawDistance = touch ? 3 : 5;
   G.world.init(scene);
   var spawn = G.world.findSpawn();
   G.player.init(scene, camera, spawn);
   G.input.init(renderer.domElement);
+  G.combat.init(camera);
+  G.enemies.init(scene, camera);
   G.world.preload(spawn.x, spawn.z, 2);
-
   var hud = document.getElementById('hud');
   var last = performance.now(), accT = 0, accN = 0, cool = 3, hudT = 0, fps = 0;
   function frame(now) {
@@ -27,9 +27,10 @@
     var dt = Math.min(raw, 0.05);
     G.player.update(dt);
     var p = G.player.pos;
+    G.combat.update(dt);
+    G.enemies.update(dt, p.x, p.y, p.z);
     G.world.update(p.x, p.z, 4);
     renderer.render(scene, camera);
-
     if (raw < 0.25) { accT += raw; accN++; hudT += raw; cool -= raw; }
     if (accT >= 1.5) {
       var avg = accT / accN * 1000;
@@ -39,7 +40,7 @@
     }
     if (hudT >= 0.4) {
       hudT = 0;
-      hud.textContent = 'FPS ' + fps + ' · Tầm nhìn ' + G.world.drawDistance + ' · Vùng ' + G.world.chunkCount();
+      hud.textContent = 'FPS ' + fps + ' · Tầm nhìn ' + G.world.drawDistance + ' · Vùng ' + G.world.chunkCount() + ' · Quái ' + G.enemies.list.length;
     }
   }
   requestAnimationFrame(frame);
