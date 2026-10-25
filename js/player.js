@@ -1,66 +1,39 @@
 (function () {
   var G = window.Game = window.Game || {};
   var HW = 0.3, HH = 1.8, E = 1e-4;
-  var P = G.player = { pos: { x: 0, y: 0, z: 0 }, vel: { x: 0, y: 0, z: 0 }, yaw: 0, pitch: 0, onGround: false, inWater: false, third: false, stepOff: 0,
-    health: 100, maxHealth: 100, weapon: { damage: 10, reach: 2.2, cooldown: 0.4 }, dead: false, rollT: 0, rollDir: { x: 0, z: 0 }, kb: { x: 0, z: 0 }, shake: 0, swingT: 0, iframes: 0 };
-  var W, cam, model, legL, legR, armL, armR, spawn, wasGround = false, phase = 0;
-  function mk(w,h,d,c) { return new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshBasicMaterial({color:c})); }
-  function limb(w,h,d,c,x,y) { var g=new THREE.Group(),m=mk(w,h,d,c);m.position.y=-h/2;g.add(m);g.position.set(x,y,0);return g; }
-  function collides(x,y,z) {
-    var x0=Math.floor(x-HW+E),x1=Math.floor(x+HW-E),y0=Math.floor(y+E),y1=Math.floor(y+HH-E),z0=Math.floor(z-HW+E),z1=Math.floor(z+HW-E);
-    for(var ix=x0;ix<=x1;ix++)for(var iz=z0;iz<=z1;iz++)for(var iy=y0;iy<=y1;iy++)if(W.solid(ix,iy,iz))return true;
-    return false;
-  }
-  function moveH(ax,d) {
-    var p=P.pos,n=Math.max(1,Math.ceil(Math.abs(d)/.3)),s=d/n;
-    for(var i=0;i<n;i++){var o=p[ax];p[ax]=o+s;if(collides(p.x,p.y,p.z)){if(wasGround&&!collides(p.x,p.y+1,p.z)){p.y+=1;P.stepOff-=1;}else{p[ax]=o;P.vel[ax]=0;return;}}}
-  }
-  function moveV(d) {
-    var p=P.pos,n=Math.max(1,Math.ceil(Math.abs(d)/.3)),s=d/n;
-    for(var i=0;i<n;i++){var o=p.y,ny=o+s;p.y=ny;if(collides(p.x,p.y,p.z)){if(d<0){p.y=Math.floor(ny+E)+1;P.onGround=true;}else p.y=Math.floor(ny+HH-E)-HH;P.vel.y=0;return;}}
-  }
+  var P = G.player = { pos:{x:0,y:0,z:0},vel:{x:0,y:0,z:0},yaw:0,pitch:0,onGround:false,inWater:false,third:false,stepOff:0,
+    health:100,maxHealth:100,weapon:{damage:10,reach:2.2,cooldown:0.4},dead:false,rollT:0,rollDir:{x:0,z:0},kb:{x:0,z:0},shake:0,swingT:0,iframes:0,
+    equip:{weapon:null,armor:null,trinket:null},dr:0,crit:0.05,speedMult:1 };
+  var W,cam,model,legL,legR,armL,armR,spawn,wasGround=false,phase=0;
+  function mk(w,h,d,c){return new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshBasicMaterial({color:c}));}
+  function limb(w,h,d,c,x,y){var g=new THREE.Group(),m=mk(w,h,d,c);m.position.y=-h/2;g.add(m);g.position.set(x,y,0);return g;}
+  function collides(x,y,z){var x0=Math.floor(x-HW+E),x1=Math.floor(x+HW-E),y0=Math.floor(y+E),y1=Math.floor(y+HH-E),z0=Math.floor(z-HW+E),z1=Math.floor(z+HW-E);for(var ix=x0;ix<=x1;ix++)for(var iz=z0;iz<=z1;iz++)for(var iy=y0;iy<=y1;iy++)if(W.solid(ix,iy,iz))return true;return false;}
+  function moveH(ax,d){var p=P.pos,n=Math.max(1,Math.ceil(Math.abs(d)/.3)),s=d/n;for(var i=0;i<n;i++){var o=p[ax];p[ax]=o+s;if(collides(p.x,p.y,p.z)){if(wasGround&&!collides(p.x,p.y+1,p.z)){p.y+=1;P.stepOff-=1;}else{p[ax]=o;P.vel[ax]=0;return;}}}}
+  function moveV(d){var p=P.pos,n=Math.max(1,Math.ceil(Math.abs(d)/.3)),s=d/n;for(var i=0;i<n;i++){var o=p.y,ny=o+s;p.y=ny;if(collides(p.x,p.y,p.z)){if(d<0){p.y=Math.floor(ny+E)+1;P.onGround=true;}else p.y=Math.floor(ny+HH-E)-HH;P.vel.y=0;return;}}}
   function clamp(v,a,b){return v<a?a:v>b?b:v;}
-  P.init=function(scene,camera,sp){
-    W=G.world;cam=camera;spawn=sp;P.spawnPos=sp;cam.rotation.order='YXZ';model=new THREE.Group();
-    var body=mk(.6,.7,.3,0x3a6fd8);body.position.y=1.05;model.add(body);
-    var head=mk(.42,.42,.42,0xe8b88a);head.position.y=1.62;model.add(head);
+  P.init=function(scene,camera,sp){W=G.world;cam=camera;spawn=sp;P.spawnPos=sp;cam.rotation.order='YXZ';model=new THREE.Group();
+    var body=mk(.6,.7,.3,0x3a6fd8);body.position.y=1.05;model.add(body);var head=mk(.42,.42,.42,0xe8b88a);head.position.y=1.62;model.add(head);
     var nose=mk(.1,.1,.06,0x333333);nose.position.set(0,1.6,-.24);model.add(nose);
-    legL=limb(.26,.7,.26,0x35406a,-.15,.7);legR=limb(.26,.7,.26,0x35406a,.15,.7);
-    armL=limb(.2,.7,.2,0x3a6fd8,-.4,1.4);armR=limb(.2,.7,.2,0x3a6fd8,.4,1.4);
-    model.add(legL,legR,armL,armR);model.visible=false;scene.add(model);P.respawn();
-  };
-  P.respawn=function(){
-    P.pos.x=spawn.x;P.pos.y=spawn.y+.001;P.pos.z=spawn.z;
-    P.vel.x=P.vel.y=P.vel.z=0;P.kb.x=P.kb.z=0;P.rollT=0;P.swingT=0;
-  };
-  P.update=function(dt){
-    var I=G.input,p=P.pos,v=P.vel;I.poll();
-    if(P.dead){I.moveX=I.moveZ=0;I.jump=false;}
-    P.yaw-=I.lookDX;P.pitch=clamp(P.pitch-I.lookDY,-1.45,1.45);I.lookDX=I.lookDY=0;
-    if(I.viewToggle){P.third=!P.third;I.viewToggle=false;}
+    legL=limb(.26,.7,.26,0x35406a,-.15,.7);legR=limb(.26,.7,.26,0x35406a,.15,.7);armL=limb(.2,.7,.2,0x3a6fd8,-.4,1.4);armR=limb(.2,.7,.2,0x3a6fd8,.4,1.4);
+    model.add(legL,legR,armL,armR);model.visible=false;scene.add(model);P.respawn();};
+  P.respawn=function(){P.pos.x=spawn.x;P.pos.y=spawn.y+.001;P.pos.z=spawn.z;P.vel.x=P.vel.y=P.vel.z=0;P.kb.x=P.kb.z=0;P.rollT=0;P.swingT=0;};
+  P.recalc=function(){var e=P.equip,w=e.weapon&&e.weapon.stats,a=e.armor&&e.armor.stats,t=e.trinket&&e.trinket.stats;
+    P.weapon.damage=w?w.damage:10;P.weapon.reach=w?w.reach:2.2;P.weapon.cooldown=.4*(w?w.cdMult:1);
+    P.maxHealth=100+((a&&a.hp)||0)+((t&&t.hp)||0);P.dr=Math.min(.6,(a&&a.dr)||0);P.speedMult=1+((t&&t.speed)||0);P.crit=.05+((t&&t.crit)||0);if(P.health>P.maxHealth)P.health=P.maxHealth;};
+  P.update=function(dt){var I=G.input,p=P.pos,v=P.vel;I.poll();if(P.dead){I.moveX=I.moveZ=0;I.jump=false;}
+    P.yaw-=I.lookDX;P.pitch=clamp(P.pitch-I.lookDY,-1.45,1.45);I.lookDX=I.lookDY=0;if(I.viewToggle){P.third=!P.third;I.viewToggle=false;}
     wasGround=P.onGround;P.inWater=W.getBlock(p.x,p.y+.4,p.z)===W.WATER;
-    var sy=Math.sin(P.yaw),cy=Math.cos(P.yaw),wx=-sy*I.moveZ+cy*I.moveX,wz=-cy*I.moveZ-sy*I.moveX,l=Math.hypot(wx,wz);
-    if(l>1){wx/=l;wz/=l;}
-    var sp=P.inWater?2.6:5.4,k=Math.min(1,(P.onGround||P.inWater?12:4)*dt);
-    if(P.rollT>0){P.rollT-=dt;v.x=P.rollDir.x*11;v.z=P.rollDir.z*11;}
-    else{v.x+=(wx*sp-v.x)*k;v.z+=(wz*sp-v.z)*k;}
-    if(P.inWater){v.y-=8*dt;if(I.jump)v.y+=20*dt;v.y-=v.y*Math.min(1,3*dt);}
-    else{v.y=Math.max(-35,v.y-28*dt);if(I.jump&&P.onGround)v.y=9;}
+    var sy=Math.sin(P.yaw),cy=Math.cos(P.yaw),wx=-sy*I.moveZ+cy*I.moveX,wz=-cy*I.moveZ-sy*I.moveX,l=Math.hypot(wx,wz);if(l>1){wx/=l;wz/=l;}
+    var sp=(P.inWater?2.6:5.4)*P.speedMult,k=Math.min(1,(P.onGround||P.inWater?12:4)*dt);
+    if(P.rollT>0){P.rollT-=dt;v.x=P.rollDir.x*11;v.z=P.rollDir.z*11;}else{v.x+=(wx*sp-v.x)*k;v.z+=(wz*sp-v.z)*k;}
+    if(P.inWater){v.y-=8*dt;if(I.jump)v.y+=20*dt;v.y-=v.y*Math.min(1,3*dt);}else{v.y=Math.max(-35,v.y-28*dt);if(I.jump&&P.onGround)v.y=9;}
     P.onGround=false;moveH('x',(v.x+P.kb.x)*dt);moveH('z',(v.z+P.kb.z)*dt);moveV(v.y*dt);
-    var kd=Math.exp(-9*dt);P.kb.x*=kd;P.kb.z*=kd;if(p.y< -30)P.respawn();
-    P.stepOff-=P.stepOff*Math.min(1,10*dt);
+    var kd=Math.exp(-9*dt);P.kb.x*=kd;P.kb.z*=kd;if(p.y< -30)P.respawn();P.stepOff-=P.stepOff*Math.min(1,10*dt);
     var cp=Math.cos(P.pitch),dx=-sy*cp,dy=Math.sin(P.pitch),dz=-cy*cp;cam.rotation.set(P.pitch,P.yaw,0);
-    if(!P.third)cam.position.set(p.x,p.y+1.62+P.stepOff,p.z);
-    else{
-      var hx=p.x,hy=p.y+1.6+P.stepOff,hz=p.z,dist=4.6;
-      for(var t=.4;t<=dist+.4;t+=.2){if(W.solid(hx-dx*t,hy-dy*t,hz-dz*t)){dist=Math.max(.3,t-.4);break;}}
-      cam.position.set(hx-dx*dist,hy-dy*dist,hz-dz*dist);
-    }
+    if(!P.third)cam.position.set(p.x,p.y+1.62+P.stepOff,p.z);else{var hx=p.x,hy=p.y+1.6+P.stepOff,hz=p.z,dist=4.6;for(var t=.4;t<=dist+.4;t+=.2){if(W.solid(hx-dx*t,hy-dy*t,hz-dz*t)){dist=Math.max(.3,t-.4);break;}}cam.position.set(hx-dx*dist,hy-dy*dist,hz-dz*dist);}
     if(P.shake>.001){cam.position.x+=(Math.random()-.5)*P.shake;cam.position.y+=(Math.random()-.5)*P.shake;P.shake*=Math.max(0,1-12*dt);}
     model.visible=P.third;model.position.set(p.x,p.y+P.stepOff,p.z);model.rotation.y=P.yaw;
-    var hs=Math.hypot(v.x,v.z);phase+=hs*dt*2.2;var sw=Math.sin(phase)*.8*Math.min(1,hs/3);
-    legL.rotation.x=sw;legR.rotation.x=-sw;armL.rotation.x=-sw;armR.rotation.x=sw;
-    if(P.swingT>0){P.swingT-=dt;armR.rotation.x=-2.2*Math.max(0,P.swingT)/.25;}
-    model.rotation.x=P.dead?-1.4:(P.rollT>0?-.9:0);
+    var hs=Math.hypot(v.x,v.z);phase+=hs*dt*2.2;var sw=Math.sin(phase)*.8*Math.min(1,hs/3);legL.rotation.x=sw;legR.rotation.x=-sw;armL.rotation.x=-sw;armR.rotation.x=sw;
+    if(P.swingT>0){P.swingT-=dt;armR.rotation.x=-2.2*Math.max(0,P.swingT)/.25;}model.rotation.x=P.dead?-1.4:(P.rollT>0?-.9:0);
   };
 })();
