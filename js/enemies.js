@@ -24,8 +24,9 @@
     W.onChunkLoad=onLoad; W.onChunkUnload=onUnload;
   };
   function spawn(name,x,y,z,overrideDef) {
-    var def=overrideDef||TYPES[name],g=new THREE.Group(),meshes=[];
-    def.parts.forEach(function(p){ var m=new THREE.Mesh(geo(p[0],p[1],p[2]),mat(p[6])); m.position.set(p[3],p[4],p[5]); m.userData.base=m.material; if(p[7])m.userData.arm=true; g.add(m); meshes.push(m); });
+    var def=overrideDef||TYPES[name],g=new THREE.Group(),meshes=[],asset=G.assets&&G.assets.model(name);
+    if(asset){g.add(asset);asset.traverse(function(m){if(m.isMesh){m.userData.base=m.material;meshes.push(m);}});}
+    else def.parts.forEach(function(p){var m=new THREE.Mesh(geo(p[0],p[1],p[2]),mat(p[6]));m.position.set(p[3],p[4],p[5]);m.userData.base=m.material;if(p[7])m.userData.arm=true;g.add(m);meshes.push(m);});
     g.position.set(x,y,z); scene.add(g);
     var e={type:name,def:def,x:x,y:y,z:z,hp:def.hp,group:g,meshes:meshes,state:'idle',t:Math.random()*2,hop:0,hopY:0,dirx:0,dirz:0,walking:false,kx:0,kz:0,flash:0,alerted:false,dead:false,deathT:0,bar:null,cd:1+Math.random()};
     E.list.push(e); return e;
