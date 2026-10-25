@@ -88,13 +88,14 @@
     mesh.cx = cx; mesh.cz = cz;
     scene.add(mesh);
     chunks.set(cx + ',' + cz, mesh);
+    if (W.onChunkLoad) W.onChunkLoad(cx, cz);
   }
 
   function plan(pcx, pcz) {
     var R = W.drawDistance, r2 = R * R + 1, ur = (R + 1) * (R + 1) + 1, dx, dz;
     chunks.forEach(function (m, k) {
       var ax = m.cx - pcx, az = m.cz - pcz;
-      if (ax * ax + az * az > ur) { scene.remove(m); m.geometry.dispose(); chunks.delete(k); }
+      if (ax * ax + az * az > ur) { scene.remove(m); m.geometry.dispose(); chunks.delete(k); if (W.onChunkUnload) W.onChunkUnload(m.cx, m.cz); }
     });
     queue = []; qi = 0;
     for (dx = -R; dx <= R; dx++) for (dz = -R; dz <= R; dz++) {
