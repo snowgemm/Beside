@@ -29,7 +29,7 @@ function element(id) {
       addEventListener(type, callback) {
         (this.listeners[type] ||= []).push(callback);
       },
-      matches() { return false; }
+      matches() { return false; },
       appendChild() {},
       getContext() { return {}; }
     };
