@@ -78,10 +78,12 @@
     if (walking) this.phase += dt * (4 + sp * 1.5) * (g.crawl ? 1.8 : 1);
     for (i = 0; i < this.recs.length; i++) { r = this.recs[i]; r.ax = r.ay = r.az = 0; }
     var rY = 0, rZ = 0, tX = this.tiltX, tZ = 0, sx = 1, sy = 1, bob = Math.sin(T * 2.4 + off);
+    // idle: breathing bob, head sway
     rY += bob * 0.025;
     this._a('head', Math.sin(T * 2.4 + 1 + off) * 0.04, Math.sin(T * 1.3 + off) * 0.14, 0);
     this._a('tail', 0, Math.sin(T * 3 + off) * 0.25, 0);
     this._a('armL', 0, 0, -0.04 * bob); this._a('armR', 0, 0, 0.04 * bob);
+    // walk
     if (walking) {
       sw = Math.sin(this.phase) * amt; k = g.quad ? 0.75 : 0.9;
       this._a('legL', sw * k, 0, 0); this._a('legR', -sw * k, 0, 0);
@@ -115,6 +117,7 @@
       }
       this._pa = u; rY = 0;
     }
+    // attack: wind-up, strike, recover
     a = this.atk;
     if (a) {
       a.t += dt; u = a.t / a.dur; w = a.w; st = (1 - w) * 0.3;

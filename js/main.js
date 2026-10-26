@@ -14,6 +14,8 @@
 
   G.world.drawDistance = touch ? 3 : 5;
   G.world.init(scene);
+  G.sky.init(scene, camera);
+  G.fx.init(scene);
   var spawn = G.world.findSpawn();
   G.player.init(scene, camera, spawn);
   G.input.init(renderer.domElement);
@@ -46,6 +48,8 @@
     var p = G.player.pos;
     if (!G.paused) { G.combat.update(dt); G.enemies.update(dt, p.x, p.y, p.z); G.loot.update(dt); G.dungeon.update(dt); }
     G.build.update();
+    G.sky.update(G.paused ? 0 : dt);
+    G.fx.update(G.paused ? 0 : dt, p.x, p.y, p.z);
     G.minimap.update(raw);
     G.world.update(p.x, p.z, 4);
     renderer.render(scene, camera);

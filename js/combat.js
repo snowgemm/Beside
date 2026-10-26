@@ -8,15 +8,16 @@
       emit: function (n, d) { var a = h[n]; if (a) for (var i = 0; i < a.length; i++) a[i](d); }
     };
   })();
-  var A = G.audio = { ctx: null, master: null, noise: null, volume: 1 };
-  A.setVolume = function (v) { A.volume = Math.max(0, Math.min(1, Number(v) || 0)); if (A.master) A.master.gain.value = 0.35 * A.volume; };
+
+  /* ---------- WebAudio (generated SFX) ---------- */
+  var A = G.audio = { ctx: null, master: null, noise: null };
   var EV = ['keydown', 'mousedown', 'touchstart', 'touchend', 'click'];
   function detach() { if (A.ctx && A.ctx.state === 'running') EV.forEach(function (e) { window.removeEventListener(e, unlock, true); }); }
   function unlock() {
     if (!A.ctx) {
       var C = window.AudioContext || window.webkitAudioContext;
       if (!C) return;
-      A.ctx = new C(); A.master = A.ctx.createGain(); A.master.gain.value = 0.35 * A.volume; A.master.connect(A.ctx.destination);
+      A.ctx = new C(); A.master = A.ctx.createGain(); A.master.gain.value = 0.35 * (A.volume == null ? 1 : A.volume); A.master.connect(A.ctx.destination);
       var sr = A.ctx.sampleRate, b = A.ctx.createBuffer(1, sr >> 1, sr), d = b.getChannelData(0);
       for (var i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
       A.noise = b;
@@ -37,6 +38,7 @@
     g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
     s.connect(f); f.connect(g); g.connect(A.master); s.start(t); s.stop(t + dur);
   }
+  A.setVolume = function (v) { A.volume = Math.max(0, Math.min(1, v)); if (A.master) A.master.gain.value = 0.35 * A.volume; };
   A.play = function (n) {
     if (!A.ctx || A.ctx.state !== 'running') return;
     if (n === 'swing') noise(0.14, 0.5, 700, 2600);
@@ -45,21 +47,29 @@
     else if (n === 'death') { tone('square', 420, 50, 0.4, 0.35); noise(0.3, 0.4, 1200, 200); }
     else if (n === 'pickup') tone('sine', 600, 1000, 0.12, 0.3);
     else if (n === 'equip') tone('triangle', 300, 520, 0.1, 0.3);
+    else if (n === 'place') { tone('triangle', 180, 260, 0.08, 0.35); noise(0.05, 0.25, 900, 500); }
+    else if (n === 'break') { noise(0.16, 0.5, 1800, 300); tone('square', 140, 60, 0.1, 0.25); }
   };
+
+  /* ---------- Combat ---------- */
   var C = G.combat = {};
   var COS_HALF_ARC = Math.cos(50 * Math.PI / 180);
   var cam, hpFill, hpText, fade, lastHp = -1, lastMax = -1, attackCd = 0, dodgeCd = 0, deadT = 0, nums = [];
   var pv = null;
+
   C.init = function (camera) {
     cam = camera; pv = new THREE.Vector3();
     hpFill = document.getElementById('hp-fill'); hpText = document.getElementById('hp-text'); fade = document.getElementById('fade');
   };
+
   C.number = function (x, y, z, v, color) {
     var el = document.createElement('div');
     el.className = 'dmg'; el.textContent = Math.round(v) + (C.critHit ? '!' : ''); el.style.color = C.critHit ? '#ffd34d' : (color || '#fff');
-    document.body.appendChild(el); nums.push({ el: el, x: x, y: y, z: z, t: 0 });
+    document.body.appendChild(el);
+    nums.push({ el: el, x: x, y: y, z: z, t: 0 });
     if (nums.length > 16) { var o = nums.shift(); o.el.remove(); }
   };
+
   C.attack = function () {
     var P = G.player, w = P.weapon;
     if (attackCd > 0 || P.dead || P.rollT > 0) return;
@@ -76,6 +86,7 @@
       C.critHit = false;
     }
   };
+
   C.dodge = function () {
     var P = G.player, I = G.input;
     if (dodgeCd > 0 || P.dead || P.rollT > 0) return;
@@ -84,6 +95,7 @@
     if (l < 0.1) { wx = -sy; wz = -cy; l = 1; }
     P.rollDir.x = wx / l; P.rollDir.z = wz / l; P.rollT = 0.35; dodgeCd = 1.0; A.play('swing');
   };
+
   C.hurtPlayer = function (dmg, fx, fz) {
     var P = G.player;
     if (P.dead || P.rollT > 0 || P.iframes > 0) return false;
@@ -95,6 +107,7 @@
     if (P.health <= 0) { P.dead = true; deadT = 0; fade.style.opacity = 1; A.play('death'); }
     return true;
   };
+
   C.update = function (dt) {
     var P = G.player, I = G.input;
     if (attackCd > 0) attackCd -= dt;
@@ -120,7 +133,8 @@
         if (n.t > 0.8) { n.el.remove(); nums.splice(i, 1); continue; }
         pv.set(n.x, n.y, n.z).project(cam);
         if (pv.z > 1) { n.el.style.display = 'none'; continue; }
-        n.el.style.display = 'block'; n.el.style.opacity = 1 - (n.t / 0.8) * (n.t / 0.8);
+        n.el.style.display = 'block';
+        n.el.style.opacity = 1 - (n.t / 0.8) * (n.t / 0.8);
         n.el.style.transform = 'translate(' + ((pv.x * 0.5 + 0.5) * window.innerWidth) + 'px,' + ((-pv.y * 0.5 + 0.5) * window.innerHeight) + 'px) translate(-50%,-50%)';
       }
     }
