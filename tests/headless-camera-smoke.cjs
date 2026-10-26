@@ -29,6 +29,7 @@ function element(id) {
       addEventListener(type, callback) {
         (this.listeners[type] ||= []).push(callback);
       },
+      matches() { return false; }
       appendChild() {},
       getContext() { return {}; }
     };
@@ -136,7 +137,7 @@ function check(name, condition, detail = '') {
 }
 function wheel(deltaY) {
   let prevented = false;
-  for (const callback of (listeners['doc:wheel'] || [])) {
+  for (const callback of (canvas.listeners.wheel || [])) {
     callback({ deltaY, preventDefault() { prevented = true; } });
   }
   return prevented;
@@ -147,10 +148,10 @@ P.third = true;
 P.camDist = 4.6;
 document.pointerLockElement = canvas;
 
-check('wheel listener registered', (listeners['doc:wheel'] || []).length > 0);
+check('wheel listener registered', (canvas.listeners.wheel || []).length > 0);
 const preventedDown = wheel(120);
 check('wheel down zooms out and prevents page scrolling',
-  Math.abs(P.camDist - 5.3) < 1e-9 && preventedDown, 'camDist=' + P.camDist);
+  Math.abs(P.camDist - 5.05) < 1e-9 && preventedDown, 'camDist=' + P.camDist);
 wheel(-120);
 check('wheel up zooms in', Math.abs(P.camDist - 4.6) < 1e-9);
 P.camDist = 11.8;
