@@ -123,7 +123,7 @@
       cam.position.set(p.x, p.y + 1.62 + P.stepOff, p.z);
     } else {
       var hx = p.x, hy = p.y + 1.6 + P.stepOff, hz = p.z;
-      var desired = P.camDist, dist = desired, prev = 0.35, t;
+      var desired = P.camDist, dist = desired, prev = 0.35, hit = false, t;
       // Probe the boom from the player outwards, then refine the first collision.
       for (t = 0.35; t <= desired; t += 0.12) {
         if (W.solid(hx - dx * t, hy - dy * t, hz - dz * t)) {
@@ -133,7 +133,7 @@
             if (W.solid(hx - dx * mid, hy - dy * mid, hz - dz * mid)) hi = mid;
             else lo = mid;
           }
-          dist = Math.max(0.55, lo - 0.12); break;
+          dist = Math.max(0.55, lo - 0.12); hit = true; break;
         }
         prev = t;
       }
