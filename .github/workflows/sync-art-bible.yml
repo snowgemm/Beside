@@ -1,45 +1,146 @@
-name: Sync uploaded art bible archive
+name: Import ZIP and open sync PR
 
+# GitHub Actions does not provide a file-upload field for workflow_dispatch.
+# Upload incoming-art-bible.zip to a dedicated non-main branch instead.
 on:
   push:
-    branches: [main]
+    branches-ignore:
+      - main
     paths:
       - "incoming-art-bible.zip"
 
 permissions:
   contents: write
+  pull-requests: write
+
+concurrency:
+  group: import-art-bible-${{ github.repository }}
+  cancel-in-progress: false
 
 jobs:
-  sync-archive:
+  import-zip:
+    name: Validate, extract, test, and open PR
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout main
+      - name: Check out uploaded branch
         uses: actions/checkout@v4
         with:
-          ref: main
-          persist-credentials: true
+          fetch-depth: 0
 
-      - name: Validate archive
-        run: unzip -t incoming-art-bible.zip
-
-      - name: Extract all files and commit
+      - name: Capture uploaded ZIP
         shell: bash
         run: |
           set -euo pipefail
-          unzip -o incoming-art-bible.zip -d .
-          rm incoming-art-bible.zip
+          git show "${GITHUB_SHA}:incoming-art-bible.zip" > "${RUNNER_TEMP}/incoming-art-bible.zip"
+          test -s "${RUNNER_TEMP}/incoming-art-bible.zip"
 
-          # Preserve the current audio compatibility fix if the archive's index predates it.
-          if [[ -f index.html ]] && ! grep -q 'js/audio-fix.js' index.html; then
-            sed -i '/<script src="js\/combat.js"><\/script>/a <script src="js/audio-fix.js"></script>' index.html
-          fi
+      - name: Start from latest main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git switch --force-create sync-art-bible origin/main
 
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
-          if git diff --cached --quiet; then
-            echo "Archive contains no tracked changes."
-            exit 0
-          fi
-          git commit -m "Sync complete art bible archive"
-          git push origin HEAD:main
+      - name: Safely extract and sync archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - "${RUNNER_TEMP}/incoming-art-bible.zip" <<'PY'
+          import stat
+          import sys
+          import zipfile
+          from pathlib import Path, PurePosixPath
+
+          archive = Path(sys.argv[1])
+          root = Path.cwd().resolve()
+          max_files = 1000
+          max_file_size = 25 * 1024 * 1024
+          max_total_size = 100 * 1024 * 1024
+
+          try:
+              with zipfile.ZipFile(archive) as zf:
+                  entries = [entry for entry in zf.infolist() if not entry.is_dir()]
+                  if not entries:
+                      raise ValueError("The ZIP contains no files.")
+                  if len(entries) > max_files:
+                      raise ValueError(f"Too many files: {len(entries)} (limit {max_files}).")
+
+                  total_size = sum(entry.file_size for entry in entries)
+                  if total_size > max_total_size:
+                      raise ValueError(f"Uncompressed size exceeds {max_total_size} bytes.")
+
+                  seen = set()
+                  for entry in entries:
+                      name = entry.filename
+                      path = PurePosixPath(name)
+
+                      if not name or name.startswith("/") or "\\" in name:
+                          raise ValueError(f"Unsafe archive path: {name!r}")
+                      if any(part in ("", ".", "..") for part in path.parts):
+                          raise ValueError(f"Unsafe archive path: {name!r}")
+                      if path.parts[0] in (".git", ".github"):
+                          raise ValueError(f"Archive may not modify repository internals/workflows: {name!r}")
+                      if name == "incoming-art-bible.zip":
+                          raise ValueError("The ZIP may not contain its own upload file.")
+                      if entry.file_size > max_file_size:
+                          raise ValueError(f"File exceeds per-file limit: {name!r}")
+                      if stat.S_ISLNK(entry.external_attr >> 16):
+                          raise ValueError(f"Symlinks are not allowed: {name!r}")
+                      if name in seen:
+                          raise ValueError(f"Duplicate archive path: {name!r}")
+                      seen.add(name)
+
+                      target = (root / Path(*path.parts)).resolve()
+                      if target != root and root not in target.parents:
+                          raise ValueError(f"Path escapes repository: {name!r}")
+                      target.parent.mkdir(parents=True, exist_ok=True)
+                      with zf.open(entry, "r") as source, target.open("wb") as output:
+                          output.write(source.read())
+
+                  print(f"Extracted and synced {len(entries)} files ({total_size} bytes).")
+          except (zipfile.BadZipFile, OSError, ValueError) as exc:
+              print(f"ZIP import rejected: {exc}", file=sys.stderr)
+              raise SystemExit(1)
+          PY
+
+          # Keep the existing audio compatibility fix when an older ZIP's index omits it.
+          python - <<'PY'
+          from pathlib import Path
+
+          index = Path("index.html")
+          if index.exists():
+              html = index.read_text(encoding="utf-8")
+              if "js/audio-fix.js" not in html:
+                  needle = '<script src="js/combat.js"></script>'
+                  if needle not in html:
+                      raise SystemExit("Cannot preserve audio-fix.js: combat.js script tag not found in index.html")
+                  html = html.replace(needle, needle + '\n<script src="js/audio-fix.js"></script>', 1)
+                  index.write_text(html, encoding="utf-8")
+                  print("Preserved js/audio-fix.js include in index.html.")
+          PY
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Run JavaScript syntax and headless camera checks
+        run: node tests/headless-camera-smoke.cjs
+
+      - name: Open or update pull request to main
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          base: main
+          branch: automation/sync-art-bible
+          delete-branch: true
+          commit-message: "Sync complete art bible ZIP"
+          title: "Sync complete art bible archive"
+          body: |
+            This PR was created automatically after an archive was uploaded to a non-main branch.
+
+            - Safely extracted the uploaded ZIP.
+            - Preserved the existing audio compatibility script include.
+            - Passed the JavaScript syntax and headless camera checks.
+
+            Please review the file changes, then merge this PR to update main.
