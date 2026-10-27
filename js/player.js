@@ -139,7 +139,8 @@
       if (dist < camCur) camCur = dist;
       else if (dist - camCur > 0.03) camCur += (dist - camCur) * (1 - Math.exp(-5 * dt)); else camCur = dist;
       cam.position.set(cpx + sideX * sideOffset + camSign * dx * camCur, cpy + liftOffset + camSign * dy * camCur, cpz + sideZ * sideOffset + camSign * dz * camCur);
-      cam.lookAt(cpx, cpy, cpz);
+      if (typeof cam.lookAt === 'function') cam.lookAt(cpx, cpy, cpz);
+      else cam.rotation.set(P.pitch, P.yaw + (frontView ? Math.PI : cameraMode === 'cinematic' ? -0.22 : 0), 0);
       camVis = camCur > 0.8;
     }
     if (P.shake > 0.001) { cam.position.x += (Math.random() - 0.5) * P.shake; cam.position.y += (Math.random() - 0.5) * P.shake; P.shake *= Math.max(0, 1 - 12 * dt); }
