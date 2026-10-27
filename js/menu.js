@@ -1,6 +1,6 @@
 (function () {
   var G = window.Game = window.Game || {};
-  var M = G.menu = { open: false, settings: { vol: 100, dd: null, map: true, vib: true, quality: (G.input && G.input.isTouch) ? 'medium' : 'high' } }, root, vol, dd, ddv, map, vib, head, home, S = M.settings;
+  var M = G.menu = { open: false, settings: { vol: 100, dd: null, map: true, vib: true, quality: (G.input && G.input.isTouch) ? 'medium' : 'high' } }, root, vol, dd, ddv, map, vib, qual, head, home, S = M.settings;
 
   function apply() {
     if (G.audio.setVolume) G.audio.setVolume(S.vol / 100);
@@ -33,8 +33,8 @@
       '<div class="menu-btns"><button id="menu-resume" class="primary" type="button">Tiếp tục</button></div>' +
       '<div class="menu-row"><span>Âm lượng</span><input id="menu-vol" type="range" min="0" max="100" step="5"></div>' +
       '<div class="menu-row"><span>Tầm nhìn: <b id="menu-ddv"></b></span><input id="menu-dd" type="range" min="3" max="7" step="1"></div>' +
-      '<div class="menu-row"><label for="menu-quality">Chất lượng đồ họa</label><select id="menu-quality"><option value="low">Thấp</option><option value="medium">Vừa</option><option value="high">Cao</option></select></div>
-      <div class="menu-row"><span>Bản đồ nhỏ</span><input id="menu-map" type="checkbox"></div>' +
+      '<div class="menu-row"><label for="menu-quality">Chất lượng đồ họa</label><select id="menu-quality"><option value="low">Thấp</option><option value="medium">Vừa</option><option value="high">Cao</option></select></div>' +
+      '<div class="menu-row"><span>Bản đồ nhỏ</span><input id="menu-map" type="checkbox"></div>' +
       '<div class="menu-row"><span>Rung</span><input id="menu-vib" type="checkbox"></div>' +
       '<div class="menu-btns"><button id="menu-clear" type="button">Xóa chỉnh sửa</button><button id="menu-home" type="button">Về màn hình chính</button><button id="menu-new" type="button">Chơi mới</button></div></div>';
     vol = document.getElementById('menu-vol'); dd = document.getElementById('menu-dd'); ddv = document.getElementById('menu-ddv'); map = document.getElementById('menu-map');
