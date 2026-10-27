@@ -17,7 +17,9 @@
     if(scene&&scene.traverse)scene.traverse(function(o){
       if((!o.isMesh&&!o.isInstancedMesh)||!o.geometry)return;
       if(o.userData&&o.userData.noShadow){o.castShadow=false;o.receiveShadow=false;return;}
-      if(o.userData&&o.userData.terrain){o.castShadow=false;o.receiveShadow=!!q.shadows;return;}
+      // Heightfield terrain is double-sided; shadow-map acne used to create giant black triangles across the hills.
+      // Contact shadows are rendered separately, so keep the terrain out of the real-time shadow receiver pass.
+      if(o.userData&&o.userData.terrain){o.castShadow=false;o.receiveShadow=false;return;}
       o.castShadow=!!q.shadows;o.receiveShadow=!!q.shadows;
     });
   }};
