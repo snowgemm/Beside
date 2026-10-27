@@ -4,13 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>Besidevalley: Dungeons</title>
-<link rel="stylesheet" href="css/style.css?v=20261028-instancing-fix2">
+<link rel="stylesheet" href="css/style.css?v=20261028-world-upgrade1">
 </head>
 <body>
 <div id="game"></div>
 <div id="touch"></div>
 <div id="joy"><div id="joy-knob"></div></div>
 <div id="hud">FPS --</div>
+<div id="coords" aria-live="off">X 0.0 · Y 0.0 · Z 0.0</div>
 <div id="hudL"><div id="wpn" class="empty"></div><div id="hp"><div id="hp-ghost"></div><div id="hp-fill"></div><div id="hp-seg"></div><span id="hp-text">100/100</span></div></div>
 <div id="fade"></div>
 <div id="room-hud"><b id="rh-room"></b><span id="rh-foes"></span></div>
@@ -27,37 +28,33 @@
 <button id="btn-bag" type="button">Túi</button>
 <button id="btn-jump" type="button">Nhảy</button>
 <button id="btn-interact" type="button"></button>
-<button id="btn-build" type="button">Xây</button>
-<button id="btn-break" type="button">Phá</button>
-<button id="btn-place" type="button">Đặt</button>
 <button id="btn-menu" type="button">⚙</button>
 <div id="menu"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
-<script src="js/assets.js?v=20261028-instancing-fix2"></script>
-<script src="js/palette.js?v=20261028-instancing-fix2"></script>
-<script src="js/toon.js?v=20261028-instancing-fix2"></script>
-<script src="js/save.js?v=20261028-instancing-fix2"></script>
-<script src="js/icons.js?v=20261028-instancing-fix2"></script>
-<script src="js/ui.js?v=20261028-instancing-fix2"></script>
-<script src="js/legacy-world.js?v=20261028-instancing-fix2"></script>
-<script src="js/fx.js?v=20261028-instancing-fix2"></script>
-<script src="js/sky.js?v=20261028-instancing-fix2"></script>
-<script src="js/rig.js?v=20261028-instancing-fix2"></script>
-<script src="js/phys.js?v=20261028-instancing-fix2"></script>
-<script src="js/player.js?v=20261028-instancing-fix2"></script>
-<script src="js/input.js?v=20261028-instancing-fix2"></script>
-<script src="js/combat.js?v=20261028-instancing-fix2"></script>
-<script src="js/audio-fix.js?v=20261028-instancing-fix2"></script>
-<script src="js/enemies.js?v=20261028-instancing-fix2"></script>
-<script src="js/items.js?v=20261028-instancing-fix2"></script>
-<script src="js/inventory.js?v=20261028-instancing-fix2"></script>
-<script src="js/rooms.js?v=20261028-instancing-fix2"></script>
-<script src="js/dungeon.js?v=20261028-instancing-fix2"></script>
-<script src="js/boss.js?v=20261028-instancing-fix2"></script>
-<script src="js/minimap.js?v=20261028-instancing-fix2"></script>
-<script src="js/build.js?v=20261028-instancing-fix2"></script>
-<script src="js/menu.js?v=20261028-instancing-fix2"></script>
-<script src="js/main.js?v=20261028-instancing-fix2"></script>
+<script src="js/assets.js?v=20261028-world-upgrade1"></script>
+<script src="js/palette.js?v=20261028-world-upgrade1"></script>
+<script src="js/toon.js?v=20261028-world-upgrade1"></script>
+<script src="js/save.js?v=20261028-world-upgrade1"></script>
+<script src="js/icons.js?v=20261028-world-upgrade1"></script>
+<script src="js/ui.js?v=20261028-world-upgrade1"></script>
+<script src="js/legacy-world.js?v=20261028-world-upgrade1"></script>
+<script src="js/fx.js?v=20261028-world-upgrade1"></script>
+<script src="js/sky.js?v=20261028-world-upgrade1"></script>
+<script src="js/rig.js?v=20261028-world-upgrade1"></script>
+<script src="js/phys.js?v=20261028-world-upgrade1"></script>
+<script src="js/player.js?v=20261028-world-upgrade1"></script>
+<script src="js/input.js?v=20261028-world-upgrade1"></script>
+<script src="js/combat.js?v=20261028-world-upgrade1"></script>
+<script src="js/audio-fix.js?v=20261028-world-upgrade1"></script>
+<script src="js/enemies.js?v=20261028-world-upgrade1"></script>
+<script src="js/items.js?v=20261028-world-upgrade1"></script>
+<script src="js/inventory.js?v=20261028-world-upgrade1"></script>
+<script src="js/rooms.js?v=20261028-world-upgrade1"></script>
+<script src="js/dungeon.js?v=20261028-world-upgrade1"></script>
+<script src="js/boss.js?v=20261028-world-upgrade1"></script>
+<script src="js/minimap.js?v=20261028-world-upgrade1"></script>
+<script src="js/menu.js?v=20261028-world-upgrade1"></script>
+<script src="js/main.js?v=20261028-world-upgrade1"></script>
 </body>
 </html>
