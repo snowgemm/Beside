@@ -1,6 +1,11 @@
 /* Besidevalley offline shell cache. Remote GLB models are cached separately in IndexedDB. */
 'use strict';
-const CACHE_NAME = 'besidevalley-shell-v4';
+const CACHE_NAME = 'besidevalley-shell-v5';
+const EXTERNAL_SCRIPTS = [
+  'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js',
+  'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js'
+];
+
 const SHELL = [
   './',
   './index.html',
@@ -39,7 +44,13 @@ self.addEventListener('install', event => {
         const response = await fetch(path, { cache: 'reload' });
         if (response.ok) await cache.put(path, response);
       } catch (_) { /* A failed optional shell entry should not break installation. */ }
-    }));
+    }).concat(EXTERNAL_SCRIPTS.map(async url => {
+      try {
+        const request = new Request(url, { mode: 'cors', credentials: 'omit', cache: 'reload' });
+        const response = await fetch(request);
+        if (response.ok) await cache.put(request, response);
+      } catch (_) { /* Keep the app installable even if a CDN is temporarily down. */ }
+    })));
     await self.skipWaiting();
   })());
 });
@@ -71,12 +82,7 @@ self.addEventListener('fetch', event => {
       const cache = await caches.open(CACHE_NAME);
       if (!isNavigation) {
         const cached = await cache.match(key);
-        if (cached) {
-          event.waitUntil(fetch(request).then(response => {
-            if (response.ok) return cache.put(key, response.clone());
-          }).catch(() => {}));
-          return cached;
-        }
+        if (cached) return cached;
       }
       try {
         const response = await fetch(request);
