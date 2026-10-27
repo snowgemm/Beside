@@ -241,8 +241,8 @@ check('newly streamed terrain chunks never receive shadow-map shadows',
   terrainSource.includes('mesh.receiveShadow=false') &&
   !terrainSource.includes("mesh.receiveShadow=!!(G.quality&&G.quality.value==='high')"));
 check('overworld height samples stay fractional for smooth hills',
-  terrainSource.includes('var N=18,H=new Float32Array(N*N)') &&
-  terrainSource.includes('return Math.max(3, Math.min(MAXH - 3, h))'));
+  terrainSource.includes('return Math.max(3, Math.min(MAXH - 3, h))') &&
+  terrainSource.includes('var N=CS+3,H=new Float32Array(N*N)'));
 check('ground detail texture does not repeat once per terrain block',
   terrainSource.includes('uvs.push((ox+x)*0.16,(oz+z)*0.16)'));
 check('character rigs use rough lit materials instead of unlit plastic shading',
