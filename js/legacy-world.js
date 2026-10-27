@@ -127,19 +127,28 @@
       var t = new THREE.Texture(cv);
       t.wrapS = t.wrapT = THREE.RepeatWrapping; t.magFilter = THREE.LinearFilter;
       t.minFilter = THREE.LinearMipmapLinearFilter || THREE.LinearFilter; // smooth filtering + mipmaps reduce harsh pixel shimmer
+      if (THREE.sRGBEncoding !== undefined) t.encoding = THREE.sRGBEncoding;
+      t.anisotropy = 2;
       t.needsUpdate = true;
       return t;
     } catch (e) { return null; }
   }
   var gs = 12345;
-  function grainTex() { // seamless, multi-scale matte surface grain; neutral enough to preserve biome vertex colours
-    return mkTex(64, function (x, y) {
-      var coarse = hash((x >> 3) + 31, (y >> 3) - 17), medium = hash(x * 3 + 91, y * 5 + 17), fine = hash(x * 17 - 23, y * 29 + 5);
-      var fleck = hash(x * 11 + 31, y * 13 - 5), g = 222 + Math.floor(coarse * 12 + medium * 10 + fine * 9) - 15;
-      if (fleck < 0.035) g -= 36;
-      else if (fleck > 0.985) g += 7;
-      g = Math.max(160, Math.min(255, g));
-      return [g, Math.min(255, g + (medium > .55 ? 2 : 0)), Math.max(0, g - 2)];
+  function tileNoise(x, y, size, cells, seed) {
+    var fx=x/size*cells, fy=y/size*cells, ix=Math.floor(fx), iy=Math.floor(fy), tx=fx-ix, ty=fy-iy;
+    tx=tx*tx*(3-2*tx); ty=ty*ty*(3-2*ty);
+    function at(ax,ay){return hash((ax%cells+cells)%cells+seed,(ay%cells+cells)%cells-seed);}
+    var a=at(ix,iy), b=at(ix+1,iy), c=at(ix,iy+1), d=at(ix+1,iy+1);
+    return (a+(b-a)*tx)*(1-ty)+(c+(d-c)*tx)*ty;
+  }
+  function grainTex() { // seamless 128px terrain microtexture: matte soil flecks with no hard tile boundary
+    var size=128;
+    return mkTex(size, function (x,y) {
+      var coarse=tileNoise(x,y,size,8,31), medium=tileNoise(x,y,size,24,73), fine=tileNoise(x,y,size,64,117), fleck=tileNoise(x,y,size,128,181);
+      var g=212+Math.floor(coarse*16+medium*12+fine*9)-18;
+      if(fleck<.018) g-=30; else if(fleck>.988) g+=8;
+      g=Math.max(160,Math.min(246,g));
+      return [g,Math.min(255,g+(medium>.56?2:0)),Math.max(0,g-(coarse>.62?4:2))];
     });
   }
   function rippleTex() { // tileable 32x32 ripple lines
@@ -341,8 +350,9 @@
     var dirt=ss(.35,1.5,slope)*(1-snow),rock=ss(1,2.8,slope)*(1-snow);
     if(!sand){r+=(ch(soil,16)-r)*dirt;g+=(ch(soil,8)-g)*dirt;b+=(ch(soil,0)-b)*dirt;r+=(ch(stone,16)-r)*rock;g+=(ch(stone,8)-g)*rock;b+=(ch(stone,0)-b)*rock;}
     var low=.94+fbm(wx*.012+17,wz*.012-23,2)*.12,fine=.985+hash(Math.floor(wx*3)+201,Math.floor(wz*3)-71)*.03;
-    // Slightly lower saturation/value so midday grass and sand do not clip to neon/luminous colours.
-    return[Math.max(0,Math.min(1,r*low*fine*.91)),Math.max(0,Math.min(1,g*low*fine*.90)),Math.max(0,Math.min(1,b*low*fine*.92))];
+    // Compress bright sand more than grass to stop midday exposure clipping while retaining biome variation.
+    var sr=sand?.87:.90, sg=sand?.83:.88, sb=sand?.78:.90;
+    return[Math.max(0,Math.min(1,r*low*fine*sr)),Math.max(0,Math.min(1,g*low*fine*sg)),Math.max(0,Math.min(1,b*low*fine*sb))];
   }
   function build(cx,cz){
     // One full sample ring is required beyond every terrain vertex so finite-difference slopes never read undefined.
@@ -395,9 +405,15 @@
   function leafCol(bi, r) {
     return bi === 4 ? AUT[(r * 3) | 0] : bi === 1 ? [.15, .44, .2] : bi === 3 ? [.13, .36, .27] : bi === 2 ? [.3, .5, .2] : [.3, .64, .24];
   }
-  function tree(bi, cx, h, cz, r2, j) {
+  function tree(bi, cx, h, cz, r2, j, ox, oz) {
     var th, L, tk = [.4 * j, .26 * j, .14 * j], k, ext = null;
-    if (bi !== 2 && G.assets && G.assets.model) ext = G.assets.model(bi === 3 ? 'pine' : 'tree');
+    // Textured GLBs near the player; distant trees stay merged into chunk geometry to cap mobile draw calls.
+    if (bi !== 2 && G.assets && G.assets.model) {
+      var pp=G.player&&G.player.pos, wx=(ox||0)+cx, wz=(oz||0)+cz;
+      var near=!pp||(wx-pp.x)*(wx-pp.x)+(wz-pp.z)*(wz-pp.z)<42*42;
+      var variant=bi===3?'pine':r2<.34?'tree':r2<.67?'tree2':'tree3';
+      if(near) ext=G.assets.model(variant);
+    }
     if (ext) {
       ext.position.set(cx, h - 0.05, cz); ext.rotation.y = r2 * Math.PI * 2; ext.scale.multiplyScalar(j);
       ext.userData.windAmp = bi === 3 ? 0.008 : 0.018; ext.userData.windPhase = r2 * Math.PI * 2;
@@ -468,7 +484,7 @@
       for (g = 0; g < gl; g++) { var dx = wx + .5 - gates[g].x, dz = wz + .5 - gates[g].z; if (dx * dx + dz * dz < 64) { near = true; break; } }
       if (near) continue;
       var cx = lx + .5 + (hash(wx + 1, wz + 2) - .5) * .5, cz = lz + .5 + (hash(wx + 2, wz + 1) - .5) * .5, j = .9 + .2 * hash(wx + 5, wz + 9), r2 = hash(wx + 3, wz + 4), L, c;
-      if (kind === 1) { tree(bi, cx, h, cz, r2, j); trees++; dbl.push(ox + cx, oz + cz, bi===2?0.34:0.42, h, h + (bi===2?3.7:5.4)); }
+      if (kind === 1) { tree(bi, cx, h, cz, r2, j, ox, oz); trees++; dbl.push(ox + cx, oz + cz, bi===2?0.34:0.42, h, h + (bi===2?3.7:5.4)); }
       else if (kind === 2) {
         L = leafCol(bi, r2);
         var bushModel = G.assets && G.assets.model ? G.assets.model('bush') : null;

@@ -16,10 +16,12 @@
       archer: { file: 'archer.glb', height: 1.6, rotY: Math.PI },
       wolf: { file: 'wolf.glb', height: 1, rotY: Math.PI }, skeleton: { file: 'skeleton.glb', height: 1.7, rotY: Math.PI }, bat: { file: 'bat.glb', height: 0.9, rotY: Math.PI },
       spider: { file: 'spider.glb', height: 0.8, rotY: Math.PI }, mushroom: { file: 'mushroom.glb', height: 1.3, rotY: Math.PI },
-      // Kenney Nature Kit: one coherent flat-shaded palette, CC0; procedural scenery is the fallback.
-      tree: { url: 'https://raw.githubusercontent.com/Hidencod/tge-assets/main/packs/nature-kit/tree-default.glb', height: 5.2 },
-      pine: { url: 'https://raw.githubusercontent.com/Hidencod/tge-assets/main/packs/nature-kit/tree-pinetalla.glb', height: 5.2 },
-      bush: { url: 'https://raw.githubusercontent.com/Hidencod/tge-assets/main/packs/nature-kit/plant-bush.glb', height: 1.0 },
+      // Quaternius Stylized Nature MegaKit is CC0; IndexedDB stores each GLB after the first successful online download.
+      tree: { url: 'https://raw.githubusercontent.com/anshaneja5/skyline-run/main/public/assets/models/tree1.glb', height: 4.8 },
+      tree2: { url: 'https://raw.githubusercontent.com/anshaneja5/skyline-run/main/public/assets/models/tree2.glb', height: 4.55 },
+      tree3: { url: 'https://raw.githubusercontent.com/anshaneja5/skyline-run/main/public/assets/models/tree3.glb', height: 4.7 },
+      pine: { url: 'https://raw.githubusercontent.com/Hidencod/tge-assets/main/packs/nature-kit/tree-pinetalla.glb', height: 4.9 },
+      bush: { url: 'https://raw.githubusercontent.com/anshaneja5/skyline-run/main/public/assets/models/bush.glb', height: 0.95 },
       rock: { url: 'https://raw.githubusercontent.com/Hidencod/tge-assets/main/packs/nature-kit/rock-smalla.glb', height: 0.8 },
       mushroomProp: { url: 'https://raw.githubusercontent.com/Hidencod/tge-assets/main/packs/nature-kit/mushroom-red.glb', height: 0.65 },
       // Small stylized collectible props from Kenney Mini Dungeon (CC0).
@@ -149,7 +151,7 @@
       function finish() { if (finished) return; finished = true; done(); }
       function loaded(g) {
         try { tpl[name] = fit(g.scene, def); } catch (e) {}
-        if (!envRefreshed && A.has('tree') && A.has('pine') && A.has('bush') && A.has('rock') && A.has('mushroomProp') && G.world && G.world.refreshDecor) {
+        if (!envRefreshed && A.has('tree') && A.has('tree2') && A.has('tree3') && A.has('pine') && A.has('bush') && A.has('rock') && A.has('mushroomProp') && G.world && G.world.refreshDecor) {
           envRefreshed = true; G.world.refreshDecor();
         }
         finish();
@@ -195,7 +197,7 @@
     if (window.THREE && THREE.GLTFLoader) for (k in MANIFEST.models) jobs.push(loadModel(k, MANIFEST.models[k]));
     if (window.fetch) for (k in MANIFEST.sounds) jobs.push(loadSound(k, MANIFEST.sounds[k]));
     return Promise.all(jobs).then(function () {
-      if (!envRefreshed && (A.has('tree') || A.has('pine') || A.has('bush') || A.has('rock') || A.has('mushroomProp')) && G.world && G.world.refreshDecor) { envRefreshed = true; G.world.refreshDecor(); }
+      if (!envRefreshed && (A.has('tree') || A.has('tree2') || A.has('tree3') || A.has('pine') || A.has('bush') || A.has('rock') || A.has('mushroomProp')) && G.world && G.world.refreshDecor) { envRefreshed = true; G.world.refreshDecor(); }
       if (pending && !timer) timer = setInterval(decodeAll, 500);
     }, function () {});
   };

@@ -10,10 +10,11 @@
   var scene = new THREE.Scene();
   var desiredFps = 0;
   G.setFpsCap = function (value) { var n = Number(value); desiredFps = [30,60,90,120,144].indexOf(n) >= 0 ? n : 0; };
-  var qualityData={low:{pixel:1,grass:'low',shadows:false},medium:{pixel:1.35,grass:'medium',shadows:false},high:{pixel:1.65,grass:'high',shadows:false}};
+  var qualityData={low:{pixel:1,grass:'low',shadows:false},medium:{pixel:1.35,grass:'medium',shadows:false},high:{pixel:1.65,grass:'high',shadows:false}}, adaptiveScale=1;
+  function resizeForQuality(){var q=qualityData[G.quality&&G.quality.value]||qualityData[touch?'medium':'high'];renderer.setPixelRatio(Math.max(.72,Math.min(window.devicePixelRatio||1,q.pixel)*adaptiveScale));renderer.setSize(window.innerWidth,window.innerHeight);}
   G.quality={value:touch?'medium':'high',set:function(level){
     if(!qualityData[level])level=touch?'medium':'high';this.value=level;var q=qualityData[level];
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,q.pixel));renderer.setSize(window.innerWidth,window.innerHeight);
+    resizeForQuality();
     // Real-time shadow maps caused black terrain wedges on some mobile GPUs. Use contact shading instead.
     renderer.shadowMap.enabled=false;if(G.sky&&G.sky.setShadows)G.sky.setShadows(false);
     if(G.world&&G.world.setGrassQuality)G.world.setGrassQuality(q.grass);
@@ -26,12 +27,12 @@
       o.castShadow=false;o.receiveShadow=false;
     });
   }};
+  G.quality.setAdaptiveScale=function(value){var next=Math.max(.72,Math.min(1,+value||1));if(Math.abs(next-adaptiveScale)<.035)return false;adaptiveScale=next;resizeForQuality();return true;};
 
   var camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 500);
   G.camera = camera; G.renderer = renderer;
   window.addEventListener('resize', function () {
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, (G.quality && G.quality.value === "low") ? 1 : (G.quality && G.quality.value === "medium") ? 1.35 : 1.65));
-    renderer.setSize(window.innerWidth, window.innerHeight);
+    resizeForQuality();
     camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix();
   });
 
@@ -60,7 +61,7 @@
   G.ui.init();
 
   var hud = document.getElementById('hud'), coordsHud = document.getElementById('coords');
-  var last = performance.now(), accT = 0, accN = 0, hudT = 0, fps = 0, slowT = 0, lowered = 0;
+  var last = performance.now(), accT = 0, accN = 0, hudT = 0, fps = 0, slowT = 0, lowered = 0, adaptiveSlowT = 0, adaptiveFastT = 0;
   function frame(now) {
     var elapsedMs = now - last;
     if (desiredFps > 0 && elapsedMs + 0.05 < 1000 / desiredFps) return;
@@ -80,10 +81,18 @@
 
     if (raw < 0.25) { accT += raw; accN++; hudT += raw; }
     if (accT >= 1) {
-      var avg = accT / accN * 1000;
+      var sampleWindow = accT, avg = accT / accN * 1000;
       fps = Math.round(1000 / avg);
-      // automatic quality: touch only, >28 ms average for 5 s, at most twice per session, min draw distance 3
-      if (touch && avg > 28 && !G.paused && !G.dungeon.active) slowT += accT; else slowT = 0;
+      // Hysteresis avoids flapping; never interpret an intentional 30/60 FPS cap as a slow GPU.
+      if (desiredFps === 0 && !G.paused && !G.dungeon.active) {
+        if (avg > (touch ? 25 : 22)) { adaptiveSlowT += sampleWindow; adaptiveFastT = 0; }
+        else if (avg < (touch ? 17 : 14.5)) { adaptiveFastT += sampleWindow; adaptiveSlowT = 0; }
+        else { adaptiveSlowT = Math.max(0, adaptiveSlowT - sampleWindow); adaptiveFastT = 0; }
+        if (adaptiveSlowT >= 2 && adaptiveScale > .72) { adaptiveSlowT = 0; if (G.quality.setAdaptiveScale(adaptiveScale - .08)) G.toast('Đã hạ độ phân giải render để giữ FPS', '#ffd34d'); }
+        if (adaptiveFastT >= 8 && adaptiveScale < 1) { adaptiveFastT = 0; G.quality.setAdaptiveScale(Math.min(1, adaptiveScale + .04)); }
+      } else { adaptiveSlowT = 0; adaptiveFastT = 0; }
+      // Last resort: lower streamed range only after sustained overload.
+      if (touch && desiredFps === 0 && avg > 28 && !G.paused && !G.dungeon.active) slowT += sampleWindow; else slowT = 0;
       if (slowT >= 5) {
         slowT = 0;
         if (lowered < 2 && G.world.drawDistance > 3) {
