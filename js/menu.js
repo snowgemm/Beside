@@ -1,14 +1,15 @@
 (function () {
   var G = window.Game = window.Game || {};
-  var M = G.menu = { open: false, settings: { vol: 100, dd: null, map: true, vib: true } }, root, vol, dd, ddv, map, vib, head, home, S = M.settings;
+  var M = G.menu = { open: false, settings: { vol: 100, dd: null, map: true, vib: true, quality: (G.input && G.input.isTouch) ? 'medium' : 'high' } }, root, vol, dd, ddv, map, vib, head, home, S = M.settings;
 
   function apply() {
     if (G.audio.setVolume) G.audio.setVolume(S.vol / 100);
     if (S.dd != null) G.world.setDrawDistance(S.dd);
     G.minimap.setEnabled(S.map);
+    if (G.quality && G.quality.set) G.quality.set(S.quality);
   }
   function sync() {
-    vol.value = S.vol; dd.value = G.world.drawDistance; ddv.textContent = G.world.drawDistance; map.checked = S.map; vib.checked = S.vib !== false;
+    vol.value = S.vol; dd.value = G.world.drawDistance; ddv.textContent = G.world.drawDistance; map.checked = S.map; vib.checked = S.vib !== false; qual.value = S.quality;
     var t = !!(G.ui && G.ui.titleOpen); head.textContent = t ? 'Cài đặt' : 'Tạm dừng'; home.style.display = t ? 'none' : '';
   }
   M.setOpen = function (o) {
@@ -32,17 +33,19 @@
       '<div class="menu-btns"><button id="menu-resume" class="primary" type="button">Tiếp tục</button></div>' +
       '<div class="menu-row"><span>Âm lượng</span><input id="menu-vol" type="range" min="0" max="100" step="5"></div>' +
       '<div class="menu-row"><span>Tầm nhìn: <b id="menu-ddv"></b></span><input id="menu-dd" type="range" min="3" max="7" step="1"></div>' +
-      '<div class="menu-row"><span>Bản đồ nhỏ</span><input id="menu-map" type="checkbox"></div>' +
+      '<div class="menu-row"><label for="menu-quality">Chất lượng đồ họa</label><select id="menu-quality"><option value="low">Thấp</option><option value="medium">Vừa</option><option value="high">Cao</option></select></div>
+      <div class="menu-row"><span>Bản đồ nhỏ</span><input id="menu-map" type="checkbox"></div>' +
       '<div class="menu-row"><span>Rung</span><input id="menu-vib" type="checkbox"></div>' +
       '<div class="menu-btns"><button id="menu-clear" type="button">Xóa chỉnh sửa</button><button id="menu-home" type="button">Về màn hình chính</button><button id="menu-new" type="button">Chơi mới</button></div></div>';
     vol = document.getElementById('menu-vol'); dd = document.getElementById('menu-dd'); ddv = document.getElementById('menu-ddv'); map = document.getElementById('menu-map');
-    vib = document.getElementById('menu-vib'); head = document.getElementById('menu-head'); home = document.getElementById('menu-home');
+    vib = document.getElementById('menu-vib'); qual = document.getElementById('menu-quality'); head = document.getElementById('menu-head'); home = document.getElementById('menu-home');
     document.getElementById('menu-close').onclick = function () { M.setOpen(false); };
     document.getElementById('menu-resume').onclick = function () { M.setOpen(false); };
     root.addEventListener('click', function (e) { if (e.target === root) M.setOpen(false); });
     vol.oninput = function () { S.vol = +vol.value; apply(); G.save.request(); };
     dd.oninput = function () { S.dd = +dd.value; ddv.textContent = S.dd; apply(); G.save.request(); };
     map.onchange = function () { S.map = map.checked; apply(); G.save.request(); };
+    qual.onchange = function () { S.quality = qual.value; apply(); G.save.request(); };
     vib.onchange = function () { S.vib = vib.checked; G.save.request(); if (S.vib && navigator.vibrate) { try { navigator.vibrate(30); } catch (e) {} } };
     document.getElementById('menu-clear').onclick = function () {
       if (window.confirm('Xóa toàn bộ chỉnh sửa khối? Không thể hoàn tác.')) M.clearEdits();
@@ -64,12 +67,13 @@
     document.addEventListener('pointerlockchange', function () {
       if (document.pointerLockElement !== cv && !M.open && !(G.inventory && G.inventory.open) && !(G.ui && G.ui.titleOpen) && !G.player.dead) M.setOpen(true);
     });
-    G.save.register('settings', function () { return { vol: S.vol, dd: S.dd, map: S.map, vib: S.vib }; }, function (d) {
+    G.save.register('settings', function () { return { vol: S.vol, dd: S.dd, map: S.map, vib: S.vib, quality: S.quality }; }, function (d) {
       if (!d) return;
       if (typeof d.vol === 'number' && isFinite(d.vol)) S.vol = Math.max(0, Math.min(100, d.vol));
       if (typeof d.dd === 'number' && isFinite(d.dd)) S.dd = Math.max(3, Math.min(7, Math.round(d.dd)));
       if (typeof d.map === 'boolean') S.map = d.map;
       if (typeof d.vib === 'boolean') S.vib = d.vib;
+      if (d.quality === 'low' || d.quality === 'medium' || d.quality === 'high') S.quality = d.quality;
     });
   };
   M.apply = apply;

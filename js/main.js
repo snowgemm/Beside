@@ -3,11 +3,28 @@
   var touch = G.input.isTouch;
   var renderer = new THREE.WebGLRenderer({ antialias: !touch, powerPreference: 'high-performance' });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, touch ? 1.5 : 2));
+  renderer.shadowMap.enabled = false;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.setSize(window.innerWidth, window.innerHeight);
   document.getElementById('game').appendChild(renderer.domElement);
   var scene = new THREE.Scene();
+  var qualityData={low:{pixel:1,grass:'low',shadows:false},medium:{pixel:1.5,grass:'medium',shadows:false},high:{pixel:2,grass:'high',shadows:true}};
+  G.quality={value:touch?'medium':'high',set:function(level){
+    if(!qualityData[level])level=touch?'medium':'high';this.value=level;var q=qualityData[level];
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,q.pixel));renderer.setSize(window.innerWidth,window.innerHeight);
+    renderer.shadowMap.enabled=!!q.shadows;if(G.sky&&G.sky.setShadows)G.sky.setShadows(!!q.shadows);
+    if(G.world&&G.world.setGrassQuality)G.world.setGrassQuality(q.grass);
+    if(scene&&scene.traverse)scene.traverse(function(o){
+      if((!o.isMesh&&!o.isInstancedMesh)||!o.geometry)return;
+      if(o.userData&&o.userData.noShadow){o.castShadow=false;o.receiveShadow=false;return;}
+      if(o.userData&&o.userData.terrain){o.castShadow=false;o.receiveShadow=!!q.shadows;return;}
+      o.castShadow=!!q.shadows;o.receiveShadow=!!q.shadows;
+    });
+  }};
+
   var camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 500);
   window.addEventListener('resize', function () {
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, (G.quality && G.quality.value === "low") ? 1 : (G.quality && G.quality.value === "medium") ? 1.5 : 2));
     renderer.setSize(window.innerWidth, window.innerHeight);
     camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix();
   });
@@ -53,7 +70,7 @@
     G.sky.update(G.paused ? 0 : dt);
     G.fx.update(G.paused ? 0 : dt, p.x, p.y, p.z);
     G.minimap.update(raw);
-    G.world.update(p.x, p.z, 4);
+    G.world.update(p.x, p.z, 4, dt);
     renderer.render(scene, camera);
 
     if (raw < 0.25) { accT += raw; accN++; hudT += raw; }

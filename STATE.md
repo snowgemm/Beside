@@ -1,6 +1,6 @@
 # Besidevalley: Dungeons — STATE
 
-Files: index.html, css/style.css, assets/ (README.md, models/, sfx/), js/{assets,save,world,player,input,combat,enemies,items,inventory,rooms,dungeon,boss,minimap,main}.js
+Files: index.html, css/style.css, assets/ (README.md, models/, sfx/), js/{assets,palette,toon,save,legacy-world,sky,player,input,phys,combat,enemies,items,inventory,rooms,dungeon,boss,minimap,menu,main}.js, plus the existing UI/support scripts. js/world.js and js/blocks.js are retained but not loaded.
 
 APIs (global `Game`):
 - world: getHeight, getBlock, solid, seed, chunk hooks
@@ -102,3 +102,20 @@ Stage 11 (art bible, palette, gallery, validation) — DONE:
 - gallery.html + gallery.js (open next to index.html; static host or file://; loads three + assets, palette, rig, items, icons, player, enemies, boss, dungeon only, not the game): tabs Mô hình / Mob / Prop / Vật phẩm / Bảng màu / Kiểm tra. Tap a card = show it + copy its id; drag = turntable yaw/pitch (auto-spin resumes after 1.5 s; wheel zooms); ☀/🌙 = day/night (sky + multiply tint); "Tỉ lệ" = scale reference (real player rig 1.7 blocks + 1x1x1 wireframe block); ⚠ on cards and info bar when over budget; items show the icon with rarity 1-5 buttons; palette tab: tap a swatch to copy hex; validate tab shows the report (badge = issues).
 VERIFIED (node, hand-written THREE stub): all scripts load; registry lists player, 9 mobs + boss, 4 props, 10 items; validate() runs with 0 missing ids, 0 errors; palette helpers; syntax of gallery.js.
 UNVERIFIED: gallery rendering/touch/clipboard on real phones, real triangle counts of props (stub geometry), day/night look, index.html game still loads (only a script tag added).
+
+Current rendering direction (2026-10-27; supersedes the earlier Stage 8 block-faced terrain renderer):
+- Terrain source: js/legacy-world.js is the only active terrain module. Game.config.legacyTerrain defaults to true. index.html loads js/toon.js and js/legacy-world.js and does not load js/blocks.js or js/world.js; those files were not modified. Existing heightmap, column-edit save key edits, getHeight, getBlock, solid, setColumn, biome and chunk APIs remain available. Added aliases: surfaceHeight(x,z), isSolid(x,y,z), setViewDistance(n), and decorBlockers(cx,cz) (null; legacy vegetation remains visual-only).
+- Art direction: smooth stylized 3D heightmap surface, shared edge normals, biome/height/slope vertex colours, sand by the sea, dirt/rock on steep slopes, snow at high elevation, and low-frequency painted variation. Character and mob meshes are unchanged.
+- Game.toon (js/toon.js): makeMaterial(color,opts) uses MeshToonMaterial with one shared four-step DataTexture gradient; addOutline(mesh,thickness,color) creates a back-face inverted hull; blobShadow(radius) returns a soft transparent disc. No custom toon shader.
+- Sky/light (js/sky.js): gradient dome, sun/moon discs, four drifting cloud sprites and stars; hemisphere light and one directional light. The existing 600-second day cycle warms dawn/dusk and cools night; fog and terrain tint track the cycle. Shadows are off by default; Cao quality enables one 1024 directional map.
+- Water (js/legacy-world.js): one semi-transparent local 112 m plane with shallow/deep vertex colours, heightmap-derived shoreline foam, gentle waves and reused geometry/arrays; no render-to-texture or refraction.
+- Grass/flowers (js/legacy-world.js): capped InstancedMesh batches (Thấp 300/36, Vừa 650/80, Cao 1050/135), recycled in roughly a 25 m radius and sampled only from grassy flat heightmap columns. The small onBeforeCompile wind hook is skipped in safe mode.
+- Quality (js/main.js, js/menu.js, css/style.css): Chất lượng đồ họa offers Thấp/Vừa/Cao and persists in the existing settings save slot. Pixel ratio caps are 1/1.5/2. Phones default to Vừa; old saves without this option use the device default.
+- Safe mode: open with ?safe=1. Game.toon.safeMode and Game.safeMode disable the grass wind shader injection, leaving heightmap terrain, water and built-in Three.js materials available.
+
+Owner real-device checklist (five):
+1. Terrain colours and smooth chunk seams on meadows, steep hills, beaches, snow/high ground and across biomes.
+2. Walk and wade along the water edge; confirm foam follows the shoreline without gaps, visible land flooding or distracting waves.
+3. Observe dawn, noon, dusk and night; verify sky, sun/moon, fog, light colour and night visibility transition smoothly.
+4. Compare Thấp, Vừa and Cao on the same phone; record FPS, hitching and heat, including the trade-off from High shadows.
+5. Load ?safe=1; confirm no injected-shader errors and that terrain, water and gameplay load with static grass.
