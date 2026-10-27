@@ -16,23 +16,11 @@ button{font-size:16px;padding:10px 14px;border:0;border-radius:8px;background:#2
   ren.setSize(innerWidth, innerHeight); ren.setPixelRatio(Math.min(devicePixelRatio || 1, 2)); document.body.appendChild(ren.domElement);
   var floor = new THREE.Mesh(new THREE.PlaneGeometry(60, 12), new THREE.MeshBasicMaterial({ color: 0x6cbf5a })); floor.rotation.x = -Math.PI / 2; scene.add(floor);
   var specs = [G.player.makeSpec({ name: 'Kiếm sắt', rarity: 3 }), T.slime.spec, T.goblin.spec, T.archer.spec, T.wolf.spec, T.skeleton.spec, T.bat.spec, T.spider.spec, T.mushroom.spec, G.boss.spec];
-  specs.forEach(function (sp, i) {
-    var r = G.rig.build(sp, 0); r.group.position.set((i - 4.5) * 2.7 + (i === 9 ? 1 : 0), 0, 0); scene.add(r.group); rigs.push(r);
-  });
-  function fit() {
-    cam.aspect = innerWidth / innerHeight; cam.position.set(0, 5, Math.max(22, 30 / cam.aspect)); cam.lookAt(0, 1.4, 0);
-    cam.updateProjectionMatrix(); ren.setSize(innerWidth, innerHeight);
-  }
+  specs.forEach(function (sp, i) { var r = G.rig.build(sp, 0); r.group.position.set((i - 4.5) * 2.7 + (i === 9 ? 1 : 0), 0, 0); scene.add(r.group); rigs.push(r); });
+  function fit() { cam.aspect = innerWidth / innerHeight; cam.position.set(0, 5, Math.max(22, 30 / cam.aspect)); cam.lookAt(0, 1.4, 0); cam.updateProjectionMatrix(); ren.setSize(innerWidth, innerHeight); }
   addEventListener('resize', fit); fit();
   var acts = { 'Đứng yên': ['idle'], 'Đi': ['walk', { speed: 3.5 }], 'Đánh': ['attack', { dur: 0.9, windup: 0.4 }], 'Bị đau': ['hurt'], 'Chết': ['death'] };
-  Object.keys(acts).forEach(function (n) {
-    var b = document.createElement('button'); b.textContent = n; document.getElementById('bar').appendChild(b);
-    b.onclick = function () { rigs.forEach(function (r) { r.play(acts[n][0], acts[n][1]); }); };
-  });
-  (function loop() {
-    requestAnimationFrame(loop); var dt = Math.min(clock.getDelta(), 0.05);
-    rigs.forEach(function (r) { r.group.rotation.y += dt * 0.5; r.update(dt); });
-    ren.render(scene, cam);
-  })();
+  Object.keys(acts).forEach(function (n) { var b = document.createElement('button'); b.textContent = n; document.getElementById('bar').appendChild(b); b.onclick = function () { rigs.forEach(function (r) { r.play(acts[n][0], acts[n][1]); }); }; });
+  (function loop() { requestAnimationFrame(loop); var dt = Math.min(clock.getDelta(), 0.05); rigs.forEach(function (r) { r.group.rotation.y += dt * 0.5; r.update(dt); }); ren.render(scene, cam); })();
 })();
 </script></body></html>
