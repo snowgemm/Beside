@@ -465,10 +465,10 @@
     var geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.Float32BufferAttribute(dp, 3));
     geo.setAttribute('color', new THREE.Float32BufferAttribute(dc, 3));
-    geo.setIndex(di);
+    geo.setIndex(di); geo.computeVertexNormals();
     var m = new THREE.Mesh(geo, decorMat);
     for (var mi = 0; mi < modelDecor.length; mi++) m.add(modelDecor[mi]);
-    m.userData = { items: n };
+    m.userData = { items: n, noShadow: true };
     return m;
   }
 
