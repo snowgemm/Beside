@@ -227,6 +227,21 @@ check('environment asset loader preserves lit PBR materials',
   assetSource.includes('src.roughness') &&
   assetSource.includes('tree-default.glb'));
 
+const mainSource = fs.readFileSync(path.join(jsDir, 'main.js'), 'utf8');
+check('shadow maps remain disabled at every graphics quality',
+  mainSource.includes('renderer.shadowMap.enabled=false') &&
+  !mainSource.includes('renderer.shadowMap.enabled=!!q.shadows'));
+check('grass uses stable two-sided cards without injected wind distortion',
+  terrainSource.includes('new THREE.MeshBasicMaterial({color:green,side:THREE.DoubleSide})') &&
+  terrainSource.includes('grassShader=null;') &&
+  !terrainSource.includes('uWindTime + instanceMatrix'));
+check('grass density is capped for mobile instead of filling the horizon with spikes',
+  terrainSource.includes("grassTarget=level==='low'?140:level==='high'?420:260"));
+check('terrain and sand are tone-mapped below the overexposed palette',
+  terrainSource.includes('r*low*fine*.91') &&
+  terrainSource.includes('g*low*fine*.90') &&
+  terrainSource.includes('b*low*fine*.92'));
+
 const failures = results.filter((result) => !result.pass);
 console.log('JavaScript syntax: ' + jsFiles.length + ' files passed');
 console.log('Headless camera/input checks: ' + (results.length - failures.length) + '/' + results.length + ' passed');
