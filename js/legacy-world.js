@@ -151,8 +151,17 @@
   }
 
   function grassGeometry(){
-    var g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute([-.045,0,0,.045,0,0,0,.58,0,0,0,-.045,0,0,.045,0,.58,0],3));
-    g.setAttribute('uv',new THREE.Float32BufferAttribute([0,0,1,0,.5,1,0,0,1,0,.5,1],2));g.setIndex([0,1,2,3,4,5]);g.computeVertexNormals();return g;
+    // Three broader crossed blades read as a tuft rather than thin black pins at mobile viewing distance.
+    var g=new THREE.BufferGeometry();
+    g.setAttribute('position',new THREE.Float32BufferAttribute([
+      -.07,0,0,.07,0,0,0,.78,0,
+      0,0,-.07,0,0,.07,0,.78,0,
+      -.05,0,-.05,.05,0,.05,0,.78,0
+    ],3));
+    g.setAttribute('uv',new THREE.Float32BufferAttribute([
+      0,0,1,0,.5,1,0,0,1,0,.5,1,0,0,1,0,.5,1
+    ],2));
+    g.setIndex([0,1,2,3,4,5,6,7,8]);g.computeVertexNormals();return g;
   }
   function setGrassQuality(level){grassTarget=level==='low'?300:level==='high'?1050:650;flowerTarget=level==='low'?36:level==='high'?135:80;grassDirty=true;}
   W.setGrassQuality=setGrassQuality;
@@ -378,6 +387,7 @@
     if (bi !== 2 && G.assets && G.assets.model) ext = G.assets.model(bi === 3 ? 'pine' : 'tree');
     if (ext) {
       ext.position.set(cx, h - 0.05, cz); ext.rotation.y = r2 * Math.PI * 2; ext.scale.multiplyScalar(j);
+      ext.userData.windAmp = bi === 3 ? 0.008 : 0.018; ext.userData.windPhase = r2 * Math.PI * 2;
       ext.traverse(function (o) { if (o.isMesh) { o.castShadow = false; o.userData = o.userData || {}; o.userData.noShadow = true; } });
       modelDecor.push(ext); return;
     }
@@ -516,6 +526,8 @@
     if(W.held)return;var pcx=Math.floor(px/CS),pcz=Math.floor(pz/CS);
     if(dirty||pcx!==lcx||pcz!==lcz){lcx=pcx;lcz=pcz;dirty=false;plan(pcx,pcz);}
     process(budgetMs);dt=typeof dt==='number'&&isFinite(dt)?Math.max(0,Math.min(.05,dt)):.016;updateWater(px,pz,dt);
+    // Gentle tree sway; only direct model roots in loaded chunks are animated.
+    chunks.forEach(function(m){if(!m.visible||!m.decor)return;var a=m.decor.children;for(var i=0;i<a.length;i++){var o=a[i];if(o.userData&&o.userData.windAmp)o.rotation.z=Math.sin(waterTime*.55+o.userData.windPhase)*o.userData.windAmp;}});
   };
   W.findSpawn = function () {
     for (var r = 0; r < 400; r += 6) {
