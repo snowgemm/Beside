@@ -8,6 +8,7 @@ on:
       - main
     paths:
       - "incoming-art-bible.zip"
+      - ".github/workflows/sync-art-bible.yml"
 
 permissions:
   contents: write
@@ -39,7 +40,7 @@ jobs:
         run: |
           set -euo pipefail
           git fetch origin main
-          git switch --force-create sync-art-bible origin/main
+          git switch --force-create main origin/main
 
       - name: Safely extract and sync archive
         shell: bash
