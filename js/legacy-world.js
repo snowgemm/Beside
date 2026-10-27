@@ -34,8 +34,8 @@
   function baseHeight(x, z) {
     var px = Math.floor(x) + 0.5, pz = Math.floor(z) + 0.5;
     var n = fbm(px * 0.006, pz * 0.006, 3), m = fbm(px * 0.03 + 50, pz * 0.03 - 70, 4);
-    var h = 12 + (n - 0.5) * 50 + (m - 0.5) * 10;
-    return Math.max(3, Math.min(MAXH - 3, Math.floor(h)));
+    var h = 13 + (n - 0.5) * 35 + (m - 0.5) * 6;
+    return Math.max(3, Math.min(MAXH - 3, h));
   }
   /* ---------- edit layer: sparse column (x,z) -> height over the heightmap ---------- */
   var EMAX = 20000, EMIN_H = 1, EMAX_H = 48, edits = new Map();
@@ -61,7 +61,7 @@
     x = Math.floor(x); y = Math.floor(y); z = Math.floor(z);
     if (y < 0) return STONE;
     var h = getHeight(x, z);
-    if (y < h) return y === h - 1 ? topType(h) : STONE;
+    if (y < h) return y === Math.floor(h) ? topType(h) : STONE;
     return y < SEA ? WATER : AIR;
   }
   function solid(x, y, z) { var b = getBlock(x, y, z); return b > 0 && b !== WATER; }
@@ -251,7 +251,7 @@
     h = Math.max(EMIN_H, Math.min(EMAX_H, Math.floor(h)));
     var k = ek(x, z), cur = getHeight(x, z), b = baseHeight(x, z);
     if (h === cur) return 'same';
-    if (h === b) edits.delete(k);
+    if (h === Math.floor(b)) edits.delete(k);
     else { if (!edits.has(k) && edits.size >= EMAX) return 'cap'; edits.set(k, h); }
     rebuildAround(x, z);
     return 'ok';
@@ -269,7 +269,7 @@
       var x = a[i], z = a[i + 1], h = a[i + 2];
       if (!Number.isInteger(x) || !Number.isInteger(z) || !Number.isInteger(h) || Math.abs(x) > 1000000 || Math.abs(z) > 1000000) continue;
       h = Math.max(EMIN_H, Math.min(EMAX_H, h));
-      if (h !== baseHeight(x, z)) edits.set(ek(x, z), h);
+      if (h !== Math.floor(baseHeight(x, z))) edits.set(ek(x, z), h);
     }
     if (chunks.size) chunks.forEach(function (m) { rebuildChunk(m.cx, m.cz); });
   };
@@ -338,13 +338,13 @@
     return[Math.max(0,Math.min(1,r*low*fine)),Math.max(0,Math.min(1,g*low*fine)),Math.max(0,Math.min(1,b*low*fine))];
   }
   function build(cx,cz){
-    var N=18,H=new Int16Array(N*N),ox=cx*CS,oz=cz*CS,x,z;
+    var N=18,H=new Float32Array(N*N),ox=cx*CS,oz=cz*CS,x,z;
     for(z=-1;z<=CS;z++)for(x=-1;x<=CS;x++)H[(z+1)*N+x+1]=getHeight(ox+x,oz+z);
     var positions=[],colors=[],normals=[],uvs=[],indices=[],BIO=new Uint8Array(CS*CS);
     for(z=0;z<=CS;z++)for(x=0;x<=CS;x++){
       var hi=(z+1)*N+x+1,h=H[hi],hl=H[hi-1],hr=H[hi+1],hb=H[hi-N],hf=H[hi+N];
       var dx=hr-hl,dz=hf-hb,nx=-dx,ny=2,nz=-dz,inv=1/Math.sqrt(nx*nx+ny*ny+nz*nz),paint=vertexPaint(ox+x,oz+z,h,Math.sqrt(dx*dx+dz*dz)*.5);
-      positions.push(x,h,z);colors.push(paint[0],paint[1],paint[2]);normals.push(nx*inv,ny*inv,nz*inv);uvs.push(ox+x,oz+z);
+      positions.push(x,h,z);colors.push(paint[0],paint[1],paint[2]);normals.push(nx*inv,ny*inv,nz*inv);uvs.push((ox+x)*0.16,(oz+z)*0.16);
     }
     for(z=0;z<CS;z++)for(x=0;x<CS;x++){
       var wx=ox+x,wz=oz+z;BIO[z*CS+x]=biomeW(wx+.5,wz+.5);
@@ -352,7 +352,10 @@
       if(hash(wx,wz)>.5)indices.push(a,d,c,a,c,b);else indices.push(a,d,b,b,d,c);
     }
     var geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));geo.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));geo.setAttribute('normal',new THREE.Float32BufferAttribute(normals,3));geo.setAttribute('uv',new THREE.Float32BufferAttribute(uvs,2));geo.setIndex(indices);
-    var mesh=new THREE.Mesh(geo,material);mesh.position.set(ox,0,oz);mesh.matrixAutoUpdate=false;mesh.updateMatrix();mesh.cx=cx;mesh.cz=cz;mesh.userData.terrain=true;mesh.castShadow=false;mesh.receiveShadow=!!(G.quality&&G.quality.value==='high');
+    var mesh=new THREE.Mesh(geo,material);mesh.position.set(ox,0,oz);mesh.matrixAutoUpdate=false;mesh.updateMatrix();mesh.cx=cx;mesh.cz=cz;mesh.userData.terrain=true;mesh.castShadow=false;
+    // Never receive shadow-map shadows: streamed terrain chunks bypass scene.traverse(), and this caused the black triangular acne seen on Android.
+    // The player and vegetation use soft contact shading instead.
+    mesh.receiveShadow=false;
     var dm=decorMesh(ox,oz,H,BIO);if(dm){dm.matrixAutoUpdate=false;dm.updateMatrix();mesh.add(dm);mesh.decor=dm;}
     // The original code generated tree/rock blocker data but discarded it, so scenery had no physical collision.
     bmap.set(bk(cx,cz),dbl.length?dbl.slice():null);scene.add(mesh);chunks.set(cx+','+cz,mesh);if(W.onChunkLoad)W.onChunkLoad(cx,cz);
