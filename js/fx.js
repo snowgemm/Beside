@@ -1,12 +1,19 @@
 (function () {
   var G = window.Game = window.Game || {};
-  var MAX = 300, AMB = 36, F = G.fx = {};
+  var MAX = 300, AMB = 36, F = G.fx = {}, particleLevel = 'medium', emitEvery = 2, emitSerial = 0, ambientLimit = 18;
   var P, C, pa, ca, pts, T = 0, next = AMB;
   var CH = 24, chM = null, chD, chCol, chN = 0, chAct = 0, chx = new Float32Array(CH), chy = new Float32Array(CH), chz = new Float32Array(CH), chvx = new Float32Array(CH), chvy = new Float32Array(CH), chvz = new Float32Array(CH), chl = new Float32Array(CH);
   var vx = new Float32Array(MAX), vy = new Float32Array(MAX), vz = new Float32Array(MAX), life = new Float32Array(MAX), grav = new Float32Array(MAX);
   var bx = new Float32Array(AMB), by = new Float32Array(AMB), bz = new Float32Array(AMB), ph = new Float32Array(AMB), sp = new Float32Array(AMB);
   function rnd(a, b) { return a + Math.random() * (b - a); }
 
+  F.setQuality = function (level) {
+    particleLevel = level === 'low' || level === 'high' ? level : 'medium';
+    emitEvery = particleLevel === 'low' ? 3 : particleLevel === 'medium' ? 2 : 1;
+    ambientLimit = particleLevel === 'low' ? 6 : particleLevel === 'medium' ? 18 : AMB;
+    if (pts && pts.material) pts.material.size = particleLevel === 'low' ? 0.18 : particleLevel === 'medium' ? 0.22 : 0.26;
+    for (var i = ambientLimit; i < AMB; i++) P[i * 3 + 1] = -1000;
+  };
   F.init = function (scene) {
     var i, geo = new THREE.BufferGeometry();
     P = new Float32Array(MAX * 3); C = new Float32Array(MAX * 3);
@@ -54,6 +61,8 @@
     if (!live) chAct = 0;
   }
   function emit(x, y, z, ax, ay, az, g, l, r, gg, b) {
+    emitSerial++;
+    if (emitEvery > 1 && emitSerial % emitEvery !== 0) return;
     var i = next, k = i * 3; next = next + 1 >= MAX ? AMB : next + 1;
     P[k] = x; P[k + 1] = y; P[k + 2] = z; C[k] = r; C[k + 1] = gg; C[k + 2] = b;
     vx[i] = ax; vy[i] = ay; vz[i] = az; grav[i] = g; life[i] = l;
@@ -93,6 +102,7 @@
     var D = G.dungeon, inD = D && D.active, W = G.world, night = G.sky ? G.sky.night : 0, i, k, h, dx, dz, bl;
     for (i = 0; i < AMB; i++) { // ambient: pollen by day, fireflies at night
       k = i * 3;
+      if (i >= ambientLimit) { P[k + 1] = -1000; continue; }
       if (inD || (night < 0.3 && (i & 1))) { P[k + 1] = -1000; continue; }
       dx = bx[i] - px; dz = bz[i] - pz;
       if (dx * dx + dz * dz > 196) {
