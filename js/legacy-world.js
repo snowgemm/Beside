@@ -442,8 +442,14 @@
         } else { dbox(cx, h - 0.05, cz, 1.1, .6, 1.1, L[0] * j * .9, L[1] * j * .9, L[2] * j * .9); dbox(cx + .15, h + .45, cz - .1, .7, .5, .7, L[0] * j * 1.05, L[1] * j * 1.05, L[2] * j * 1.05); }
       } else if (kind === 3) {
         c = FLW[(r2 * 5) | 0];
-        dbox(cx, h - 0.05, cz, .08, .38, .08, .2, .5, .2); dbox(cx, h + .33, cz, .26, .2, .26, c[0], c[1], c[2]);
-        dbox(cx + .35, h - 0.05, cz + .2, .08, .3, .08, .2, .5, .2); dbox(cx + .35, h + .25, cz + .2, .24, .18, .24, c[0] * .95, c[1] * .95, c[2] * .95);
+        var mushroomModel = G.assets && G.assets.model ? G.assets.model('mushroomProp') : null;
+        if (mushroomModel) {
+          mushroomModel.position.set(cx, h - 0.05, cz); mushroomModel.rotation.y = r2 * Math.PI * 2; mushroomModel.scale.multiplyScalar(j);
+          mushroomModel.traverse(function (o) { if (o.isMesh) { o.castShadow = false; o.userData = o.userData || {}; o.userData.noShadow = true; } }); modelDecor.push(mushroomModel);
+        } else {
+          dbox(cx, h - 0.05, cz, .08, .38, .08, .2, .5, .2); dbox(cx, h + .33, cz, .26, .2, .26, c[0], c[1], c[2]);
+          dbox(cx + .35, h - 0.05, cz + .2, .08, .3, .08, .2, .5, .2); dbox(cx + .35, h + .25, cz + .2, .24, .18, .24, c[0] * .95, c[1] * .95, c[2] * .95);
+        }
       } else {
         c = bi === 3 ? [.82, .86, .92] : bi === 2 ? [.7, .55, .4] : [.55, .55, .58];
         var rockModel = G.assets && G.assets.model ? G.assets.model('rock') : null;
