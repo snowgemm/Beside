@@ -203,6 +203,16 @@ text-shadow:0 2px 0 #5a6a8a,0 4px 0 #2a3248,0 7px 0 rgba(0,0,0,.45)}
 .d-box{text-align:center}
 .d-t{font-size:min(10vw,48px);color:#ff5a5a;margin-bottom:20px;text-shadow:0 3px 0 #5a0a0a,var(--tout)}
 
+/* Buttons inside modal panels must participate in layout; the global fixed positioning is only for HUD controls. */
+#title .t-btns button,
+#menu .menu-panel button{
+  position:relative;inset:auto;z-index:auto;width:100%;min-width:0;max-width:100%;
+  box-sizing:border-box;left:auto;right:auto;top:auto;bottom:auto;
+}
+#menu .menu-head{align-items:center}
+#menu .menu-head button{flex:0 0 42px;width:42px;min-width:42px;max-width:42px;height:40px;min-height:40px;padding:0}
+#menu .menu-btns button{min-height:42px;padding:10px 12px;line-height:1.2;text-align:center}
+
 /* Graphics quality selector */
 #menu-quality{min-width:92px;max-width:45%;padding:8px 10px;border:1px solid var(--inner);border-radius:6px;background:var(--panel2);color:var(--hi);font:inherit;}
 .menu-row label[for="menu-quality"]{flex:1;}
