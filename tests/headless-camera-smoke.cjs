@@ -256,6 +256,14 @@ const mainSource = fs.readFileSync(path.join(jsDir, 'main.js'), 'utf8');
 check('shadow maps remain disabled at every graphics quality',
   mainSource.includes('renderer.shadowMap.enabled=false') &&
   !mainSource.includes('renderer.shadowMap.enabled=!!q.shadows'));
+check('InstancedMesh colour attributes are fully allocated before count is set to zero',
+  terrainSource.includes('function primeInstanceColors(mesh, capacity)') &&
+  terrainSource.includes('new THREE.InstancedBufferAttribute(data, 3)') &&
+  terrainSource.includes('for (var i = 0; i < data.length; i++) data[i] = 1;') &&
+  terrainSource.indexOf('primeInstanceColors(grassMesh,1050)') < terrainSource.indexOf('grassMesh.count=flowerMesh.count=0;') &&
+  terrainSource.indexOf('primeInstanceColors(flowerMesh,135)') < terrainSource.indexOf('grassMesh.count=flowerMesh.count=0;'));
+check('grass sky tint multiplies its palette instead of replacing green with a grey tint',
+  terrainSource.includes('grassMaterial.color.copy(grassBaseColor).multiply(grassTintColor)'));
 check('grass uses stable two-sided cards without injected wind distortion',
   terrainSource.includes('new THREE.MeshBasicMaterial({color:green,side:THREE.DoubleSide,toneMapped:false})') &&
   terrainSource.includes('grassShader=null;') &&
