@@ -11,12 +11,15 @@
 <div id="touch"></div>
 <div id="joy"><div id="joy-knob"></div></div>
 <div id="hud">FPS --</div>
-<div id="hp"><div id="hp-fill"></div><span id="hp-text">100/100</span></div>
+<div id="hudL"><div id="wpn" class="empty"></div><div id="hp"><div id="hp-ghost"></div><div id="hp-fill"></div><div id="hp-seg"></div><span id="hp-text">100/100</span></div></div>
 <div id="fade"></div>
-<div id="room-hud"></div>
-<div id="boss-bar"><div id="boss-fill"></div><span id="boss-name"></span></div>
+<div id="room-hud"><b id="rh-room"></b><span id="rh-foes"></span></div>
+<div id="boss-bar"><div id="boss-fill"></div><i class="tick" style="left:50%"></i><span id="boss-name"></span></div>
 <div id="inv"></div>
 <div id="toasts"></div>
+<div id="banner"><div id="bn-t"></div><div id="bn-s"></div></div>
+<div id="death"><div class="d-box"><div class="d-t">Bạn đã gục ngã</div><button id="d-btn" class="primary" type="button">Hồi sinh</button></div></div>
+<div id="title"></div>
 <div id="hint">Nhấp để chơi<br><small>WASD: di chuyển · Space: nhảy · V: đổi góc nhìn</small></div>
 <button id="btn-view" type="button">Góc nhìn</button>
 <button id="btn-attack" type="button">Đánh</button>
@@ -33,10 +36,13 @@
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 <script src="js/assets.js"></script>
 <script src="js/save.js"></script>
+<script src="js/icons.js"></script>
+<script src="js/ui.js"></script>
 <script src="js/world.js"></script>
 <script src="js/fx.js"></script>
 <script src="js/sky.js"></script>
 <script src="js/rig.js"></script>
+<script src="js/phys.js"></script>
 <script src="js/player.js"></script>
 <script src="js/input.js"></script>
 <script src="js/combat.js"></script>
