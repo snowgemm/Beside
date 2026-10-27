@@ -45,7 +45,17 @@
     if (edits.size) { var e = edits.get(ek(x, z)); if (e !== undefined) return e; }
     return baseHeight(x, z);
   }
-  function surfaceHeight(x,z) { var ix=Math.floor(x),iz=Math.floor(z),fx=x-ix,fz=z-iz,h00=getHeight(ix,iz),h10=getHeight(ix+1,iz),h01=getHeight(ix,iz+1),h11=getHeight(ix+1,iz+1),a=h00+(h10-h00)*fx,b=h01+(h11-h01)*fx; return a+(b-a)*fz; }
+  // Exact height on the same triangle split used by build(); this keeps collision and the visible surface aligned.
+  function surfaceHeight(x,z) {
+    var ix=Math.floor(x),iz=Math.floor(z),fx=x-ix,fz=z-iz;
+    var h00=getHeight(ix,iz),h10=getHeight(ix+1,iz),h01=getHeight(ix,iz+1),h11=getHeight(ix+1,iz+1);
+    if(hash(ix,iz)>.5){
+      if(fz>=fx)return h00*(1-fz)+h01*(fz-fx)+h11*fx;
+      return h00*(1-fx)+h10*(fx-fz)+h11*fz;
+    }
+    if(fx+fz<=1)return h00*(1-fx-fz)+h10*fx+h01*fz;
+    return h10*(1-fz)+h01*(1-fx)+h11*(fx+fz-1);
+  }
   function topType(h) { return h <= SEA + 1 ? SAND : h >= 26 ? SNOW : h >= 21 ? STONE : GRASS; }
   function getBlock(x, y, z) {
     x = Math.floor(x); y = Math.floor(y); z = Math.floor(z);
@@ -201,8 +211,8 @@
 
   W.init = function(sc){
     scene=sc;grain=grainTex();
-    material=new THREE.MeshStandardMaterial({vertexColors:true,fog:true,map:grain,roughness:.96,metalness:0});
-    decorMat=new THREE.MeshStandardMaterial({vertexColors:true,fog:true,roughness:.98,metalness:0});
+    material=new THREE.MeshStandardMaterial({vertexColors:true,fog:true,map:grain,roughness:1,metalness:0,side:THREE.DoubleSide});
+    decorMat=new THREE.MeshStandardMaterial({vertexColors:true,fog:true,roughness:1,metalness:0,side:THREE.DoubleSide});
     wtex=rippleTex();if(wtex)wtex.repeat.set(28,28);
     waterGeom=new THREE.PlaneGeometry(112,112,48,48);waterGeom.rotateX(-Math.PI/2);waterPos=waterGeom.attributes.position;waterCol=new Float32Array(waterPos.count*3);
     for(var i=0;i<waterPos.count;i++){waterCol[i*3]=.16;waterCol[i*3+1]=.48;waterCol[i*3+2]=.55;}
@@ -333,7 +343,8 @@
     var geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));geo.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));geo.setAttribute('normal',new THREE.Float32BufferAttribute(normals,3));geo.setAttribute('uv',new THREE.Float32BufferAttribute(uvs,2));geo.setIndex(indices);
     var mesh=new THREE.Mesh(geo,material);mesh.position.set(ox,0,oz);mesh.matrixAutoUpdate=false;mesh.updateMatrix();mesh.cx=cx;mesh.cz=cz;mesh.userData.terrain=true;mesh.castShadow=false;mesh.receiveShadow=!!(G.quality&&G.quality.value==='high');
     var dm=decorMesh(ox,oz,H,BIO);if(dm){dm.matrixAutoUpdate=false;dm.updateMatrix();mesh.add(dm);mesh.decor=dm;}
-    bmap.set(bk(cx,cz),null);scene.add(mesh);chunks.set(cx+','+cz,mesh);if(W.onChunkLoad)W.onChunkLoad(cx,cz);
+    // The original code generated tree/rock blocker data but discarded it, so scenery had no physical collision.
+    bmap.set(bk(cx,cz),dbl.length?dbl.slice():null);scene.add(mesh);chunks.set(cx+','+cz,mesh);if(W.onChunkLoad)W.onChunkLoad(cx,cz);
   }
 
   /* ---------- decor: one merged mesh per chunk, deterministic, visual only ---------- */
@@ -432,7 +443,7 @@
       for (g = 0; g < gl; g++) { var dx = wx + .5 - gates[g].x, dz = wz + .5 - gates[g].z; if (dx * dx + dz * dz < 64) { near = true; break; } }
       if (near) continue;
       var cx = lx + .5 + (hash(wx + 1, wz + 2) - .5) * .5, cz = lz + .5 + (hash(wx + 2, wz + 1) - .5) * .5, j = .9 + .2 * hash(wx + 5, wz + 9), r2 = hash(wx + 3, wz + 4), L, c;
-      if (kind === 1) { tree(bi, cx, h, cz, r2, j); trees++; dbl.push(ox + cx, oz + cz, 0.32, h, h + 2.5); }
+      if (kind === 1) { tree(bi, cx, h, cz, r2, j); trees++; dbl.push(ox + cx, oz + cz, bi===2?0.34:0.42, h, h + (bi===2?3.7:5.4)); }
       else if (kind === 2) {
         L = leafCol(bi, r2);
         var bushModel = G.assets && G.assets.model ? G.assets.model('bush') : null;
