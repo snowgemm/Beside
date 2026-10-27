@@ -22,6 +22,10 @@
       bush: { url: 'https://raw.githubusercontent.com/Hidencod/tge-assets/main/packs/nature-kit/plant-bush.glb', height: 0.9 },
       rock: { url: 'https://raw.githubusercontent.com/Hidencod/tge-assets/main/packs/nature-kit/rock-smalla.glb', height: 0.8 },
       mushroomProp: { url: 'https://raw.githubusercontent.com/Hidencod/tge-assets/main/packs/nature-kit/mushroom-red.glb', height: 0.65 },
+      // Tiny stylized loot props from Kenney Mini Dungeon / Platformer Kit (CC0).
+      lootSword: { url: 'https://raw.githubusercontent.com/Hidencod/tge-assets/main/packs/mini-dungeon/weapon-sword.glb', height: 0.82, rotY: Math.PI },
+      lootSpear: { url: 'https://raw.githubusercontent.com/Hidencod/tge-assets/main/packs/mini-dungeon/weapon-spear.glb', height: 0.92, rotY: Math.PI },
+      lootShield: { url: 'https://raw.githubusercontent.com/Hidencod/tge-assets/main/packs/mini-dungeon/shield-round.glb', height: 0.68 },
       coin: { url: 'https://raw.githubusercontent.com/Hidencod/tge-assets/main/packs/mini-dungeon/coin.glb', height: 0.42 },
       potion: { url: 'https://raw.githubusercontent.com/Hidencod/tge-assets/main/packs/mini-dungeon/potion.glb', height: 0.46 }
     },
