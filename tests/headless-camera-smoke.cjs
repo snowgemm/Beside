@@ -360,8 +360,11 @@ check('expanded minimap has interactive wheel and pinch zoom that persist settin
   minimapSource.includes('map-zoom-in') &&
   minimapSource.includes('G.menu.settings.mapZoom=M.zoom'));
 check('offline cache is bumped and versioned local assets prevent stale code from loading',
-  swSource.includes("CACHE_NAME = 'besidevalley-shell-v7'") &&
-  indexSource.includes('20261028-rpg-performance4'));
+  swSource.includes("CACHE_NAME = 'besidevalley-shell-v8'") &&
+  indexSource.includes('20261028-rpg-performance5'));
+check('player jump input triggers a short takeoff pose independent of refresh rate',
+  rigSource.includes("state === 'jump'") && rigSource.includes('this.jumpT = 0.32') &&
+  rigSource.includes('var jumpPulse = Math.sin') && playerSource.includes("rig.play('jump'"));
 check('player and procedural mobs play physics-driven landing squash/rebound',
   rigSource.includes("state === 'land'") && rigSource.includes('impactPulse') &&
   playerSource.includes("rig.play('land'") && enemySource.includes("e.rig.play('land'"));
