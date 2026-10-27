@@ -2,11 +2,11 @@
 
 ## Integrated models
 
-The game loads compact environment props over HTTPS from a public mirror of Kenney's asset packs. These are optional: if a remote model fails to load, the built-in procedural scenery remains available.
+The game loads optional environment props over HTTPS from public asset mirrors. If a remote model fails, the procedural fallback remains available.
 
-- **Nature Kit (CC0):** [official pack](https://kenney.nl/assets/nature-kit) · [Kenney license/support](https://kenney.nl/support) · [public GLB mirror](https://github.com/Hidencod/tge-assets)
-- Integrated environment props: broadleaf tree, pine, bush, small rock and mushroom.
-- A small 3D coin model is used for trinket loot drops, with a rarity-coloured ring. A potion model is cached for later use; it is not currently shown as a gameplay item.
+- **Quaternius Stylized Nature MegaKit (CC0):** [official pack and license](https://quaternius.com/packs/stylizednaturemegakit.html). The broadleaf tree and bush are GLB files mirrored in [skyline-run](https://github.com/anshaneja5/skyline-run), whose [credits file](https://github.com/anshaneja5/skyline-run/blob/main/CREDITS.md) identifies the tree and bush models as Quaternius CC0 assets.
+- **Kenney Nature Kit (CC0):** [official pack](https://kenney.nl/assets/nature-kit) · [Kenney license/support](https://kenney.nl/support) · [public GLB mirror](https://github.com/Hidencod/tge-assets). Used for the pine tree, small rock and mushroom fallback props.
+- A small 3D coin model is used for trinket drops, with a rarity-coloured ring. A potion model is cached for later use; it is not currently shown as a gameplay item.
 
 ## Free sources for future assets
 
@@ -19,6 +19,6 @@ The game loads compact environment props over HTTPS from a public mirror of Kenn
 
 ## Integration notes
 
-- Runtime uses Three.js r128 and GLTFLoader. Models are fitted to target heights and their materials are converted to a lightweight unlit material, keeping the stylized palette and avoiding added real-time texture/shader costs.
+- Runtime uses Three.js r128 and GLTFLoader. Models are fitted to target heights and use rough, non-metallic lit materials so textured foliage can react to the directional and hemisphere lights.
 - Imported scenery props are static. Existing character movement, idle and combat animations stay on the compatible procedural rig; skeletal clips are not applied to an incompatible character rig.
 - No paid assets or proprietary game UI are bundled. Check the source page and license of every added asset before publishing.
