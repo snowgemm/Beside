@@ -212,13 +212,13 @@ check('player lands on the smooth rendered terrain instead of integer voxel step
 const terrainSource = fs.readFileSync(path.join(jsDir, 'legacy-world.js'), 'utf8');
 const assetSource = fs.readFileSync(path.join(jsDir, 'assets.js'), 'utf8');
 check('newly streamed terrain chunks never receive shadow-map shadows',
-  /mesh\\.receiveShadow=false/.test(terrainSource) &&
-  !/mesh\\.receiveShadow=!!\\(G\\.quality&&G\\.quality\\.value===\x27high\x27\\)/.test(terrainSource));
+  terrainSource.includes('mesh.receiveShadow=false') &&
+  !terrainSource.includes("mesh.receiveShadow=!!(G.quality&&G.quality.value==='high')"));
 check('overworld height samples stay fractional for smooth hills',
-  /var N=18,H=new Float32Array\\(N\\*N\\)/.test(terrainSource) &&
-  /return Math\\.max\\(3, Math\\.min\\(MAXH - 3, h\\)\\)/.test(terrainSource));
+  terrainSource.includes('var N=18,H=new Float32Array(N*N)') &&
+  terrainSource.includes('return Math.max(3, Math.min(MAXH - 3, h))'));
 check('ground detail texture does not repeat once per terrain block',
-  /uvs\\.push\\(\\(ox\\+x\\)\\*0\\.16,\\(oz\\+z\\)\\*0\\.16\\)/.test(terrainSource));
+  terrainSource.includes('uvs.push((ox+x)*0.16,(oz+z)*0.16)'));
 check('environment asset loader preserves lit PBR materials',
   assetSource.includes('function keepPBR') &&
   assetSource.includes('src.roughness') &&
