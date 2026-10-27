@@ -116,7 +116,7 @@
   W.useProvider = function (p) { p = p || W.ow; W.getHeight = p.getHeight; W.getBlock = p.getBlock; W.solid = p.solid; };
   W.hold = function (on) { W.held=!!on; chunks.forEach(function(m){m.visible=!on;}); if(water)water.visible=!on; if(grassMesh)grassMesh.visible=!on; if(flowerMesh)flowerMesh.visible=!on; if(!on)dirty=true; };
   var scene, material, decorMat, water, waterGeom, waterPos, waterCol, waterTime=0, waterAx=1e9, waterAz=1e9, wtex, grain, tr=1,tg=1,tb=1,chunks=new Map(),queue=[],qi=0,lcx=1e9,lcz=1e9,dirty=true;
-  var grassMesh,flowerMesh,grassMaterial,flowerMaterial,grassShader=null,grassTarget=650,flowerTarget=80,grassDirty=true,grassX=1e9,grassZ=1e9,grassDummy,flowerColor,grassColor;
+  var grassMesh,flowerMesh,grassMaterial,flowerMaterial,grassShader=null,grassTarget=650,flowerTarget=80,grassDirty=true,grassX=1e9,grassZ=1e9,grassDummy,flowerColor,grassColor,grassBaseColor,grassTintColor;
 
   function mkTex(size, fn, rep) {
     try {
@@ -150,6 +150,14 @@
     });
   }
 
+  function primeInstanceColors(mesh, capacity) {
+    // Three.js r128 setColorAt() allocates from mesh.count. Since streamed vegetation starts at count=0,
+    // allocate the full-capacity buffer first so colour writes never target a zero-length attribute.
+    var data = new Float32Array(capacity * 3);
+    for (var i = 0; i < data.length; i++) data[i] = 1;
+    mesh.instanceColor = new THREE.InstancedBufferAttribute(data, 3);
+    mesh.instanceColor.needsUpdate = true;
+  }
   function grassGeometry(){
     // Solid low-poly tufts replace thin crossed cards, which rasterize as long black slivers on some mobile GPUs.
     var g=new THREE.ConeGeometry(.085,.28,5,1);g.translate(0,.14,0);g.computeVertexNormals();return g;
@@ -160,10 +168,12 @@
     if(grassMesh||!scene)return;
     var p=G.palette||{},r=p.grass&&(p.grass.plains||p.grass.forest),green=Array.isArray(r)?r[2]:0x6eaa48;
     // Grass blades are thin two-sided cards: unlit material avoids black razor-like wedges under grazing light on mobile GPUs.
+    grassBaseColor=new THREE.Color(green);grassTintColor=new THREE.Color(1,1,1);
     grassMaterial=new THREE.MeshBasicMaterial({color:green,side:THREE.DoubleSide,toneMapped:false});
     flowerMaterial=new THREE.MeshStandardMaterial({color:0xffffff,vertexColors:true,roughness:.9});
     grassShader=null; // disable custom wind injection here; it could distort thin cards into long black slivers on mobile GPUs.
     grassMesh=new THREE.InstancedMesh(grassGeometry(),grassMaterial,1050);flowerMesh=new THREE.InstancedMesh(new THREE.ConeGeometry(.065,.16,5),flowerMaterial,135);
+    primeInstanceColors(grassMesh,1050);primeInstanceColors(flowerMesh,135);
     grassMesh.count=flowerMesh.count=0;grassMesh.frustumCulled=flowerMesh.frustumCulled=false;grassMesh.userData.noShadow=flowerMesh.userData.noShadow=true;
     scene.add(grassMesh);scene.add(flowerMesh);grassDummy=new THREE.Object3D();flowerColor=new THREE.Color();grassColor=new THREE.Color();
     setGrassQuality(G.quality?G.quality.value:'medium');
@@ -228,7 +238,11 @@
   W.tint = function (r, g, b) {
     tr = r; tg = g; tb = b;
     if (material) { material.color.setRGB(r, g, b); decorMat.color.setRGB(r, g, b); }
-    if (grassMaterial) grassMaterial.color.setRGB(0.46*r+0.10,0.62*g+0.06,0.31*b+0.04);
+    if (grassMaterial && grassBaseColor && grassTintColor) {
+      // Tint the existing grass green rather than replacing it with a near-black/grey sky colour.
+      grassTintColor.setRGB(0.66+0.34*r,0.66+0.34*g,0.66+0.34*b);
+      grassMaterial.color.copy(grassBaseColor).multiply(grassTintColor);
+    }
   };
   W.setDrawDistance = function (n) {
     W.drawDistance = Math.max(3, Math.min(7, Math.round(n)));
