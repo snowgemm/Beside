@@ -207,6 +207,23 @@ check('player lands on the smooth rendered terrain instead of integer voxel step
   Math.abs(P.pos.y - terrainY) < 0.11 && P.pos.onGround,
   'feetY=' + P.pos.y.toFixed(3) + ', meshY=' + terrainY.toFixed(3));
 
+// Visual regression guards: streamed meshes are created outside the quality-setting traversal,
+ // so their shadow receiver flag must be safe at construction time, not just toggled once.
+const terrainSource = fs.readFileSync(path.join(jsDir, 'legacy-world.js'), 'utf8');
+const assetSource = fs.readFileSync(path.join(jsDir, 'assets.js'), 'utf8');
+check('newly streamed terrain chunks never receive shadow-map shadows',
+  /mesh\\.receiveShadow=false/.test(terrainSource) &&
+  !/mesh\\.receiveShadow=!!\\(G\\.quality&&G\\.quality\\.value===\x27high\x27\\)/.test(terrainSource));
+check('overworld height samples stay fractional for smooth hills',
+  /var N=18,H=new Float32Array\\(N\\*N\\)/.test(terrainSource) &&
+  /return Math\\.max\\(3, Math\\.min\\(MAXH - 3, h\\)\\)/.test(terrainSource));
+check('ground detail texture does not repeat once per terrain block',
+  /uvs\\.push\\(\\(ox\\+x\\)\\*0\\.16,\\(oz\\+z\\)\\*0\\.16\\)/.test(terrainSource));
+check('environment asset loader preserves lit PBR materials',
+  assetSource.includes('function keepPBR') &&
+  assetSource.includes('src.roughness') &&
+  assetSource.includes('tree-default.glb'));
+
 const failures = results.filter((result) => !result.pass);
 console.log('JavaScript syntax: ' + jsFiles.length + ' files passed');
 console.log('Headless camera/input checks: ' + (results.length - failures.length) + '/' + results.length + ' passed');
