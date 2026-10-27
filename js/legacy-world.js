@@ -154,27 +154,24 @@
     // Three broader crossed blades read as a tuft rather than thin black pins at mobile viewing distance.
     var g=new THREE.BufferGeometry();
     g.setAttribute('position',new THREE.Float32BufferAttribute([
-      -.07,0,0,.07,0,0,0,.78,0,
-      0,0,-.07,0,0,.07,0,.78,0,
-      -.05,0,-.05,.05,0,.05,0,.78,0
+      -.09,0,0,.09,0,0,0,.48,0,
+      0,0,-.09,0,0,.09,0,.48,0,
+      -.065,0,-.065,.065,0,.065,0,.48,0
     ],3));
     g.setAttribute('uv',new THREE.Float32BufferAttribute([
       0,0,1,0,.5,1,0,0,1,0,.5,1,0,0,1,0,.5,1
     ],2));
     g.setIndex([0,1,2,3,4,5,6,7,8]);g.computeVertexNormals();return g;
   }
-  function setGrassQuality(level){grassTarget=level==='low'?300:level==='high'?1050:650;flowerTarget=level==='low'?36:level==='high'?135:80;grassDirty=true;}
+  function setGrassQuality(level){grassTarget=level==='low'?140:level==='high'?420:260;flowerTarget=level==='low'?24:level==='high'?90:54;grassDirty=true;}
   W.setGrassQuality=setGrassQuality;
   function initGrass(){
     if(grassMesh||!scene)return;
     var p=G.palette||{},r=p.grass&&(p.grass.plains||p.grass.forest),green=Array.isArray(r)?r[2]:0x6eaa48;
-    grassMaterial=new THREE.MeshStandardMaterial({color:green,side:THREE.DoubleSide,roughness:1});
+    // Grass blades are thin two-sided cards: unlit material avoids black razor-like wedges under grazing light on mobile GPUs.
+    grassMaterial=new THREE.MeshBasicMaterial({color:green,side:THREE.DoubleSide});
     flowerMaterial=new THREE.MeshStandardMaterial({color:0xffffff,vertexColors:true,roughness:.9});
-    if(!G.safeMode&&!(G.toon&&G.toon.safeMode))grassMaterial.onBeforeCompile=function(shader){
-      shader.uniforms.uWindTime={value:0};grassShader=shader;
-      shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\nuniform float uWindTime;');
-      shader.vertexShader=shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\ntransformed.x += sin(uWindTime + instanceMatrix[3][0]*0.22 + transformed.y*2.0)*0.035*transformed.y;');
-    };
+    grassShader=null; // disable custom wind injection here; it could distort thin cards into long black slivers on mobile GPUs.
     grassMesh=new THREE.InstancedMesh(grassGeometry(),grassMaterial,1050);flowerMesh=new THREE.InstancedMesh(new THREE.ConeGeometry(.065,.16,5),flowerMaterial,135);
     grassMesh.count=flowerMesh.count=0;grassMesh.frustumCulled=flowerMesh.frustumCulled=false;grassMesh.userData.noShadow=flowerMesh.userData.noShadow=true;
     scene.add(grassMesh);scene.add(flowerMesh);grassDummy=new THREE.Object3D();flowerColor=new THREE.Color();grassColor=new THREE.Color();
@@ -190,7 +187,7 @@
       sl=Math.max(Math.abs(getHeight(wx+1,wz)-getHeight(wx-1,wz)),Math.abs(getHeight(wx,wz+1)-getHeight(wx,wz-1)))*.5;if(sl>1.25)continue;
       bi=biomeW(wx,wz);if(bi===2||bi===3)continue;
       grassDummy.position.set(wx,h+.015,wz);grassDummy.rotation.set(0,n*6.283,0);scale=.65+hash(Math.floor(wx*3),Math.floor(wz*3))*.7;
-      grassDummy.scale.set(scale*(.82+hash(Math.floor(wx+11),Math.floor(wz-7))*.34),scale*(.72+hash(Math.floor(wx-13),Math.floor(wz+17))*.46),scale*(.82+hash(Math.floor(wx+23),Math.floor(wz+5))*.34));
+      grassDummy.scale.set(scale*(.82+hash(Math.floor(wx+11),Math.floor(wz-7))*.34),scale*(.55+hash(Math.floor(wx-13),Math.floor(wz+17))*.32),scale*(.82+hash(Math.floor(wx+23),Math.floor(wz+5))*.34));
       grassDummy.updateMatrix();grassMesh.setMatrixAt(gn,grassDummy.matrix);
       var shade=.72+hash(Math.floor(wx*7+13),Math.floor(wz*7-31))*.36;
       grassColor.setRGB(shade,Math.min(1,shade*1.05),shade*.88);if(grassMesh.setColorAt)grassMesh.setColorAt(gn,grassColor);gn++;
@@ -220,7 +217,7 @@
     waterTime+=Math.max(0,dt);for(i=0;i<waterPos.count;i++){x=waterPos.getX(i);z=waterPos.getZ(i);waterPos.setY(i,Math.sin(waterTime*1.15+x*.12+z*.16)*.035+Math.sin(waterTime*.7-x*.08)*.02);}
     waterPos.needsUpdate=true;if(((waterTime*10)|0)!==(((waterTime-dt)*10)|0))waterGeom.computeVertexNormals();
     if(wtex)wtex.offset.set((px/12+waterTime*.02)%1,(-pz/12+waterTime*.015)%1);water.material.color.setRGB(tr,tg,tb);
-    if(grassShader&&grassShader.uniforms.uWindTime)grassShader.uniforms.uWindTime.value=waterTime;
+
     if(grassDirty||Math.abs(ax-grassX)>=4||Math.abs(az-grassZ)>=4)rebuildGrass(px,pz);
   }
 
@@ -339,7 +336,8 @@
     var dirt=ss(.35,1.5,slope)*(1-snow),rock=ss(1,2.8,slope)*(1-snow);
     if(!sand){r+=(ch(soil,16)-r)*dirt;g+=(ch(soil,8)-g)*dirt;b+=(ch(soil,0)-b)*dirt;r+=(ch(stone,16)-r)*rock;g+=(ch(stone,8)-g)*rock;b+=(ch(stone,0)-b)*rock;}
     var low=.94+fbm(wx*.012+17,wz*.012-23,2)*.12,fine=.985+hash(Math.floor(wx*3)+201,Math.floor(wz*3)-71)*.03;
-    return[Math.max(0,Math.min(1,r*low*fine)),Math.max(0,Math.min(1,g*low*fine)),Math.max(0,Math.min(1,b*low*fine))];
+    // Slightly lower saturation/value so midday grass and sand do not clip to neon/luminous colours.
+    return[Math.max(0,Math.min(1,r*low*fine*.91)),Math.max(0,Math.min(1,g*low*fine*.90)),Math.max(0,Math.min(1,b*low*fine*.92))];
   }
   function build(cx,cz){
     var N=18,H=new Float32Array(N*N),ox=cx*CS,oz=cz*CS,x,z;
