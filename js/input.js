@@ -4,6 +4,7 @@
   var I = G.input = { isTouch: isTouch, moveX: 0, moveZ: 0, jump: false, lookDX: 0, lookDY: 0, viewToggle: false, attackQ: false, dodgeQ: false, invToggle: false, interactQ: false, buildMode: false };
   var k = {}, joy = { x: 0, z: 0 }, jumpT = false;
   function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
+  function lookScale(base) { var v = G.menu && G.menu.settings && G.menu.settings.sensitivity; return base * (typeof v === 'number' && isFinite(v) ? v / 50 : 1); }
 
   I.poll = function () {
     I.moveX = clamp((k.r ? 1 : 0) - (k.l ? 1 : 0) + joy.x, -1, 1);
@@ -33,7 +34,7 @@
       hint.style.display = (document.pointerLockElement === canvas || isTouch) ? 'none' : 'block';
     });
     document.addEventListener('mousemove', function (e) {
-      if (document.pointerLockElement === canvas) { I.lookDX += e.movementX * 0.0022; I.lookDY += e.movementY * 0.0022; }
+      if (document.pointerLockElement === canvas) { I.lookDX += e.movementX * lookScale(0.0022); I.lookDY += e.movementY * lookScale(0.0022); }
     });
 
     document.addEventListener('mousedown', function (e) { if (e.button === 0 && !I.buildMode && document.pointerLockElement === canvas) I.attackQ = true; });
@@ -86,7 +87,7 @@
         var t = e.changedTouches[i];
         if (t.identifier === joyId) setJoy(t.clientX, t.clientY);
         else if (t.identifier === lookId) {
-          I.lookDX += (t.clientX - lx) * 0.005; I.lookDY += (t.clientY - ly) * 0.005; lx = t.clientX; ly = t.clientY;
+          I.lookDX += (t.clientX - lx) * lookScale(0.005); I.lookDY += (t.clientY - ly) * lookScale(0.005); lx = t.clientX; ly = t.clientY;
         }
       }
     }, { passive: false });
