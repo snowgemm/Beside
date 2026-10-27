@@ -191,6 +191,22 @@ check('third-person camera shortens before a mock terrain wall',
   Math.floor(camera.position.z) !== 2 && camera.position.z - P.pos.z < 2,
   'cameraZ=' + camera.position.z.toFixed(3) + ', playerZ=' + P.pos.z.toFixed(3));
 
+// Regression: the overworld renderer is a triangle heightfield, not a stack of voxel columns.
+G.world.surfaceHeight = (x, z) => 2 + x * 0.15 + z * 0.05;
+G.world.getHeight = G.world.surfaceHeight;
+G.world.getBlock = () => 0;
+G.world.solid = () => false;
+G.world.decorBlockers = () => null;
+G.dungeon.active = false;
+P.dead = false; P.health = P.maxHealth = 100; P.pos.x = 0.5; P.pos.z = 0.5; P.pos.y = 6;
+P.pos.vx = P.pos.vz = 0; P.pos.vy = 0; P.pos.onGround = false; P.pos.inWater = false;
+P.third = true; P.yaw = 0; P.pitch = 0; P.camDist = 4.6; P.shake = 0; P.stepOff = 0;
+for (let i = 0; i < 180; i++) P.update(1 / 60);
+const terrainY = G.world.surfaceHeight(P.pos.x, P.pos.z);
+check('player lands on the smooth rendered terrain instead of integer voxel steps',
+  Math.abs(P.pos.y - terrainY) < 0.11 && P.pos.onGround,
+  'feetY=' + P.pos.y.toFixed(3) + ', meshY=' + terrainY.toFixed(3));
+
 const failures = results.filter((result) => !result.pass);
 console.log('JavaScript syntax: ' + jsFiles.length + ' files passed');
 console.log('Headless camera/input checks: ' + (results.length - failures.length) + '/' + results.length + ' passed');
