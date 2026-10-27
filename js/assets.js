@@ -86,7 +86,7 @@
       try {
         new THREE.GLTFLoader().load(def.url || ('assets/models/' + def.file), function (g) {
           try { tpl[name] = fit(g.scene, def); } catch (e) {}
-          if (!envRefreshed && A.has('tree') && A.has('pine') && A.has('bush') && A.has('rock') && G.world && G.world.refreshDecor) { envRefreshed = true; G.world.refreshDecor(); }
+          if (!envRefreshed && A.has('tree') && A.has('pine') && A.has('bush') && A.has('rock') && A.has('mushroomProp') && G.world && G.world.refreshDecor) { envRefreshed = true; G.world.refreshDecor(); }
           done();
         }, undefined, function () { done(); });
       } catch (e) { done(); }
@@ -117,7 +117,7 @@
     if (window.THREE && THREE.GLTFLoader) for (k in MANIFEST.models) jobs.push(loadModel(k, MANIFEST.models[k]));
     if (window.fetch) for (k in MANIFEST.sounds) jobs.push(loadSound(k, MANIFEST.sounds[k]));
     return Promise.all(jobs).then(function () {
-      if (!envRefreshed && (A.has('tree') || A.has('pine') || A.has('bush') || A.has('rock')) && G.world && G.world.refreshDecor) { envRefreshed = true; G.world.refreshDecor(); }
+      if (!envRefreshed && (A.has('tree') || A.has('pine') || A.has('bush') || A.has('rock') || A.has('mushroomProp')) && G.world && G.world.refreshDecor) { envRefreshed = true; G.world.refreshDecor(); }
       if (pending && !timer) timer = setInterval(decodeAll, 500);
     }, function () {});
   };
