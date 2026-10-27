@@ -47,13 +47,13 @@
     var bv = document.getElementById('btn-view'), bj = document.getElementById('btn-jump');
     bv.addEventListener('click', function () { I.viewToggle = true; });
     bv.addEventListener('touchstart', function (e) { e.preventDefault(); e.stopPropagation(); I.viewToggle = true; }, { passive: false });
-    bj.addEventListener('touchstart', function (e) { e.preventDefault(); e.stopPropagation(); jumpT = true; }, { passive: false });
+    bj.addEventListener('touchstart', function (e) { e.preventDefault(); e.stopPropagation(); jumpT = true; if (G.menu && G.menu.vibrate) G.menu.vibrate(18); }, { passive: false });
     function jEnd(e) { e.preventDefault(); jumpT = false; }
     bj.addEventListener('touchend', jEnd, { passive: false });
     bj.addEventListener('touchcancel', jEnd, { passive: false });
 
     function tb(id, flag) {
-      document.getElementById(id).addEventListener('touchstart', function (e) { e.preventDefault(); e.stopPropagation(); I[flag] = true; }, { passive: false });
+      document.getElementById(id).addEventListener('touchstart', function (e) { e.preventDefault(); e.stopPropagation(); I[flag] = true; if (G.menu && G.menu.vibrate) G.menu.vibrate(flag === 'attackQ' ? 22 : 16); }, { passive: false });
     }
     tb('btn-attack', 'attackQ'); tb('btn-dodge', 'dodgeQ'); tb('btn-bag', 'invToggle');
     document.getElementById('btn-bag').addEventListener('click', function () { I.invToggle = true; });
