@@ -20,6 +20,7 @@
   G.player.init(scene, camera, spawn);
   G.input.init(renderer.domElement);
   G.combat.init(camera);
+  G.phys.init();
   G.enemies.init(scene, camera);
   G.loot.init(scene);
   G.dungeon.init(scene);
@@ -34,6 +35,7 @@
   G.menu.apply();
   G.dungeon.afterLoad();
   G.world.preload(G.player.pos.x, G.player.pos.z, 2);
+  G.ui.init();
 
   var hud = document.getElementById('hud');
   var last = performance.now(), accT = 0, accN = 0, hudT = 0, fps = 0, slowT = 0, lowered = 0;
