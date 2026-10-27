@@ -151,19 +151,10 @@
   }
 
   function grassGeometry(){
-    // Three broader crossed blades read as a tuft rather than thin black pins at mobile viewing distance.
-    var g=new THREE.BufferGeometry();
-    g.setAttribute('position',new THREE.Float32BufferAttribute([
-      -.09,0,0,.09,0,0,0,.48,0,
-      0,0,-.09,0,0,.09,0,.48,0,
-      -.065,0,-.065,.065,0,.065,0,.48,0
-    ],3));
-    g.setAttribute('uv',new THREE.Float32BufferAttribute([
-      0,0,1,0,.5,1,0,0,1,0,.5,1,0,0,1,0,.5,1
-    ],2));
-    g.setIndex([0,1,2,3,4,5,6,7,8]);g.computeVertexNormals();return g;
+    // Solid low-poly tufts replace thin crossed cards, which rasterize as long black slivers on some mobile GPUs.
+    var g=new THREE.ConeGeometry(.085,.28,5,1);g.translate(0,.14,0);g.computeVertexNormals();return g;
   }
-  function setGrassQuality(level){grassTarget=level==='low'?140:level==='high'?420:260;flowerTarget=level==='low'?24:level==='high'?90:54;grassDirty=true;}
+  function setGrassQuality(level){grassTarget=level==='low'?90:level==='high'?300:180;flowerTarget=level==='low'?24:level==='high'?90:54;grassDirty=true;}
   W.setGrassQuality=setGrassQuality;
   function initGrass(){
     if(grassMesh||!scene)return;
@@ -353,7 +344,9 @@
       var a=z*(CS+1)+x,b=a+1,d=a+CS+1,c=d+1;
       if(hash(wx,wz)>.5)indices.push(a,d,c,a,c,b);else indices.push(a,d,b,b,d,c);
     }
-    var geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));geo.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));geo.setAttribute('normal',new THREE.Float32BufferAttribute(normals,3));geo.setAttribute('uv',new THREE.Float32BufferAttribute(uvs,2));geo.setIndex(indices);
+    var geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));geo.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));geo.setAttribute('uv',new THREE.Float32BufferAttribute(uvs,2));geo.setIndex(indices);
+    // Recalculate normals from the final indexed triangles. Hand-written normals became inconsistent with terrain slopes on some mobile renderers.
+    geo.computeVertexNormals();geo.computeBoundingSphere();
     var mesh=new THREE.Mesh(geo,material);mesh.position.set(ox,0,oz);mesh.matrixAutoUpdate=false;mesh.updateMatrix();mesh.cx=cx;mesh.cz=cz;mesh.userData.terrain=true;mesh.castShadow=false;
     // Never receive shadow-map shadows: streamed terrain chunks bypass scene.traverse(), and this caused the black triangular acne seen on Android.
     // The player and vegetation use soft contact shading instead.
