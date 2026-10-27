@@ -100,7 +100,8 @@ const THREE = {
   Mesh,
   BoxGeometry: Geometry,
   BufferAttribute,
-  MeshBasicMaterial: Material
+  MeshBasicMaterial: Material,
+  MeshStandardMaterial: Material
 };
 const context = vm.createContext({ window, document, navigator: { maxTouchPoints: 0 }, THREE });
 
@@ -219,6 +220,8 @@ check('overworld height samples stay fractional for smooth hills',
   terrainSource.includes('return Math.max(3, Math.min(MAXH - 3, h))'));
 check('ground detail texture does not repeat once per terrain block',
   terrainSource.includes('uvs.push((ox+x)*0.16,(oz+z)*0.16)'));
+check('character rigs use rough lit materials instead of unlit plastic shading',
+  fs.readFileSync(path.join(jsDir, 'rig.js'), 'utf8').includes('new THREE.MeshStandardMaterial({ color: c, vertexColors: true, roughness: 0.96, metalness: 0'));
 check('environment asset loader preserves lit PBR materials',
   assetSource.includes('function keepPBR') &&
   assetSource.includes('src.roughness') &&
