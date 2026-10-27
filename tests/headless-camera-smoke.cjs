@@ -287,6 +287,52 @@ check('terrain and sand are tone-mapped below the overexposed palette',
   terrainSource.includes('g*low*fine*.90') &&
   terrainSource.includes('b*low*fine*.92'));
 
+const indexSource = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
+const uiSource = fs.readFileSync(path.join(jsDir, 'ui.js'), 'utf8');
+const menuSource = fs.readFileSync(path.join(jsDir, 'menu.js'), 'utf8');
+const minimapSource = fs.readFileSync(path.join(jsDir, 'minimap.js'), 'utf8');
+const fxSource = fs.readFileSync(path.join(jsDir, 'fx.js'), 'utf8');
+const swSource = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
+check('story-driven UI no longer exposes block-build/place controls',
+  !/id="btn-(build|break|place)"/.test(indexSource) &&
+  !indexSource.includes('js/build.js') &&
+  !mainSource.includes('G.build.') &&
+  !uiSource.includes("'btn-build'"));
+check('renderer uses the native animation loop and offers refresh-aware FPS caps',
+  mainSource.includes('renderer.setAnimationLoop(frame)') &&
+  mainSource.includes('G.setFpsCap') &&
+  mainSource.includes('144'));
+check('live coordinate HUD is present and updated from player position',
+  indexSource.includes('id="coords"') &&
+  mainSource.includes("coordsHud.textContent = 'X '") &&
+  menuSource.includes('showCoords'));
+check('minimap opens as a terrain-aware world map and keeps its close button intact',
+  minimapSource.includes('M.setExpanded') &&
+  minimapSource.includes('drawTerrain(p, s)') &&
+  minimapSource.includes("e.code === 'KeyM'") &&
+  minimapSource.includes('if (M.expanded && labelTitle) labelTitle.textContent'));
+check('front and cinematic third-person camera modes perform collision checks',
+  menuSource.includes('<option value="front">Phía trước</option>') &&
+  menuSource.includes('<option value="cinematic">Điện ảnh</option>') &&
+  playerSource.includes("cameraMode === 'cinematic'") &&
+  playerSource.includes('ph.blockedAt(cpx + sideX * sideOffset + camSign * dx * t'));
+check('personalization persists theme, UI size and FPS limit',
+  menuSource.includes('theme: S.theme') &&
+  menuSource.includes('uiScale: S.uiScale') &&
+  menuSource.includes('fpsCap: S.fpsCap') &&
+  menuSource.includes("document.body.setAttribute('data-theme', S.theme)"));
+check('particle quality controls reduce emission and ambient effects',
+  fxSource.includes('F.setQuality') &&
+  fxSource.includes("particleLevel === 'low' ? 3") &&
+  fxSource.includes('ambientLimit = particleLevel'));
+check('remote GLB cache supports repeat offline sessions with graceful fallback',
+  assetSource.includes("indexedDB.open('besidevalley-model-cache'") &&
+  assetSource.includes('function getModelBuffer(url)') &&
+  assetSource.includes('function fallbackLoad()'));
+check('offline service worker caches the app shell and external renderer scripts after first load',
+  indexSource.includes("navigator.serviceWorker.register('./sw.js')") &&
+  swSource.includes('const SHELL = [') &&
+  swSource.includes("request.destination === 'script'"));
 const failures = results.filter((result) => !result.pass);
 console.log('JavaScript syntax: ' + jsFiles.length + ' files passed');
 console.log('Headless camera/input checks: ' + (results.length - failures.length) + '/' + results.length + ' passed');
