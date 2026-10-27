@@ -1,7 +1,7 @@
 (function () {
   var G = window.Game = window.Game || {};
   var isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
-  var I = G.input = { isTouch: isTouch, moveX: 0, moveZ: 0, jump: false, lookDX: 0, lookDY: 0, viewToggle: false, attackQ: false, dodgeQ: false, invToggle: false, interactQ: false, buildMode: false };
+  var I = G.input = { isTouch: isTouch, moveX: 0, moveZ: 0, jump: false, lookDX: 0, lookDY: 0, viewToggle: false, attackQ: false, dodgeQ: false, invToggle: false, interactQ: false };
   var k = {}, joy = { x: 0, z: 0 }, jumpT = false;
   function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
   function lookScale(base) { var v = G.menu && G.menu.settings && G.menu.settings.sensitivity; return base * (typeof v === 'number' && isFinite(v) ? v / 50 : 1); }
@@ -37,7 +37,7 @@
       if (document.pointerLockElement === canvas) { I.lookDX += e.movementX * lookScale(0.0022); I.lookDY += e.movementY * lookScale(0.0022); }
     });
 
-    document.addEventListener('mousedown', function (e) { if (e.button === 0 && !I.buildMode && document.pointerLockElement === canvas) I.attackQ = true; });
+    document.addEventListener('mousedown', function (e) { if (e.button === 0 && document.pointerLockElement === canvas) I.attackQ = true; });
 
     document.addEventListener('wheel', function (e) {
       var P = G.player; if (!P || !P.third || document.pointerLockElement !== canvas) return;
