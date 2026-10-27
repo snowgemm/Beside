@@ -2,17 +2,18 @@
   var G = window.Game = window.Game || {};
   var touch = G.input.isTouch;
   var renderer = new THREE.WebGLRenderer({ antialias: !touch, powerPreference: 'high-performance' });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, touch ? 1.5 : 2));
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, touch ? 1.35 : 1.65));
   renderer.shadowMap.enabled = false;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.setSize(window.innerWidth, window.innerHeight);
   document.getElementById('game').appendChild(renderer.domElement);
   var scene = new THREE.Scene();
-  var qualityData={low:{pixel:1,grass:'low',shadows:false},medium:{pixel:1.5,grass:'medium',shadows:false},high:{pixel:2,grass:'high',shadows:true}};
+  var qualityData={low:{pixel:1,grass:'low',shadows:false},medium:{pixel:1.35,grass:'medium',shadows:false},high:{pixel:1.65,grass:'high',shadows:false}};
   G.quality={value:touch?'medium':'high',set:function(level){
     if(!qualityData[level])level=touch?'medium':'high';this.value=level;var q=qualityData[level];
     renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,q.pixel));renderer.setSize(window.innerWidth,window.innerHeight);
-    renderer.shadowMap.enabled=!!q.shadows;if(G.sky&&G.sky.setShadows)G.sky.setShadows(!!q.shadows);
+    // Real-time shadow maps caused black terrain wedges on some mobile GPUs. Use contact shading instead.
+    renderer.shadowMap.enabled=false;if(G.sky&&G.sky.setShadows)G.sky.setShadows(false);
     if(G.world&&G.world.setGrassQuality)G.world.setGrassQuality(q.grass);
     if(scene&&scene.traverse)scene.traverse(function(o){
       if((!o.isMesh&&!o.isInstancedMesh)||!o.geometry)return;
@@ -20,14 +21,14 @@
       // Heightfield terrain is double-sided; shadow-map acne used to create giant black triangles across the hills.
       // Contact shadows are rendered separately, so keep the terrain out of the real-time shadow receiver pass.
       if(o.userData&&o.userData.terrain){o.castShadow=false;o.receiveShadow=false;return;}
-      o.castShadow=!!q.shadows;o.receiveShadow=!!q.shadows;
+      o.castShadow=false;o.receiveShadow=false;
     });
   }};
 
   var camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 500);
   G.camera = camera; G.renderer = renderer;
   window.addEventListener('resize', function () {
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, (G.quality && G.quality.value === "low") ? 1 : (G.quality && G.quality.value === "medium") ? 1.5 : 2));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, (G.quality && G.quality.value === "low") ? 1 : (G.quality && G.quality.value === "medium") ? 1.35 : 1.65));
     renderer.setSize(window.innerWidth, window.innerHeight);
     camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix();
   });
