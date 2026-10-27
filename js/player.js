@@ -4,7 +4,7 @@
     health: 100, maxHealth: 100, weapon: { damage: 10, reach: 2.2, cooldown: 0.4 }, dead: false, rollT: 0, rollDir: { x: 0, z: 0 }, kb: { x: 0, z: 0 }, shake: 0, swingT: 0, iframes: 0,
     equip: { weapon: null, armor: null, trinket: null }, dr: 0, crit: 0.05, speedMult: 1 };
   (function () { var b = P.pos; P.vel = Object.defineProperties({}, { x: { get: function () { return b.vx; }, set: function (v) { b.vx = v; }, enumerable: true }, y: { get: function () { return b.vy; }, set: function (v) { b.vy = v; }, enumerable: true }, z: { get: function () { return b.vz; }, set: function (v) { b.vz = v; }, enumerable: true } }); })();
-  var W, cam, scn, rig, curW, spawn, wasGround = false, lastJump = false, wallCd = 0, jbuf = 0, coy = 0, camInit = false, cpx = 0, cpy = 0, cpz = 0, cvx = 0, cvy = 0, cvz = 0, camCur = 6.5, lastSwing = 0, lastHp = -1, wasDead = false, stepT = 0;
+  var W, cam, scn, rig, curW, spawn, shadow = null, wasGround = false, lastJump = false, wallCd = 0, jbuf = 0, coy = 0, camInit = false, cpx = 0, cpy = 0, cpz = 0, cvx = 0, cvy = 0, cvz = 0, camCur = 6.5, lastSwing = 0, lastHp = -1, wasDead = false, stepT = 0;
 
   function weaponKind(w) {
     var n = (w && w.name) || '';
@@ -39,6 +39,9 @@
     W = G.world; cam = camera; spawn = sp; P.spawnPos = sp;
     cam.rotation.order = 'YXZ';
     scn = scene; mkRig();
+    if (shadow && shadow.parent) shadow.parent.remove(shadow);
+    shadow = G.toon && G.toon.blobShadow ? G.toon.blobShadow(0.58) : null;
+    if (shadow) scene.add(shadow);
     P.respawn();
   };
   P.respawn = function () {
@@ -102,6 +105,15 @@
       }
     }
     if (p.y < -30) P.respawn();
+
+    // Soft contact shadow: avoids hard shadow-map acne on the low-poly heightfield and grounds the avatar visually.
+    if (shadow) {
+      var floorY = (G.dungeon && G.dungeon.active) ? W.getHeight(p.x, p.z) : (W.surfaceHeight ? W.surfaceHeight(p.x, p.z) : W.getHeight(p.x, p.z));
+      if (!isFinite(floorY)) floorY = W.getHeight(p.x, p.z);
+      var air = Math.max(0, p.y - floorY), radius = 0.54 + Math.min(1.15, air * 0.12);
+      shadow.position.set(p.x, floorY + 0.035, p.z); shadow.scale.set(radius, radius * 0.72, 1);
+      shadow.visible = !P.dead && !b.inWater && air < 5;
+    }
 
     P.stepOff -= P.stepOff * Math.min(1, 10 * dt);
     var cp = Math.cos(P.pitch), dx = -sy * cp, dy = Math.sin(P.pitch), dz = -cy * cp, camVis = true;
