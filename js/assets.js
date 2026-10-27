@@ -15,7 +15,15 @@
       goblin: { file: 'goblin.glb', height: 1.5, rotY: Math.PI },
       archer: { file: 'archer.glb', height: 1.6, rotY: Math.PI },
       wolf: { file: 'wolf.glb', height: 1, rotY: Math.PI }, skeleton: { file: 'skeleton.glb', height: 1.7, rotY: Math.PI }, bat: { file: 'bat.glb', height: 0.9, rotY: Math.PI },
-      spider: { file: 'spider.glb', height: 0.8, rotY: Math.PI }, mushroom: { file: 'mushroom.glb', height: 1.3, rotY: Math.PI }
+      spider: { file: 'spider.glb', height: 0.8, rotY: Math.PI }, mushroom: { file: 'mushroom.glb', height: 1.3, rotY: Math.PI },
+      // Optional Kenney Nature Kit GLBs from a public mirror; procedural scenery is the offline fallback.
+      tree: { url: 'https://raw.githubusercontent.com/Hidencod/tge-assets/main/packs/nature-kit/tree-default.glb', height: 5.2 },
+      pine: { url: 'https://raw.githubusercontent.com/Hidencod/tge-assets/main/packs/nature-kit/tree-pinetalla.glb', height: 5.2 },
+      bush: { url: 'https://raw.githubusercontent.com/Hidencod/tge-assets/main/packs/nature-kit/plant-bush.glb', height: 0.9 },
+      rock: { url: 'https://raw.githubusercontent.com/Hidencod/tge-assets/main/packs/nature-kit/rock-smalla.glb', height: 0.8 },
+      mushroomProp: { url: 'https://raw.githubusercontent.com/Hidencod/tge-assets/main/packs/nature-kit/mushroom-red.glb', height: 0.65 },
+      coin: { url: 'https://raw.githubusercontent.com/Hidencod/tge-assets/main/packs/mini-dungeon/coin.glb', height: 0.42 },
+      potion: { url: 'https://raw.githubusercontent.com/Hidencod/tge-assets/main/packs/mini-dungeon/potion.glb', height: 0.46 }
     },
     sounds: {
       door: ['door.ogg', 'door.mp3', 'door.wav'], chest: ['chest.ogg', 'chest.mp3', 'chest.wav'],
@@ -25,7 +33,7 @@
       place: ['place.ogg', 'place.mp3', 'place.wav'], break: ['break.ogg', 'break.mp3', 'break.wav']
     }
   };
-  var A = G.assets = { manifest: MANIFEST }, tpl = {}, bufs = {}, raw = {}, pending = 0, timer = null, wrapped = false;
+  var A = G.assets = { manifest: MANIFEST }, tpl = {}, bufs = {}, raw = {}, pending = 0, timer = null, wrapped = false, envRefreshed = false;
 
   // glTF materials are PBR but the game has no lights: convert to unlit basic materials (colour space matched to linear output)
   function toBasic(src, cache) {
@@ -76,8 +84,9 @@
   function loadModel(name, def) {
     return new Promise(function (done) {
       try {
-        new THREE.GLTFLoader().load('assets/models/' + def.file, function (g) {
+        new THREE.GLTFLoader().load(def.url || ('assets/models/' + def.file), function (g) {
           try { tpl[name] = fit(g.scene, def); } catch (e) {}
+          if (!envRefreshed && A.has('tree') && A.has('pine') && A.has('bush') && A.has('rock') && G.world && G.world.refreshDecor) { envRefreshed = true; G.world.refreshDecor(); }
           done();
         }, undefined, function () { done(); });
       } catch (e) { done(); }
@@ -108,6 +117,7 @@
     if (window.THREE && THREE.GLTFLoader) for (k in MANIFEST.models) jobs.push(loadModel(k, MANIFEST.models[k]));
     if (window.fetch) for (k in MANIFEST.sounds) jobs.push(loadSound(k, MANIFEST.sounds[k]));
     return Promise.all(jobs).then(function () {
+      if (!envRefreshed && (A.has('tree') || A.has('pine') || A.has('bush') || A.has('rock')) && G.world && G.world.refreshDecor) { envRefreshed = true; G.world.refreshDecor(); }
       if (pending && !timer) timer = setInterval(decodeAll, 500);
     }, function () {});
   };
