@@ -82,7 +82,7 @@
     if (b.onGround) coy = 0.1; else if (coy > 0) coy -= dt;
     b.swimUp = false;
     if (inW && b.wet > 0.45) b.swimUp = I.jump;
-    else if ((I.jump && b.onGround) || (jbuf > 0 && coy > 0)) { b.vy = ph.JUMP_V; jbuf = 0; coy = 0; b.onGround = false; if (A) A.play('jump'); }
+    else if ((I.jump && b.onGround) || (jbuf > 0 && coy > 0)) { b.vy = ph.JUMP_V; jbuf = 0; coy = 0; b.onGround = false; if (rig && rig.play) rig.play('jump'); if (A) A.play('jump'); }
     var hs0 = Math.sqrt(b.vx * b.vx + b.vz * b.vz);
     ph.move(b, dt);
     if (wallCd > 0) wallCd -= dt;
