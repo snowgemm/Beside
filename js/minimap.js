@@ -1,6 +1,6 @@
 (function () {
   var G = window.Game = window.Game || {};
-  var M = G.minimap = {}, SZ = 256, H = SZ / 2, cv, c, acc = 0, shade, label, labelTitle, cache = new Map(), cacheSeed = null, cacheEditCount = -1;
+  var M = G.minimap = {}, SZ = 256, H = SZ / 2, cv, c, acc = 0, shade, label, labelTitle, cache = new Map(), cacheSeed = null, cacheEditCount = -1, zoomSaveTimer = null;
   M.enabled = true; M.expanded = false; M.zoom = 2.35;
 
   function dot(x, y, r, col) { c.fillStyle = col; c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2); c.fill(); }
@@ -140,12 +140,17 @@
     });
   };
   M.setEnabled = function (on) { M.enabled = !!on; if (cv) cv.style.display = on ? '' : 'none'; if (!on) M.setExpanded(false); };
+  function queueZoomSave() {
+    if (!G.save || !G.save.request) return;
+    if (zoomSaveTimer) clearTimeout(zoomSaveTimer);
+    zoomSaveTimer = setTimeout(function () { zoomSaveTimer = null; if (G.save && G.save.request) G.save.request(); }, 220);
+  }
   M.setZoom = function (zoom, persist) {
     M.zoom = Math.max(1.4, Math.min(3.2, +zoom || 2.35)); acc = 1;
     var z=document.getElementById('map-zoom-value'),inp=document.getElementById('menu-map-zoom'),val=document.getElementById('menu-map-zoom-val');
     if(z)z.textContent=M.zoom.toFixed(1)+'×';if(inp)inp.value=String(M.zoom);if(val)val.textContent=M.zoom.toFixed(1)+'×';
     if(G.menu&&G.menu.settings)G.menu.settings.mapZoom=M.zoom;
-    if(persist!==false&&G.save&&G.save.request)G.save.request();
+    if(persist!==false)queueZoomSave();
   };
   M.update = function (dt) {
     acc += Math.max(0, dt || 0);
