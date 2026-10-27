@@ -238,3 +238,17 @@ body.map-expanded #btn-view,body.map-expanded #btn-attack,body.map-expanded #btn
   #coords{font-size:10px;max-width:calc(100vw - 16px)}
   #map-label{font-size:11px;gap:8px}
 }
+
+/* Expanded world map controls: touch-friendly, readable in portrait and landscape. */
+#map-label{display:flex;flex-wrap:wrap;justify-content:center;row-gap:7px;white-space:normal}
+#map-label .map-title{flex:1 0 100%;text-align:center;font-weight:800;letter-spacing:.8px}
+#map-legend{flex:1 0 100%;text-align:center;color:#c7d4de;font-size:11px;line-height:1.35}
+.map-zoom-controls{display:flex;align-items:center;justify-content:center;gap:7px;flex:0 1 auto}
+.map-zoom-controls #map-zoom-out,.map-zoom-controls #map-zoom-in{min-width:38px;min-height:36px;padding:5px 10px;font-size:20px;font-weight:800}
+.map-zoom-controls #map-zoom-value{min-width:38px;text-align:center;font-variant-numeric:tabular-nums;font-weight:800;color:#ffe09b}
+.map-zoom-controls #map-close{min-height:36px;min-width:65px;padding:7px 9px}
+@media(max-width:520px){
+  #map-label{width:calc(100vw - 24px);gap:6px;padding:8px}
+  #map-legend{font-size:10px}
+  .map-zoom-controls{gap:5px}
+}

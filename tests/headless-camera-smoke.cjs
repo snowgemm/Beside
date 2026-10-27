@@ -340,6 +340,26 @@ check('offline service worker caches the app shell and external renderer scripts
   indexSource.includes("navigator.serviceWorker.register('./sw.js')") &&
   swSource.includes('const SHELL = [') &&
   swSource.includes("request.destination === 'script'"));
+check('terrain grain texture uses periodic multi-scale noise and color texture encoding',
+  terrainSource.includes('function tileNoise(x, y, size, cells, seed)') &&
+  terrainSource.includes('mkTex(size, function (x,y)') &&
+  terrainSource.includes('t.encoding = THREE.sRGBEncoding'));
+check('three distinct close-range tree models use merged procedural trees at distance',
+  assetSource.includes("tree2: { url: 'https://raw.githubusercontent.com/anshaneja5/skyline-run/main/public/assets/models/tree2.glb'") &&
+  assetSource.includes("tree3: { url: 'https://raw.githubusercontent.com/anshaneja5/skyline-run/main/public/assets/models/tree3.glb'") &&
+  terrainSource.includes('42*42') && terrainSource.includes("r2<.34?'tree':r2<.67?'tree2':'tree3'"));
+check('adaptive resolution uses hysteresis and respects the selected FPS cap',
+  mainSource.includes('G.quality.setAdaptiveScale=function(value)') &&
+  mainSource.includes('desiredFps === 0 && !G.paused') &&
+  mainSource.includes('adaptiveFastT >= 8'));
+check('expanded minimap has interactive wheel and pinch zoom that persist settings',
+  minimapSource.includes("cv.addEventListener('wheel'") &&
+  minimapSource.includes("cv.addEventListener('touchmove'") &&
+  minimapSource.includes('map-zoom-in') &&
+  minimapSource.includes('G.menu.settings.mapZoom=M.zoom'));
+check('offline cache is bumped and versioned local assets prevent stale code from loading',
+  swSource.includes("CACHE_NAME = 'besidevalley-shell-v7'") &&
+  indexSource.includes('20261028-rpg-performance4'));
 const failures = results.filter((result) => !result.pass);
 console.log('JavaScript syntax: ' + jsFiles.length + ' files passed');
 console.log('Headless camera/input checks: ' + (results.length - failures.length) + '/' + results.length + ' passed');

@@ -115,19 +115,38 @@
     cv.setAttribute('role', 'button'); cv.setAttribute('tabindex', '0'); cv.setAttribute('aria-label', 'Mở bản đồ toàn màn hình');
     document.body.appendChild(cv); c = cv.getContext('2d');
     label = document.createElement('div'); label.id = 'map-label'; label.style.display = 'none';
-    var title = document.createElement('span'); title.textContent = 'BẢN ĐỒ THẾ GIỚI'; labelTitle = title; label.appendChild(title);
-    var close = document.createElement('button'); close.type = 'button'; close.id = 'map-close'; close.textContent = 'Đóng ✕'; label.appendChild(close); document.body.appendChild(label);
+    var title = document.createElement('span'); title.className='map-title'; title.textContent = 'BẢN ĐỒ THẾ GIỚI'; labelTitle = title; label.appendChild(title);
+    var legend=document.createElement('div');legend.id='map-legend';legend.className='map-legend';legend.textContent='▲ Bạn  ·  ● Quái  ·  ● Đồ rơi  ·  ◆ Cổng';label.appendChild(legend);
+    var controls=document.createElement('div');controls.className='map-zoom-controls';
+    var zoomOut=document.createElement('button');zoomOut.type='button';zoomOut.id='map-zoom-out';zoomOut.textContent='−';zoomOut.setAttribute('aria-label','Thu nhỏ bản đồ');controls.appendChild(zoomOut);
+    var zoomValue=document.createElement('span');zoomValue.id='map-zoom-value';zoomValue.textContent=M.zoom.toFixed(1)+'×';controls.appendChild(zoomValue);
+    var zoomIn=document.createElement('button');zoomIn.type='button';zoomIn.id='map-zoom-in';zoomIn.textContent='+';zoomIn.setAttribute('aria-label','Phóng to bản đồ');controls.appendChild(zoomIn);
+    var close = document.createElement('button'); close.type = 'button'; close.id = 'map-close'; close.textContent = 'Đóng ✕'; controls.appendChild(close);
+    label.appendChild(controls); document.body.appendChild(label);
     cv.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); if (!M.expanded) M.setExpanded(true); });
     cv.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); M.toggleExpanded(); } });
     shade.addEventListener('click', function () { M.setExpanded(false); });
     close.addEventListener('click', function (e) { e.stopPropagation(); M.setExpanded(false); });
+    zoomOut.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();M.setZoom(M.zoom-.2);});
+    zoomIn.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();M.setZoom(M.zoom+.2);});
+    cv.addEventListener('wheel',function(e){if(!M.expanded)return;e.preventDefault();e.stopPropagation();M.setZoom(M.zoom+(e.deltaY<0?.15:-.15));},{passive:false});
+    var pinchStart=0,pinchZoom=M.zoom;
+    cv.addEventListener('touchstart',function(e){if(!M.expanded||e.touches.length<2)return;var a=e.touches[0],b=e.touches[1];pinchStart=Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY);pinchZoom=M.zoom;e.preventDefault();},{passive:false});
+    cv.addEventListener('touchmove',function(e){if(!M.expanded||e.touches.length<2||pinchStart<=0)return;var a=e.touches[0],b=e.touches[1],d=Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY);M.setZoom(pinchZoom*d/pinchStart);e.preventDefault();},{passive:false});
+    cv.addEventListener('touchend',function(e){if(e.touches.length<2)pinchStart=0;},{passive:true});
     window.addEventListener('keydown', function (e) {
       if (e.code === 'KeyM' && !e.repeat) { M.toggleExpanded(); e.preventDefault(); }
       else if (e.code === 'Escape' && M.expanded) { M.setExpanded(false); e.stopImmediatePropagation(); }
     });
   };
   M.setEnabled = function (on) { M.enabled = !!on; if (cv) cv.style.display = on ? '' : 'none'; if (!on) M.setExpanded(false); };
-  M.setZoom = function (zoom) { M.zoom = Math.max(1.4, Math.min(3.2, +zoom || 2.35)); acc = 1; };
+  M.setZoom = function (zoom, persist) {
+    M.zoom = Math.max(1.4, Math.min(3.2, +zoom || 2.35)); acc = 1;
+    var z=document.getElementById('map-zoom-value'),inp=document.getElementById('menu-map-zoom'),val=document.getElementById('menu-map-zoom-val');
+    if(z)z.textContent=M.zoom.toFixed(1)+'×';if(inp)inp.value=String(M.zoom);if(val)val.textContent=M.zoom.toFixed(1)+'×';
+    if(G.menu&&G.menu.settings)G.menu.settings.mapZoom=M.zoom;
+    if(persist!==false&&G.save&&G.save.request)G.save.request();
+  };
   M.update = function (dt) {
     acc += Math.max(0, dt || 0);
     if (acc < (M.expanded ? 0.25 : 0.12) || !c || !M.enabled) return;

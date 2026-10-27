@@ -5,7 +5,7 @@
   function apply() {
     if (G.audio.setVolume) G.audio.setVolume(S.vol / 100);
     if (S.dd != null) G.world.setDrawDistance(S.dd);
-    if (G.minimap && G.minimap.setEnabled) { G.minimap.setEnabled(S.map); if (G.minimap.setZoom) G.minimap.setZoom(S.mapZoom); }
+    if (G.minimap && G.minimap.setEnabled) { G.minimap.setEnabled(S.map); if (G.minimap.setZoom) G.minimap.setZoom(S.mapZoom, false); }
     if (G.quality && G.quality.set) G.quality.set(S.quality);
     if (G.camera) { G.camera.fov = S.fov; G.camera.updateProjectionMatrix(); }
     if (G.player && typeof G.player.camDist === 'number') G.player.camDist = S.camera;
@@ -94,7 +94,7 @@
     uiScale.oninput = function () { S.uiScale = +uiScale.value; uiScaleVal.textContent = Math.round(S.uiScale * 100) + '%'; apply(); G.save.request(); };
     theme.onchange = function () { S.theme = theme.value; apply(); G.save.request(); };
     particles.onchange = function () { S.particles = particles.value; apply(); G.save.request(); };
-    mapZoom.oninput = function () { S.mapZoom = +mapZoom.value; mapZoomVal.textContent = S.mapZoom.toFixed(1) + '×'; if (G.minimap && G.minimap.setZoom) G.minimap.setZoom(S.mapZoom); G.save.request(); };
+    mapZoom.oninput = function () { S.mapZoom = +mapZoom.value; mapZoomVal.textContent = S.mapZoom.toFixed(1) + '×'; if (G.minimap && G.minimap.setZoom) G.minimap.setZoom(S.mapZoom, false); G.save.request(); };
     vib.onchange = function () { S.vib = vib.checked; G.save.request(); if (S.vib && navigator.vibrate) { try { navigator.vibrate(30); } catch (e) {} } };
     document.getElementById('menu-reset').onclick = function () {
       S.vol = 100; S.dd = G.input.isTouch ? 3 : 5; S.map = true; S.vib = true; S.quality = G.input.isTouch ? 'medium' : 'high';
