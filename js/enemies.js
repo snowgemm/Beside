@@ -300,6 +300,7 @@
       if (e.update) e.update(e, dt, dx, dz, d, px, py, pz); else ai(e, dt, dx, dz, d, px, py, pz);
       drive(e, dt);
       P.move(e, dt);
+      if (e.rig && e.landV > 3 && !e.wasGround) e.rig.play('land', { strength: Math.min(1, Math.max(0.2, e.landV / 18)) });
       if (e.landV > P.FALL_V && !e.wasGround && !e.inWater && !e.fly) E.hurt(e, Math.round((e.landV - P.FALL_V) * P.FALL_DMG), 0, 0); // ledge fall
       e.group.position.set(e.x, e.y, e.z);
       if (e.rig) e.rig.update(dt, dt > 0 ? Math.sqrt((e.x - ox) * (e.x - ox) + (e.z - oz) * (e.z - oz)) / dt : 0);
