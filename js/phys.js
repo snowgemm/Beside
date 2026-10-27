@@ -26,9 +26,16 @@
   function smoothWorld() { return !!(W && W.surfaceHeight && !(G.dungeon && G.dungeon.active)); }
   // Take the highest point under the body's footprint so feet do not sink into a hillside.
   function groundY(x,z,r) {
-    var f=W.surfaceHeight, q=Math.max(0,r||0)*0.7, h=f(x,z);
-    if(q>0){h=Math.max(h,f(x-q,z-q),f(x+q,z-q),f(x-q,z+q),f(x+q,z+q));}
-    return h;
+    var f=W && W.surfaceHeight, fallback=W && W.getHeight, q=Math.max(0,r||0)*0.7, h;
+    h=typeof f==='function'?f(x,z):NaN;
+    // A bad height sample must never propagate NaN into body Y and disable floor collision for the rest of the fall.
+    if(!isFinite(h)&&typeof fallback==='function')h=fallback(x,z);
+    if(!isFinite(h))h=W&&isFinite(W.SEA)?W.SEA:0;
+    if(q>0&&typeof f==='function'){
+      var h0=f(x-q,z-q),h1=f(x+q,z-q),h2=f(x-q,z+q),h3=f(x+q,z+q);
+      if(isFinite(h0))h=Math.max(h,h0);if(isFinite(h1))h=Math.max(h,h1);if(isFinite(h2))h=Math.max(h,h2);if(isFinite(h3))h=Math.max(h,h3);
+    }
+    return isFinite(h)?h:(W&&isFinite(W.SEA)?W.SEA:0);
   }
   function collides(b, x, y, z) {
     // The overworld is a triangle-meshed heightfield, not a stack of invisible voxel columns.
