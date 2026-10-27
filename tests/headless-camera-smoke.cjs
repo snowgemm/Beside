@@ -290,6 +290,9 @@ const indexSource = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 const uiSource = fs.readFileSync(path.join(jsDir, 'ui.js'), 'utf8');
 const menuSource = fs.readFileSync(path.join(jsDir, 'menu.js'), 'utf8');
 const playerSource = fs.readFileSync(path.join(jsDir, 'player.js'), 'utf8');
+const enemySource = fs.readFileSync(path.join(jsDir, 'enemies.js'), 'utf8');
+const rigSource = fs.readFileSync(path.join(jsDir, 'rig.js'), 'utf8');
+const physicsSource = fs.readFileSync(path.join(jsDir, 'phys.js'), 'utf8');
 const minimapSource = fs.readFileSync(path.join(jsDir, 'minimap.js'), 'utf8');
 const fxSource = fs.readFileSync(path.join(jsDir, 'fx.js'), 'utf8');
 const swSource = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
@@ -359,6 +362,16 @@ check('expanded minimap has interactive wheel and pinch zoom that persist settin
 check('offline cache is bumped and versioned local assets prevent stale code from loading',
   swSource.includes("CACHE_NAME = 'besidevalley-shell-v7'") &&
   indexSource.includes('20261028-rpg-performance4'));
+check('player and procedural mobs play physics-driven landing squash/rebound',
+  rigSource.includes("state === 'land'") && rigSource.includes('impactPulse') &&
+  playerSource.includes("rig.play('land'") && enemySource.includes("e.rig.play('land'"));
+check('terrain collision has finite fallbacks for invalid surface-height samples',
+  physicsSource.includes("if(!isFinite(h)&&typeof fallback==='function')h=fallback(x,z)") &&
+  physicsSource.includes("return isFinite(h)?h:(W&&isFinite(W.SEA)?W.SEA:0)"));
+check('minimap zoom saves are debounced during continuous gestures',
+  minimapSource.includes('function queueZoomSave()') &&
+  minimapSource.includes('zoomSaveTimer = setTimeout(function ()') &&
+  minimapSource.includes('}, 220)'));
 const failures = results.filter((result) => !result.pass);
 console.log('JavaScript syntax: ' + jsFiles.length + ' files passed');
 console.log('Headless camera/input checks: ' + (results.length - failures.length) + '/' + results.length + ' passed');
