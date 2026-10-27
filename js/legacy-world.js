@@ -154,13 +154,13 @@
     // Solid low-poly tufts replace thin crossed cards, which rasterize as long black slivers on some mobile GPUs.
     var g=new THREE.ConeGeometry(.085,.28,5,1);g.translate(0,.14,0);g.computeVertexNormals();return g;
   }
-  function setGrassQuality(level){grassTarget=level==='low'?90:level==='high'?300:180;flowerTarget=level==='low'?24:level==='high'?90:54;grassDirty=true;}
+  function setGrassQuality(level){grassTarget=level==='low'?48:level==='high'?120:72;flowerTarget=level==='low'?16:level==='high'?48:28;grassDirty=true;}
   W.setGrassQuality=setGrassQuality;
   function initGrass(){
     if(grassMesh||!scene)return;
     var p=G.palette||{},r=p.grass&&(p.grass.plains||p.grass.forest),green=Array.isArray(r)?r[2]:0x6eaa48;
     // Grass blades are thin two-sided cards: unlit material avoids black razor-like wedges under grazing light on mobile GPUs.
-    grassMaterial=new THREE.MeshBasicMaterial({color:green,side:THREE.DoubleSide});
+    grassMaterial=new THREE.MeshBasicMaterial({color:green,side:THREE.DoubleSide,toneMapped:false});
     flowerMaterial=new THREE.MeshStandardMaterial({color:0xffffff,vertexColors:true,roughness:.9});
     grassShader=null; // disable custom wind injection here; it could distort thin cards into long black slivers on mobile GPUs.
     grassMesh=new THREE.InstancedMesh(grassGeometry(),grassMaterial,1050);flowerMesh=new THREE.InstancedMesh(new THREE.ConeGeometry(.065,.16,5),flowerMaterial,135);
@@ -173,14 +173,14 @@
     grassX=ax;grassZ=az;grassDirty=false;
     for(dz=-25;dz<=25&&gn<grassTarget;dz+=1.15)for(dx=-25;dx<=25&&gn<grassTarget;dx+=1.15){
       n=hash(Math.floor(ax+dx+4096),Math.floor(az+dz-1703));wx=ax+dx+(n-.5)*.72;wz=az+dz+(hash(Math.floor(ax+dx+17),Math.floor(az+dz+33))-.5)*.72;
-      dist=(wx-px)*(wx-px)+(wz-pz)*(wz-pz);if(dist>26*26)continue;
+      dist=(wx-px)*(wx-px)+(wz-pz)*(wz-pz);if(dist>17*17)continue;
       h=getHeight(wx,wz);if(h<=SEA+1||h>=24)continue;
       sl=Math.max(Math.abs(getHeight(wx+1,wz)-getHeight(wx-1,wz)),Math.abs(getHeight(wx,wz+1)-getHeight(wx,wz-1)))*.5;if(sl>1.25)continue;
       bi=biomeW(wx,wz);if(bi===2||bi===3)continue;
       grassDummy.position.set(wx,h+.015,wz);grassDummy.rotation.set(0,n*6.283,0);scale=.65+hash(Math.floor(wx*3),Math.floor(wz*3))*.7;
       grassDummy.scale.set(scale*(.82+hash(Math.floor(wx+11),Math.floor(wz-7))*.34),scale*(.55+hash(Math.floor(wx-13),Math.floor(wz+17))*.32),scale*(.82+hash(Math.floor(wx+23),Math.floor(wz+5))*.34));
       grassDummy.updateMatrix();grassMesh.setMatrixAt(gn,grassDummy.matrix);
-      var shade=.72+hash(Math.floor(wx*7+13),Math.floor(wz*7-31))*.36;
+      var shade=.88+hash(Math.floor(wx*7+13),Math.floor(wz*7-31))*.12;
       grassColor.setRGB(shade,Math.min(1,shade*1.05),shade*.88);if(grassMesh.setColorAt)grassMesh.setColorAt(gn,grassColor);gn++;
       if(fn<flowerTarget&&hash(Math.floor(wx+121),Math.floor(wz-91))<.09){
         flowerColor.setRGB(.95,.76+hash(Math.floor(wx),Math.floor(wz))*.22,.88);flowerMesh.setColorAt(fn,flowerColor);
@@ -435,7 +435,7 @@
   // tree trunks (r .32, 2.5 high) and rocks (r .5, .55 high) as short cylinders: Float32Array stride 5 = x, z, r, y0, y1; null when none
   function decorBlockers(cx, cz) { return bmap.get(bk(cx, cz)) || null; }
   function decorMesh(ox, oz, H, BIO) {
-    var N = 18, gates = gatesFor(ox, oz), sp = G.player && G.player.spawnPos, n = 0, trees = 0, lx, lz, g, gl = gates ? gates.length : 0;
+    var N = CS + 3, gates = gatesFor(ox, oz), sp = G.player && G.player.spawnPos, n = 0, trees = 0, lx, lz, g, gl = gates ? gates.length : 0;
     dp = []; dc = []; di = []; dbl = []; modelDecor = [];
     outer:
     for (lz = 0; lz < CS; lz++) for (lx = 0; lx < CS; lx++) {
