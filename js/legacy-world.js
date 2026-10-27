@@ -331,13 +331,14 @@
     return[Math.max(0,Math.min(1,r*low*fine*.91)),Math.max(0,Math.min(1,g*low*fine*.90)),Math.max(0,Math.min(1,b*low*fine*.92))];
   }
   function build(cx,cz){
-    var N=18,H=new Float32Array(N*N),ox=cx*CS,oz=cz*CS,x,z;
-    for(z=-1;z<=CS;z++)for(x=-1;x<=CS;x++)H[(z+1)*N+x+1]=getHeight(ox+x,oz+z);
-    var positions=[],colors=[],normals=[],uvs=[],indices=[],BIO=new Uint8Array(CS*CS);
+    // One full sample ring is required beyond every terrain vertex so finite-difference slopes never read undefined.
+    var N=CS+3,H=new Float32Array(N*N),ox=cx*CS,oz=cz*CS,x,z;
+    for(z=-1;z<=CS+1;z++)for(x=-1;x<=CS+1;x++)H[(z+1)*N+x+1]=getHeight(ox+x,oz+z);
+    var positions=[],colors=[],uvs=[],indices=[],BIO=new Uint8Array(CS*CS);
     for(z=0;z<=CS;z++)for(x=0;x<=CS;x++){
       var hi=(z+1)*N+x+1,h=H[hi],hl=H[hi-1],hr=H[hi+1],hb=H[hi-N],hf=H[hi+N];
-      var dx=hr-hl,dz=hf-hb,nx=-dx,ny=2,nz=-dz,inv=1/Math.sqrt(nx*nx+ny*ny+nz*nz),paint=vertexPaint(ox+x,oz+z,h,Math.sqrt(dx*dx+dz*dz)*.5);
-      positions.push(x,h,z);colors.push(paint[0],paint[1],paint[2]);normals.push(nx*inv,ny*inv,nz*inv);uvs.push((ox+x)*0.16,(oz+z)*0.16);
+      var dx=hr-hl,dz=hf-hb,paint=vertexPaint(ox+x,oz+z,h,Math.sqrt(dx*dx+dz*dz)*.5);
+      positions.push(x,h,z);colors.push(paint[0],paint[1],paint[2]);uvs.push((ox+x)*0.16,(oz+z)*0.16);
     }
     for(z=0;z<CS;z++)for(x=0;x<CS;x++){
       var wx=ox+x,wz=oz+z;BIO[z*CS+x]=biomeW(wx+.5,wz+.5);
