@@ -1,5 +1,5 @@
 (function () {
-  var G=window.Game=window.Game||{},S=G.sky={t:.3,night:0},DAY=600,scene,cam,dome,domeAttr,domeFactor,hemi,keylight,sun,moon,stars,starMat,cloudMat,clouds=[],cloudTex,acc=1,drift=0,off=false;
+  var G=window.Game=window.Game||{},S=G.sky={t:.3,night:0,speed:1},DAY=600,scene,cam,dome,domeAttr,domeFactor,hemi,keylight,sun,moon,stars,starMat,cloudMat,clouds=[],cloudTex,acc=1,drift=0,off=false;
   var keys=[
     {t:0,top:[.018,.03,.09],hor:[.08,.10,.20],fog:[.06,.08,.15],tint:[.52,.58,.78]},
     {t:.18,top:[.15,.18,.34],hor:[.95,.40,.25],fog:[.52,.32,.30],tint:[.88,.78,.70]},
@@ -18,6 +18,7 @@
     var g=x.createLinearGradient(0,20,0,60);g.addColorStop(0,'rgba(255,255,255,.95)');g.addColorStop(1,'rgba(255,255,255,.12)');
     x.globalCompositeOperation='source-in';x.fillStyle=g;x.fillRect(0,0,128,64);return new THREE.CanvasTexture(c);
   }
+  S.setSpeed=function(v){S.speed=[0,.5,1,2].indexOf(v)>=0?v:1;};
   S.init=function(sc,camera){
     scene=sc;cam=camera;hemi=new THREE.HemisphereLight(0xdbe9ff,0x474a48,.78);scene.add(hemi);
     keylight=new THREE.DirectionalLight(0xffd7b5,.9);keylight.position.set(40,100,25);scene.add(keylight);scene.add(keylight.target);keylight.castShadow=false;
@@ -43,7 +44,7 @@
   };
   S.update=function(dt){
     if(!dome)return;var D=G.dungeon;if(D&&D.active){if(!off){off=true;visible(false);}return;}if(off){off=false;visible(true);acc=1;}
-    S.t=(S.t+dt/DAY)%1;if(!(S.t>=0))S.t=.3;sample(S.t);
+    S.t=(S.t+dt*S.speed/DAY)%1;if(!(S.t>=0))S.t=.3;sample(S.t);
     var a=(S.t-.25)*Math.PI*2,sy=Math.sin(a),sx=Math.cos(a),c=cam.position,day=Math.max(0,Math.min(1,(sy+.12)/.8));
     S.night=Math.max(0,Math.min(1,.5-sy*2.5));if(G.world&&G.world.tint)G.world.tint(tint[0],tint[1],tint[2]);
     if(scene.fog)scene.fog.color.setRGB(fog[0],fog[1],fog[2]);if(scene.background&&scene.background.setRGB)scene.background.setRGB(fog[0],fog[1],fog[2]);
