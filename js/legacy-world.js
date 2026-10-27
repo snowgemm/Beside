@@ -319,18 +319,18 @@
   function build(cx,cz){
     var N=18,H=new Int16Array(N*N),ox=cx*CS,oz=cz*CS,x,z;
     for(z=-1;z<=CS;z++)for(x=-1;x<=CS;x++)H[(z+1)*N+x+1]=getHeight(ox+x,oz+z);
-    var positions=[],colors=[],normals=[],indices=[],BIO=new Uint8Array(CS*CS);
+    var positions=[],colors=[],normals=[],uvs=[],indices=[],BIO=new Uint8Array(CS*CS);
     for(z=0;z<=CS;z++)for(x=0;x<=CS;x++){
       var hi=(z+1)*N+x+1,h=H[hi],hl=H[hi-1],hr=H[hi+1],hb=H[hi-N],hf=H[hi+N];
       var dx=hr-hl,dz=hf-hb,nx=-dx,ny=2,nz=-dz,inv=1/Math.sqrt(nx*nx+ny*ny+nz*nz),paint=vertexPaint(ox+x,oz+z,h,Math.sqrt(dx*dx+dz*dz)*.5);
-      positions.push(x,h,z);colors.push(paint[0],paint[1],paint[2]);normals.push(nx*inv,ny*inv,nz*inv);
+      positions.push(x,h,z);colors.push(paint[0],paint[1],paint[2]);normals.push(nx*inv,ny*inv,nz*inv);uvs.push(ox+x,oz+z);
     }
     for(z=0;z<CS;z++)for(x=0;x<CS;x++){
       var wx=ox+x,wz=oz+z;BIO[z*CS+x]=biomeW(wx+.5,wz+.5);
       var a=z*(CS+1)+x,b=a+1,d=a+CS+1,c=d+1;
       if(hash(wx,wz)>.5)indices.push(a,d,c,a,c,b);else indices.push(a,d,b,b,d,c);
     }
-    var geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));geo.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));geo.setAttribute('normal',new THREE.Float32BufferAttribute(normals,3));geo.setIndex(indices);
+    var geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));geo.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));geo.setAttribute('normal',new THREE.Float32BufferAttribute(normals,3));geo.setAttribute('uv',new THREE.Float32BufferAttribute(uvs,2));geo.setIndex(indices);
     var mesh=new THREE.Mesh(geo,material);mesh.position.set(ox,0,oz);mesh.matrixAutoUpdate=false;mesh.updateMatrix();mesh.cx=cx;mesh.cz=cz;mesh.userData.terrain=true;mesh.castShadow=false;mesh.receiveShadow=!!(G.quality&&G.quality.value==='high');
     var dm=decorMesh(ox,oz,H,BIO);if(dm){dm.matrixAutoUpdate=false;dm.updateMatrix();mesh.add(dm);mesh.decor=dm;}
     bmap.set(bk(cx,cz),null);scene.add(mesh);chunks.set(cx+','+cz,mesh);if(W.onChunkLoad)W.onChunkLoad(cx,cz);
