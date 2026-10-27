@@ -43,7 +43,7 @@
 
   function Rig() {
     this.t = 0; this.phase = 0; this.sm = 0; this.speedV = 0; this.air = -1; this._pa = -1; this.landT = 0; this.autoHop = false; this.tiltX = 0;
-    this.flashT = 0; this.tintHex = 0; this.mk = 0; this.atk = null; this.hurtT = 0; this.death = null; this.dead = false; this.disposed = false;
+    this.flashT = 0; this.tintHex = 0; this.mk = 0; this.atk = null; this.hurtT = 0; this.impactT = 0; this.impactStrength = 0; this.death = null; this.dead = false; this.disposed = false;
     this.off = Math.random() * 6.28; this.recs = []; this.role = {}; this.parts = {}; this.meshes = [];
   }
   var P = Rig.prototype;
@@ -53,7 +53,9 @@
       this.speedV = state === 'walk' ? (o.speed || 3) : 0; this.autoHop = state === 'walk';
       if (this.death) { this.death = null; this.dead = false; }
     } else if (state === 'attack') this.atk = { t: 0, dur: Math.max(0.05, o.dur || 0.5), w: o.windup == null ? 0.35 : Math.min(0.9, o.windup) };
-    else if (state === 'hurt') { this.hurtT = 0.28; this.flash(0.12); }
+    else if (state === 'land') {
+      this.impactT = 0.22; this.impactStrength = Math.max(this.impactStrength, Math.max(0.18, Math.min(1, +o.strength || 0.3)));
+    } else if (state === 'hurt') { this.hurtT = 0.28; this.flash(0.12); }
     else if (state === 'death' && !this.death) { this.death = { t: 0, dur: 0.6, cb: o.onDone || null, keep: !!o.keep, done: false }; this.atk = null; this.flash(0.1); }
   };
   P.flash = function (t) { this.flashT = Math.max(this.flashT, t || 0.12); this._m(); };
@@ -144,6 +146,15 @@
       if (k >= 1 && !d.done) { d.done = true; this.dead = true; if (d.cb) d.cb(); }
     }
     if (this.flashT > 0) { this.flashT -= dt; if (this.flashT <= 0) { this.flashT = 0; this._m(); } }
+    // Physics-driven squash/rebound on landing, scaled by impact velocity and updated with delta time.
+    if (this.impactT > 0) {
+      this.impactT = Math.max(0, this.impactT - dt);
+      var impactPulse = Math.sin(Math.PI * (1 - this.impactT / 0.22));
+      sx *= 1 + 0.075 * this.impactStrength * impactPulse;
+      sy *= 1 - 0.15 * this.impactStrength * impactPulse;
+      rY -= 0.045 * this.impactStrength * impactPulse;
+      if (this.impactT === 0) this.impactStrength = 0;
+    }
     for (i = 0; i < this.recs.length; i++) { r = this.recs[i]; r.j.rotation.set(r.rx + r.ax, r.ry + r.ay, r.rz + r.az); }
     this.root.position.set(0, rY, rZ); this.root.scale.set(sx, sy, sx); this.pitch.rotation.set(tX, 0, tZ);
   };
