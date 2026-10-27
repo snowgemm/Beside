@@ -16,11 +16,10 @@
       archer: { file: 'archer.glb', height: 1.6, rotY: Math.PI },
       wolf: { file: 'wolf.glb', height: 1, rotY: Math.PI }, skeleton: { file: 'skeleton.glb', height: 1.7, rotY: Math.PI }, bat: { file: 'bat.glb', height: 0.9, rotY: Math.PI },
       spider: { file: 'spider.glb', height: 0.8, rotY: Math.PI }, mushroom: { file: 'mushroom.glb', height: 1.3, rotY: Math.PI },
-      // Optional Kenney Nature Kit GLBs from a public mirror; procedural scenery is the offline fallback.
-      // Quaternius CommonTree (CC0), textured GLB hosted in a public demo repository; compact Kenney trees remain the fallback.
-      tree: { url: 'https://raw.githubusercontent.com/anshaneja5/skyline-run/main/public/assets/models/tree1.glb', height: 5.2 },
+      // Kenney Nature Kit: one coherent flat-shaded palette, CC0; procedural scenery is the fallback.
+      tree: { url: 'https://raw.githubusercontent.com/Hidencod/tge-assets/main/packs/nature-kit/tree-default.glb', height: 5.2 },
       pine: { url: 'https://raw.githubusercontent.com/Hidencod/tge-assets/main/packs/nature-kit/tree-pinetalla.glb', height: 5.2 },
-      bush: { url: 'https://raw.githubusercontent.com/anshaneja5/skyline-run/main/public/assets/models/bush.glb', height: 1.0 },
+      bush: { url: 'https://raw.githubusercontent.com/Hidencod/tge-assets/main/packs/nature-kit/plant-bush.glb', height: 1.0 },
       rock: { url: 'https://raw.githubusercontent.com/Hidencod/tge-assets/main/packs/nature-kit/rock-smalla.glb', height: 0.8 },
       mushroomProp: { url: 'https://raw.githubusercontent.com/Hidencod/tge-assets/main/packs/nature-kit/mushroom-red.glb', height: 0.65 },
       // Small stylized collectible props from Kenney Mini Dungeon (CC0).
@@ -39,26 +38,21 @@
 
   // Use rough, lit materials instead of unlit plastic-looking colours. Preserve GLTF colour/texture data;
   // external GLB maps are already configured by GLTFLoader and should not be forced into another encoding.
-  function toBasic(src, cache) {
-    if (Array.isArray(src)) return src.map(function (m) { return toBasic(m, cache); });
-    if (cache[src.uuid]) return cache[src.uuid];
-    var opts = { color: src.color ? src.color.clone() : new THREE.Color(0xffffff), map: src.map || null,
-      vertexColors: !!src.vertexColors, transparent: !!src.transparent, opacity: src.opacity == null ? 1 : src.opacity,
-      alphaTest: src.alphaTest || 0, side: src.side, fog: true, roughness: 1, metalness: 0 };
-    if (src.alphaMap) opts.alphaMap = src.alphaMap;
-    if (src.emissiveMap) opts.emissiveMap = src.emissiveMap;
-    if (src.emissive) opts.emissive = src.emissive.clone();
-    var Material = THREE.MeshStandardMaterial || THREE.MeshLambertMaterial || THREE.MeshBasicMaterial;
-    var m = new Material(opts);
-    // This game keeps the legacy linear framebuffer. Preserve its established colour output
-    // by matching GLTF factors/textures to that pipeline instead of adding a global gamma change.
-    if (src.color && m.color && m.color.convertLinearToSRGB) m.color.convertLinearToSRGB();
-    if (m.map && THREE.LinearEncoding !== undefined) m.map.encoding = THREE.LinearEncoding;
-    cache[src.uuid] = m; return m;
+  function keepPBR(src) {
+    if (Array.isArray(src)) return src.map(keepPBR);
+    // Keep the GLTF PBR material and embedded texture intact. Replacing it with
+    // MeshBasicMaterial was washing out lighting and making foliage look plastic.
+    if (src && src.isMeshStandardMaterial) {
+      src.roughness = Math.max(0.82, src.roughness == null ? 1 : src.roughness);
+      src.metalness = 0;
+      src.envMapIntensity = 0.25;
+      src.needsUpdate = true;
+    }
+    return src;
   }
   function fit(scene, def) {
-    var cache = {}, box, size, c, s, wrap = new THREE.Group(), inner = new THREE.Group();
-    scene.traverse(function (o) { if (o.isMesh) o.material = toBasic(o.material, cache); });
+    var box, size, c, s, wrap = new THREE.Group(), inner = new THREE.Group();
+    scene.traverse(function (o) { if (o.isMesh) o.material = keepPBR(o.material); });
     inner.add(scene); inner.updateMatrixWorld(true);
     box = new THREE.Box3().setFromObject(inner); size = box.getSize(new THREE.Vector3()); c = box.getCenter(new THREE.Vector3());
     s = size.y > 1e-6 ? def.height / size.y : 1;
