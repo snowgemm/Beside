@@ -236,7 +236,12 @@ check('grass uses stable two-sided cards without injected wind distortion',
   terrainSource.includes('grassShader=null;') &&
   !terrainSource.includes('uWindTime + instanceMatrix'));
 check('grass density is capped for mobile instead of filling the horizon with spikes',
-  terrainSource.includes("grassTarget=level==='low'?140:level==='high'?420:260"));
+  terrainSource.includes("grassTarget=level==='low'?90:level==='high'?300:180"));
+check('terrain normals are generated from the final indexed triangles',
+  terrainSource.includes('geo.computeVertexNormals();geo.computeBoundingSphere();'));
+check('grass uses solid low-poly tufts instead of thin crossed cards',
+  terrainSource.includes('new THREE.ConeGeometry(.085,.28,5,1)') &&
+  !terrainSource.includes('-.09,0,0,.09,0,0,0,.48,0'));
 check('terrain and sand are tone-mapped below the overexposed palette',
   terrainSource.includes('r*low*fine*.91') &&
   terrainSource.includes('g*low*fine*.90') &&
