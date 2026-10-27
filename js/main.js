@@ -23,6 +23,7 @@
   }};
 
   var camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 500);
+  G.camera = camera; G.renderer = renderer;
   window.addEventListener('resize', function () {
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, (G.quality && G.quality.value === "low") ? 1 : (G.quality && G.quality.value === "medium") ? 1.5 : 2));
     renderer.setSize(window.innerWidth, window.innerHeight);
