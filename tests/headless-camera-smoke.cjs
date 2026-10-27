@@ -247,10 +247,10 @@ check('ground detail texture does not repeat once per terrain block',
   terrainSource.includes('uvs.push((ox+x)*0.16,(oz+z)*0.16)'));
 check('character rigs use rough lit materials instead of unlit plastic shading',
   fs.readFileSync(path.join(jsDir, 'rig.js'), 'utf8').includes('new THREE.MeshStandardMaterial({ color: c, vertexColors: true, roughness: 0.96, metalness: 0'));
-check('environment asset loader preserves lit PBR materials',
+check('environment asset loader preserves lit PBR materials and uses licensed textured nature variants',
   assetSource.includes('function keepPBR') &&
   assetSource.includes('src.roughness') &&
-  assetSource.includes('tree-default.glb'));
+  assetSource.includes('tree1.glb') && assetSource.includes('tree2.glb') && assetSource.includes('tree3.glb'));
 
 const mainSource = fs.readFileSync(path.join(jsDir, 'main.js'), 'utf8');
 check('shadow maps remain disabled at every graphics quality',
@@ -282,10 +282,9 @@ check('terrain normals are generated from the final indexed triangles',
 check('grass uses solid low-poly tufts instead of thin crossed cards',
   terrainSource.includes('new THREE.ConeGeometry(.085,.28,5,1)') &&
   !terrainSource.includes('-.09,0,0,.09,0,0,0,.48,0'));
-check('terrain and sand are tone-mapped below the overexposed palette',
-  terrainSource.includes('r*low*fine*.91') &&
-  terrainSource.includes('g*low*fine*.90') &&
-  terrainSource.includes('b*low*fine*.92'));
+check('terrain and sand use separate exposure compression to reduce midday clipping',
+  terrainSource.includes('var sr=sand?.87:.90, sg=sand?.83:.88, sb=sand?.78:.90') &&
+  terrainSource.includes('r*low*fine*sr') && terrainSource.includes('g*low*fine*sg') && terrainSource.includes('b*low*fine*sb'));
 
 const indexSource = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 const uiSource = fs.readFileSync(path.join(jsDir, 'ui.js'), 'utf8');
@@ -310,7 +309,7 @@ check('live coordinate HUD is present and updated from player position',
 check('minimap zoom is user-adjustable and persisted with the rest of settings',
   menuSource.includes("mapZoom: 2.35") &&
   menuSource.includes('id=\"menu-map-zoom\"') &&
-  menuSource.includes('G.minimap.setZoom(S.mapZoom)') &&
+  menuSource.includes('G.minimap.setZoom(S.mapZoom, false)') &&
   menuSource.includes('mapZoom: S.mapZoom') &&
   menuSource.includes('d.mapZoom'));
 check('minimap opens as a terrain-aware world map and keeps its close button intact',
