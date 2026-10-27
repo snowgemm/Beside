@@ -11,9 +11,8 @@
       PT('shoulderL', 'torso', [.7, .45, .8], [0, 0, 0], [-.95, .95, 0], 0x8d93a0), PT('shoulderR', 'torso', [.7, .45, .8], [0, 0, 0], [.95, .95, 0], 0x8d93a0),
       PT('armL', 'torso', [.5, 1.2, .5], [0, -.55, 0], [-1, .9, 0], 0x6a6f7c), PT('armR', 'torso', [.5, 1.2, .5], [0, -.55, 0], [1, .9, 0], 0x6a6f7c),
       PT('fistL', 'armL', [.8, .7, .8], [0, -.3, 0], [0, -1.15, 0], 0x555965), PT('fistR', 'armR', [.8, .7, .8], [0, -.3, 0], [0, -1.15, 0], 0x555965)] } };
-  B.spec = DEF.spec;
+  B.spec = DEF.spec; B.name = DEF.name;
   var scene, e = null, S = null, tele = null, projs = [], bar, fill, nameEl, pGeo, pMat;
-
   function killTele() {
     if (!tele) return;
     scene.remove(tele);
@@ -40,6 +39,7 @@
     var g = new THREE.CircleGeometry(14, 24, -S.ang - S.spread / 2, S.spread); g.rotateX(-Math.PI / 2);
     tele = mkTele(g, 0.3); tele.position.set(e.x, e.y + 0.06, e.z); scene.add(tele); swing(S.dur);
   }
+  var lastPw = -1, lastEnr = false;
   function projectiles(dt, px, py, pz) {
     for (var i = projs.length - 1; i >= 0; i--) {
       var q = projs[i];
@@ -56,21 +56,20 @@
     var def = en.def, P = G.player, enr = en.hp < def.hp * 0.5, ux = dx / (d || 1), uz = dz / (d || 1), k;
     en.kx = en.kz = 0;
     if (en.bar) en.bar.visible = false;
-    fill.style.width = Math.max(0, en.hp / def.hp * 100) + '%';
-    projectiles(dt, px, py, pz);
-    S.t += dt;
+    var pw = Math.max(0, Math.round(en.hp / def.hp * 100));
+    if (pw !== lastPw) { lastPw = pw; fill.style.width = pw + '%'; }
+    if (enr !== lastEnr) { lastEnr = enr; bar.classList.toggle('enr', enr); }
+    projectiles(dt, px, py, pz); S.t += dt;
     if (S.state === 'idle') {
       en.group.rotation.y = Math.atan2(-dx, -dz);
       if (d > 5.5 && !P.dead) {
-        var nx = en.x + ux * def.speed * dt, nz = en.z + uz * def.speed * dt;
-        if (free(nx, en.z, en.y)) en.x = nx;
-        if (free(en.x, nz, en.y)) en.z = nz;
+        if (free(en.x + ux * 0.4, en.z, en.y)) en.wx = ux * def.speed;
+        if (free(en.x, en.z + uz * 0.4, en.y)) en.wz = uz * def.speed;
       }
       S.cd -= dt;
       if (S.cd <= 0 && !P.dead) { S.n++; if (S.n % 2 === 1 && d < 9) slam(enr); else fan(enr, dx, dz); }
     } else if (S.state === 'slam') {
-      k = Math.min(1, S.t / S.dur);
-      S.fillG.scale.set(k, 1, k); en.group.scale.y = 1 + 0.15 * k;
+      k = Math.min(1, S.t / S.dur); S.fillG.scale.set(k, 1, k); en.group.scale.y = 1 + 0.15 * k;
       if (S.t >= S.dur) {
         en.group.scale.y = 1;
         if (Math.sqrt(dx * dx + dz * dz) < S.R && Math.abs(py - en.y) < 2.5) G.combat.hurtPlayer(Math.round(def.damage * 1.6), en.x, en.z);
@@ -93,27 +92,21 @@
     }
     if (tele && S.state === 'slam') tele.position.set(en.x, en.y + 0.06, en.z);
   }
-
   B.init = function (sc) {
     scene = sc; bar = document.getElementById('boss-bar'); fill = document.getElementById('boss-fill'); nameEl = document.getElementById('boss-name');
     pGeo = new THREE.BoxGeometry(0.34, 0.34, 0.34); pMat = new THREE.MeshBasicMaterial({ color: 0xff7a1a });
-    G.events.on('enemyDied', function (d) {
-      if (d.type !== 'boss' || !B.active) return;
-      B.cleanup(); G.events.emit('bossDied', { x: d.x, y: d.y, z: d.z });
-    });
+    G.events.on('enemyDied', function (d) { if (d.type !== 'boss' || !B.active) return; B.cleanup(); G.events.emit('bossDied', { x: d.x, y: d.y, z: d.z }); });
   };
   B.spawn = function (x, y, z, level) {
     var def = Object.create(DEF);
     def.hp = Math.round(DEF.hp * (1 + 0.2 * (level - 1))); def.damage = Math.round(DEF.damage * (1 + 0.1 * (level - 1)));
     e = G.enemies.spawn('boss', x, y, z, def); e.update = update; e.alerted = true;
     S = { state: 'idle', t: 0, cd: 2, n: 0 }; B.active = true;
-    nameEl.textContent = DEF.name; fill.style.width = '100%'; bar.style.display = 'block';
+    lastPw = -1; lastEnr = false; bar.classList.remove('enr'); nameEl.textContent = DEF.name; fill.style.width = '100%'; bar.style.display = 'block';
     G.audio.play('boss');
   };
   B.cleanup = function () {
-    killTele();
-    projs.forEach(function (q) { scene.remove(q.m); }); projs.length = 0;
-    if (bar) bar.style.display = 'none';
-    B.active = false; e = null;
+    killTele(); projs.forEach(function (q) { scene.remove(q.m); }); projs.length = 0;
+    if (bar) bar.style.display = 'none'; B.active = false; e = null;
   };
 })();
