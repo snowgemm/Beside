@@ -290,6 +290,7 @@ check('terrain and sand are tone-mapped below the overexposed palette',
 const indexSource = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 const uiSource = fs.readFileSync(path.join(jsDir, 'ui.js'), 'utf8');
 const menuSource = fs.readFileSync(path.join(jsDir, 'menu.js'), 'utf8');
+const playerSource = fs.readFileSync(path.join(jsDir, 'player.js'), 'utf8');
 const minimapSource = fs.readFileSync(path.join(jsDir, 'minimap.js'), 'utf8');
 const fxSource = fs.readFileSync(path.join(jsDir, 'fx.js'), 'utf8');
 const swSource = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
