@@ -307,6 +307,12 @@ check('live coordinate HUD is present and updated from player position',
   indexSource.includes('id="coords"') &&
   mainSource.includes("coordsHud.textContent = 'X '") &&
   menuSource.includes('showCoords'));
+check('minimap zoom is user-adjustable and persisted with the rest of settings',
+  menuSource.includes("mapZoom: 2.35") &&
+  menuSource.includes('id=\"menu-map-zoom\"') &&
+  menuSource.includes('G.minimap.setZoom(S.mapZoom)') &&
+  menuSource.includes('mapZoom: S.mapZoom') &&
+  menuSource.includes('d.mapZoom'));
 check('minimap opens as a terrain-aware world map and keeps its close button intact',
   minimapSource.includes('M.setExpanded') &&
   minimapSource.includes('drawTerrain(p, s)') &&
