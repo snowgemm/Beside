@@ -143,7 +143,7 @@ function check(name, condition, detail = '') {
 }
 function wheel(deltaY) {
   let prevented = false;
-  for (const callback of (canvas.listeners.wheel || [])) {
+  for (const callback of (listeners['doc:wheel'] || [])) {
     callback({ deltaY, preventDefault() { prevented = true; } });
   }
   return prevented;
