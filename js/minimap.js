@@ -1,6 +1,6 @@
 (function () {
   var G = window.Game = window.Game || {};
-  var M = G.minimap = {}, SZ = 256, H = SZ / 2, cv, c, acc = 0, shade, label, cache = new Map(), cacheSeed = null, cacheEditCount = -1;
+  var M = G.minimap = {}, SZ = 256, H = SZ / 2, cv, c, acc = 0, shade, label, labelTitle, cache = new Map(), cacheSeed = null, cacheEditCount = -1;
   M.enabled = true; M.expanded = false; M.zoom = 2.35;
 
   function dot(x, y, r, col) { c.fillStyle = col; c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2); c.fill(); }
@@ -94,7 +94,7 @@
     c.save(); c.translate(H, H); c.rotate(-P.yaw);
     c.fillStyle = '#fff'; c.beginPath(); c.moveTo(0, -9); c.lineTo(6, 7); c.lineTo(0, 4); c.lineTo(-6, 7); c.closePath(); c.fill(); c.restore();
     dot(H, H, 3, '#ffffff');
-    if (M.expanded && label) label.textContent = 'BẢN ĐỒ THẾ GIỚI  ·  X ' + p.x.toFixed(1) + '  Z ' + p.z.toFixed(1);
+    if (M.expanded && labelTitle) labelTitle.textContent = 'BẢN ĐỒ THẾ GIỚI  ·  X ' + p.x.toFixed(1) + '  Z ' + p.z.toFixed(1);
     if (cache.size > 28000) {
       var removeN = cache.size - 20000, it = cache.keys();
       while (removeN-- > 0) { var n = it.next(); if (n.done) break; cache.delete(n.value); }
@@ -115,9 +115,9 @@
     cv.setAttribute('role', 'button'); cv.setAttribute('tabindex', '0'); cv.setAttribute('aria-label', 'Mở bản đồ toàn màn hình');
     document.body.appendChild(cv); c = cv.getContext('2d');
     label = document.createElement('div'); label.id = 'map-label'; label.style.display = 'none';
-    var title = document.createElement('span'); title.textContent = 'BẢN ĐỒ THẾ GIỚI'; label.appendChild(title);
+    var title = document.createElement('span'); title.textContent = 'BẢN ĐỒ THẾ GIỚI'; labelTitle = title; label.appendChild(title);
     var close = document.createElement('button'); close.type = 'button'; close.id = 'map-close'; close.textContent = 'Đóng ✕'; label.appendChild(close); document.body.appendChild(label);
-    cv.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); M.toggleExpanded(); });
+    cv.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); if (!M.expanded) M.setExpanded(true); });
     cv.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); M.toggleExpanded(); } });
     shade.addEventListener('click', function () { M.setExpanded(false); });
     close.addEventListener('click', function (e) { e.stopPropagation(); M.setExpanded(false); });
