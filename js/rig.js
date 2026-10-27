@@ -43,7 +43,7 @@
 
   function Rig() {
     this.t = 0; this.phase = 0; this.sm = 0; this.speedV = 0; this.air = -1; this._pa = -1; this.landT = 0; this.autoHop = false; this.tiltX = 0;
-    this.flashT = 0; this.tintHex = 0; this.mk = 0; this.atk = null; this.hurtT = 0; this.impactT = 0; this.impactStrength = 0; this.death = null; this.dead = false; this.disposed = false;
+    this.flashT = 0; this.tintHex = 0; this.mk = 0; this.atk = null; this.hurtT = 0; this.jumpT = 0; this.impactT = 0; this.impactStrength = 0; this.death = null; this.dead = false; this.disposed = false;
     this.off = Math.random() * 6.28; this.recs = []; this.role = {}; this.parts = {}; this.meshes = [];
   }
   var P = Rig.prototype;
@@ -53,6 +53,7 @@
       this.speedV = state === 'walk' ? (o.speed || 3) : 0; this.autoHop = state === 'walk';
       if (this.death) { this.death = null; this.dead = false; }
     } else if (state === 'attack') this.atk = { t: 0, dur: Math.max(0.05, o.dur || 0.5), w: o.windup == null ? 0.35 : Math.min(0.9, o.windup) };
+    else if (state === 'jump') { this.jumpT = 0.32; }
     else if (state === 'land') {
       this.impactT = 0.22; this.impactStrength = Math.max(this.impactStrength, Math.max(0.18, Math.min(1, +o.strength || 0.3)));
     } else if (state === 'hurt') { this.hurtT = 0.28; this.flash(0.12); }
@@ -94,6 +95,16 @@
       this._a('torso', g.quad ? Math.sin(this.phase * 2) * 0.05 : 0, sw * 0.06, 0); this._a('head', 0, -sw * 0.05, 0);
       this._a('tail', 0, Math.sin(this.phase) * 0.3, 0);
       rY += Math.abs(Math.sin(this.phase)) * (g.quad ? 0.08 : 0.06) * amt;
+    }
+    // Compact anticipation pose at take-off; the timer is based on elapsed seconds, not frame count.
+    if (this.jumpT > 0) {
+      this.jumpT = Math.max(0, this.jumpT - dt);
+      var jumpPulse = Math.sin(Math.PI * (1 - this.jumpT / 0.32));
+      this._a('armL', -0.38 * jumpPulse, 0, -0.12 * jumpPulse);
+      this._a('armR', -0.38 * jumpPulse, 0, 0.12 * jumpPulse);
+      this._a('legL', 0.08 * jumpPulse, 0, 0.04 * jumpPulse);
+      this._a('legR', 0.08 * jumpPulse, 0, -0.04 * jumpPulse);
+      rY += 0.025 * jumpPulse;
     }
     if (g.crawl && (arr = this.role.leg)) {
       for (i = 0; i < arr.length; i++) {
