@@ -91,6 +91,7 @@
     P.stepOff += b.stepDy; b.stepDy = 0;
     if (b.landV > 3 && !wasGround && !P.dead) { // landing: event + fall damage (none in water, never lethal)
       var lv = b.landV;
+      if (rig && rig.play) rig.play('land', { strength: Math.min(1, Math.max(0.2, lv / 18)) });
       G.events.emit('landed', { speed: lv });
       if (lv > ph.FALL_V && !b.inWater && P.health > 1) {
         var fd = Math.min(Math.round((lv - ph.FALL_V) * ph.FALL_DMG), P.health - 1);
