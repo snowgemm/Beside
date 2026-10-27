@@ -39,7 +39,7 @@
   function visible(on){if(dome)dome.visible=on;if(stars)stars.visible=on;for(var i=0;i<clouds.length;i++)clouds[i].visible=on;if(!on&&sun&&moon)sun.visible=moon.visible=false;}
   S.setShadows=function(on){
     if(!keylight)return;keylight.castShadow=!!on;
-    if(on){keylight.shadow.mapSize.set(1024,1024);keylight.shadow.camera.left=-30;keylight.shadow.camera.right=30;keylight.shadow.camera.top=30;keylight.shadow.camera.bottom=-30;keylight.shadow.camera.near=1;keylight.shadow.camera.far=100;keylight.shadow.bias=-.00025;keylight.shadow.normalBias=.025;}
+    if(on){keylight.shadow.mapSize.set(1024,1024);keylight.shadow.camera.left=-30;keylight.shadow.camera.right=30;keylight.shadow.camera.top=30;keylight.shadow.camera.bottom=-30;keylight.shadow.camera.near=1;keylight.shadow.camera.far=100;keylight.shadow.camera.updateProjectionMatrix();keylight.shadow.bias=-.00025;keylight.shadow.normalBias=.025;}
   };
   S.update=function(dt){
     if(!dome)return;var D=G.dungeon;if(D&&D.active){if(!off){off=true;visible(false);}return;}if(off){off=false;visible(true);acc=1;}

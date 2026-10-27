@@ -327,7 +327,7 @@
       if(hash(wx,wz)>.5)indices.push(a,d,c,a,c,b);else indices.push(a,d,b,b,d,c);
     }
     var geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));geo.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));geo.setAttribute('normal',new THREE.Float32BufferAttribute(normals,3));geo.setIndex(indices);
-    var mesh=new THREE.Mesh(geo,material);mesh.position.set(ox,0,oz);mesh.matrixAutoUpdate=false;mesh.updateMatrix();mesh.cx=cx;mesh.cz=cz;mesh.userData.terrain=true;
+    var mesh=new THREE.Mesh(geo,material);mesh.position.set(ox,0,oz);mesh.matrixAutoUpdate=false;mesh.updateMatrix();mesh.cx=cx;mesh.cz=cz;mesh.userData.terrain=true;mesh.castShadow=false;mesh.receiveShadow=!!(G.quality&&G.quality.value==='high');
     var dm=decorMesh(ox,oz,H,BIO);if(dm){dm.matrixAutoUpdate=false;dm.updateMatrix();mesh.add(dm);mesh.decor=dm;}
     bmap.set(bk(cx,cz),null);scene.add(mesh);chunks.set(cx+','+cz,mesh);if(W.onChunkLoad)W.onChunkLoad(cx,cz);
   }
@@ -479,7 +479,7 @@
   W.update = function(px,pz,budgetMs){
     if(W.held)return;var pcx=Math.floor(px/CS),pcz=Math.floor(pz/CS);
     if(dirty||pcx!==lcx||pcz!==lcz){lcx=pcx;lcz=pcz;dirty=false;plan(pcx,pcz);}
-    process(budgetMs);updateWater(px,pz,0.016);
+    process(budgetMs);dt=typeof dt==='number'&&isFinite(dt)?Math.max(0,Math.min(.05,dt)):.016;updateWater(px,pz,dt);
   };
   W.findSpawn = function () {
     for (var r = 0; r < 400; r += 6) {
