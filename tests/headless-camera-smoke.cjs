@@ -257,7 +257,7 @@ check('shadow maps remain disabled at every graphics quality',
   mainSource.includes('renderer.shadowMap.enabled=false') &&
   !mainSource.includes('renderer.shadowMap.enabled=!!q.shadows'));
 check('grass uses stable two-sided cards without injected wind distortion',
-  terrainSource.includes('new THREE.MeshBasicMaterial({color:green,side:THREE.DoubleSide})') &&
+  terrainSource.includes('new THREE.MeshBasicMaterial({color:green,side:THREE.DoubleSide,toneMapped:false})') &&
   terrainSource.includes('grassShader=null;') &&
   !terrainSource.includes('uWindTime + instanceMatrix'));
 check('grass density is capped for mobile instead of filling the horizon with spikes',
