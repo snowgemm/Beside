@@ -20,7 +20,7 @@
       // Quaternius CommonTree (CC0), textured GLB hosted in a public demo repository; compact Kenney trees remain the fallback.
       tree: { url: 'https://raw.githubusercontent.com/anshaneja5/skyline-run/main/public/assets/models/tree1.glb', height: 5.2 },
       pine: { url: 'https://raw.githubusercontent.com/Hidencod/tge-assets/main/packs/nature-kit/tree-pinetalla.glb', height: 5.2 },
-      bush: { url: 'https://raw.githubusercontent.com/Hidencod/tge-assets/main/packs/nature-kit/plant-bush.glb', height: 0.9 },
+      bush: { url: 'https://raw.githubusercontent.com/anshaneja5/skyline-run/main/public/assets/models/bush.glb', height: 1.0 },
       rock: { url: 'https://raw.githubusercontent.com/Hidencod/tge-assets/main/packs/nature-kit/rock-smalla.glb', height: 0.8 },
       mushroomProp: { url: 'https://raw.githubusercontent.com/Hidencod/tge-assets/main/packs/nature-kit/mushroom-red.glb', height: 0.65 },
       // Small stylized collectible props from Kenney Mini Dungeon (CC0).
@@ -50,7 +50,10 @@
     if (src.emissive) opts.emissive = src.emissive.clone();
     var Material = THREE.MeshStandardMaterial || THREE.MeshLambertMaterial || THREE.MeshBasicMaterial;
     var m = new Material(opts);
-    if (src.map && m.map && THREE.LinearEncoding !== undefined && m.map.encoding === undefined) m.map.encoding = THREE.LinearEncoding;
+    // This game keeps the legacy linear framebuffer. Preserve its established colour output
+    // by matching GLTF factors/textures to that pipeline instead of adding a global gamma change.
+    if (src.color && m.color && m.color.convertLinearToSRGB) m.color.convertLinearToSRGB();
+    if (m.map && THREE.LinearEncoding !== undefined) m.map.encoding = THREE.LinearEncoding;
     cache[src.uuid] = m; return m;
   }
   function fit(scene, def) {
