@@ -8,6 +8,8 @@
   renderer.setSize(window.innerWidth, window.innerHeight);
   document.getElementById('game').appendChild(renderer.domElement);
   var scene = new THREE.Scene();
+  var desiredFps = 0;
+  G.setFpsCap = function (value) { var n = Number(value); desiredFps = [30,60,90,120,144].indexOf(n) >= 0 ? n : 0; };
   var qualityData={low:{pixel:1,grass:'low',shadows:false},medium:{pixel:1.35,grass:'medium',shadows:false},high:{pixel:1.65,grass:'high',shadows:false}};
   G.quality={value:touch?'medium':'high',set:function(level){
     if(!qualityData[level])level=touch?'medium':'high';this.value=level;var q=qualityData[level];
@@ -47,7 +49,6 @@
   G.dungeon.init(scene);
   G.boss.init(scene);
   G.minimap.init();
-  G.build.init(scene);
   G.menu.init();
   G.assets.load();
   G.inventory.init();
@@ -58,11 +59,12 @@
   G.world.preload(G.player.pos.x, G.player.pos.z, 2);
   G.ui.init();
 
-  var hud = document.getElementById('hud');
+  var hud = document.getElementById('hud'), coordsHud = document.getElementById('coords');
   var last = performance.now(), accT = 0, accN = 0, hudT = 0, fps = 0, slowT = 0, lowered = 0;
   function frame(now) {
-    requestAnimationFrame(frame);
-    var raw = (now - last) / 1000; last = now;
+    var elapsedMs = now - last;
+    if (desiredFps > 0 && elapsedMs + 0.05 < 1000 / desiredFps) return;
+    var raw = elapsedMs / 1000; last = now;
     var dt = Math.min(raw, 0.05);
     G.inventory.update();
     var inp = G.input;
@@ -70,7 +72,6 @@
     else { inp.attackQ = inp.dodgeQ = inp.interactQ = false; inp.lookDX = inp.lookDY = 0; inp.viewToggle = false; }
     var p = G.player.pos;
     if (!G.paused) { G.combat.update(dt); G.enemies.update(dt, p.x, p.y, p.z); G.loot.update(dt); G.dungeon.update(dt); }
-    G.build.update();
     G.sky.update(G.paused ? 0 : dt);
     G.fx.update(G.paused ? 0 : dt, p.x, p.y, p.z);
     G.minimap.update(raw);
@@ -94,8 +95,10 @@
     }
     if (hudT >= 0.4) {
       hudT = 0;
-      hud.textContent = G.dungeon.active ? 'FPS ' + fps : 'FPS ' + fps + ' · Tầm nhìn ' + G.world.drawDistance + ' · Vùng ' + G.world.chunkCount();
+      hud.textContent = 'FPS ' + fps + (G.dungeon.active ? '' : ' · Tầm nhìn ' + G.world.drawDistance + ' · Vùng ' + G.world.chunkCount());
+      if (coordsHud) coordsHud.textContent = 'X ' + p.x.toFixed(1) + ' · Y ' + p.y.toFixed(1) + ' · Z ' + p.z.toFixed(1);
     }
   }
-  requestAnimationFrame(frame);
+  // WebGLRenderer's animation loop follows the display refresh schedule (including high-refresh displays).
+  renderer.setAnimationLoop(frame);
 })();
