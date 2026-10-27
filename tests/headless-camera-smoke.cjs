@@ -112,10 +112,14 @@ function load(relativePath) {
 load('input.js');
 load('rig.js');
 load('player.js');
+// The current player controller delegates body motion and camera collision to phys.js.
+load('phys.js');
 
 let wall = false;
 window.Game.world = {
   WATER: 5,
+  SEA: 0,
+  decorBlockers() { return null; },
   getBlock() { return 0; },
   solid(x, y, z) {
     return wall && Math.floor(z) === 2 && Math.floor(y) === 3;
@@ -126,10 +130,12 @@ window.Game.dungeon = { respawnPoint() { return null; } };
 const scene = new Object3D();
 const camera = new Object3D();
 const G = window.Game;
+G.events = { on() {}, emit() {} };
 G.player.init(scene, camera, { x: 0, y: 2, z: 0.5 });
 const canvas = element('canvas');
 canvas.requestPointerLock = () => { document.pointerLockElement = canvas; };
 G.input.init(canvas);
+G.phys.init();
 
 const results = [];
 function check(name, condition, detail = '') {
