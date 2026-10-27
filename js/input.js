@@ -38,13 +38,10 @@
 
     document.addEventListener('mousedown', function (e) { if (e.button === 0 && !I.buildMode && document.pointerLockElement === canvas) I.attackQ = true; });
 
-    canvas.addEventListener('wheel', function (e) {
-      var P = G.player;
-      if (!P || !P.third || (document.pointerLockElement !== canvas && !canvas.matches(':hover'))) return;
-      e.preventDefault();
-      var delta = e.deltaY > 0 ? 1 : -1;
-      P.camDist = Math.max(2.5, Math.min(12, P.camDist + delta * Math.min(1.1, Math.max(0.45, Math.abs(e.deltaY) * 0.002))));
-    }, { passive: false });
+    document.addEventListener('wheel', function (e) {
+      var P = G.player; if (!P || !P.third || document.pointerLockElement !== canvas) return;
+      P.camDist = Math.max(2.5, Math.min(12, P.camDist + (e.deltaY > 0 ? 0.7 : -0.7)));
+    });
 
     var bv = document.getElementById('btn-view'), bj = document.getElementById('btn-jump');
     bv.addEventListener('click', function () { I.viewToggle = true; });

@@ -22,32 +22,44 @@
     return (h >>> 0) / 4294967296;
   }
   P.STEP = { shadow: 0, dark: 1, base: 2, light: 3, highlight: 4 };
-  P.skin = arr([0xf6d5b8, 0xe8b98f, 0xd29a6a, 0xb87a4e, 0x8d5a3a, 0x5e3a28]);
-  P.hair = arr([0x2a2420, 0x4a3222, 0x6e4a2c, 0x8a4a2a, 0xd8b45a, 0xb8402a, 0x9a9a9e, 0xe8e4dc]);
-  P.cloth = map({ red: 0xc0392f, orange: 0xd9792b, yellow: 0xe0b830, lime: 0x8fc03a, green: 0x3f9a4a, teal: 0x2f9a8c, sky: 0x4aa6d8, blue: 0x3a62c8, purple: 0x7a4ab8, pink: 0xd8689a, brown: 0x8a5a38, gray: 0x7a7e8a });
+  P.skin = arr([0xf6d5b8, 0xe8b98f, 0xd29a6a, 0xb87a4e, 0x8d5a3a, 0x5e3a28]);                       // 6 tones, light -> deep
+  P.hair = arr([0x2a2420, 0x4a3222, 0x6e4a2c, 0x8a4a2a, 0xd8b45a, 0xb8402a, 0x9a9a9e, 0xe8e4dc]);   // black, dark brown, brown, auburn, blond, red, gray, white
+  P.cloth = map({ red: 0xc0392f, orange: 0xd9792b, yellow: 0xe0b830, lime: 0x8fc03a, green: 0x3f9a4a, teal: 0x2f9a8c, sky: 0x4aa6d8,
+    blue: 0x3a62c8, purple: 0x7a4ab8, pink: 0xd8689a, brown: 0x8a5a38, gray: 0x7a7e8a });
   P.metal = map({ iron: 0x7a7e86, copper: 0xc0703a, gold: 0xe0b43a, steel: 0xb4bcc8, mythril: 0x5ad0c8 });
-  P.wood = ramp(0x8a5a30); P.stone = ramp(0x80838a);
+  P.wood = ramp(0x8a5a30);
+  P.stone = ramp(0x80838a);
   P.grass = map({ forest: 0x3f8a3a, plains: 0x8cc84a, desert: 0xc8b060, snow: 0xcfe0e4, swamp: 0x5a7a3a, jungle: 0x2f9a3a });
   P.leaves = map({ forest: 0x2f7a32, plains: 0x5aa83a, desert: 0x8a9a48, snow: 0x4a7a5a, swamp: 0x4a6a3a, jungle: 0x1f8a3a });
-  P.water = ramp(0x3a8ad8); P.fire = ramp(0xf0702a); P.magic = ramp(0xa05aff);
+  P.water = ramp(0x3a8ad8);
+  P.fire = ramp(0xf0702a);
+  P.magic = ramp(0xa05aff);
   P.rarity = { common: 0xf2f2f2, uncommon: 0x4ccf4c, rare: 0x4c8dff, epic: 0xb24cff, legendary: 0xff9a1f };
+
+  // shade(color, step): color = 0xRRGGBB | '#rrggbb' | ramp array; step = 0..4 or 'shadow'|'dark'|'base'|'light'|'highlight'
   P.shade = function (color, step) {
     var r = Array.isArray(color) ? color : ramp(color), i = typeof step === 'string' ? P.STEP[step] : step | 0;
     return r[Math.max(0, Math.min(4, i == null ? 2 : i))];
   };
+  // jitter(color, seed): deterministic lightness noise of 3-6% (sign and size from the seed), for per-voxel richness
   P.jitter = function (color, seed) {
     var c = rgb(color), f = 1 + (hash01(seed + 'a') < 0.5 ? -1 : 1) * (0.03 + 0.03 * hash01(seed + 'b'));
     return pack(mul(c, f));
   };
+  // flat list of every palette colour: [{id:'cloth.red.base', group:'cloth', ramp:'cloth.red', hex}]
   P.list = function () {
     var out = [], g;
-    function add(group, name, r) { var steps = ['shadow', 'dark', 'base', 'light', 'highlight'], i; for (i = 0; i < 5; i++) out.push({ id: name + '.' + steps[i], group: group, ramp: name, hex: r[i] }); }
+    function add(group, name, r) {
+      var steps = ['shadow', 'dark', 'base', 'light', 'highlight'], i;
+      for (i = 0; i < 5; i++) out.push({ id: name + '.' + steps[i], group: group, ramp: name, hex: r[i] });
+    }
     ['skin', 'hair'].forEach(function (k) { P[k].forEach(function (r, i) { add(k, k + '.' + (i + 1), r); }); });
     ['cloth', 'metal', 'grass', 'leaves'].forEach(function (k) { for (g in P[k]) add(k, k + '.' + g, P[k][g]); });
     ['wood', 'stone', 'water', 'fire', 'magic'].forEach(function (k) { add(k, k, P[k]); });
     for (g in P.rarity) out.push({ id: 'rarity.' + g, group: 'rarity', ramp: 'rarity.' + g, hex: P.rarity[g] });
     return out;
   };
+  // nearest(color) -> {id, hex, dist} (RGB distance 0..441); isOn(color, tol=30): within jitter range of some palette colour
   P.nearest = function (color) {
     var l = flatCache || (flatCache = P.list()), c = rgb(color), best = null, bd = 1e9, i, p, d;
     for (i = 0; i < l.length; i++) {

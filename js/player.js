@@ -1,10 +1,10 @@
 (function () {
   var G = window.Game = window.Game || {};
-  var HW = 0.3, HH = 1.8, E = 1e-4;
-  var P = G.player = { pos: { x: 0, y: 0, z: 0 }, vel: { x: 0, y: 0, z: 0 }, yaw: 0, pitch: 0, onGround: false, inWater: false, third: true, camDist: 6.5, camCurrentDist: 6.5, stepOff: 0,
+    var P = G.player = { pos: { x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, r: 0.3, h: 1.8, sr: 0.45, mass: 1.2, imass: 1 / 1.2, onGround: false, inWater: false, autoStep: true, stepDy: 0, wet: 0, swimUp: false }, stun: 0, yaw: 0, pitch: 0, onGround: false, inWater: false, third: true, camDist: 6.5, stepOff: 0,
     health: 100, maxHealth: 100, weapon: { damage: 10, reach: 2.2, cooldown: 0.4 }, dead: false, rollT: 0, rollDir: { x: 0, z: 0 }, kb: { x: 0, z: 0 }, shake: 0, swingT: 0, iframes: 0,
     equip: { weapon: null, armor: null, trinket: null }, dr: 0, crit: 0.05, speedMult: 1 };
-  var W, cam, scn, rig, curW, spawn, wasGround = false, lastSwing = 0, lastHp = -1, wasDead = false, stepT = 0;
+  (function () { var b = P.pos; P.vel = Object.defineProperties({}, { x: { get: function () { return b.vx; }, set: function (v) { b.vx = v; }, enumerable: true }, y: { get: function () { return b.vy; }, set: function (v) { b.vy = v; }, enumerable: true }, z: { get: function () { return b.vz; }, set: function (v) { b.vz = v; }, enumerable: true } }); })();
+  var W, cam, scn, rig, curW, spawn, wasGround = false, lastJump = false, wallCd = 0, jbuf = 0, coy = 0, camInit = false, cpx = 0, cpy = 0, cpz = 0, cvx = 0, cvy = 0, cvz = 0, camCur = 6.5, lastSwing = 0, lastHp = -1, wasDead = false, stepT = 0;
 
   function weaponKind(w) {
     var n = (w && w.name) || '';
@@ -33,33 +33,6 @@
     curW = P.equip.weapon; rig = G.rig.build(P.makeSpec(curW)); scn.add(rig.group); rig.group.visible = false;
     if (P.dead) rig.play('death', { keep: true });
   }
-  function collides(x, y, z) {
-    var x0 = Math.floor(x - HW + E), x1 = Math.floor(x + HW - E), y0 = Math.floor(y + E), y1 = Math.floor(y + HH - E),
-        z0 = Math.floor(z - HW + E), z1 = Math.floor(z + HW - E);
-    for (var ix = x0; ix <= x1; ix++) for (var iz = z0; iz <= z1; iz++) for (var iy = y0; iy <= y1; iy++) if (W.solid(ix, iy, iz)) return true;
-    return false;
-  }
-  function moveH(ax, d) {
-    var p = P.pos, n = Math.max(1, Math.ceil(Math.abs(d) / 0.3)), s = d / n;
-    for (var i = 0; i < n; i++) {
-      var o = p[ax]; p[ax] = o + s;
-      if (collides(p.x, p.y, p.z)) {
-        if (wasGround && !collides(p.x, p.y + 1, p.z)) { p.y += 1; P.stepOff -= 1; }
-        else { p[ax] = o; P.vel[ax] = 0; return; }
-      }
-    }
-  }
-  function moveV(d) {
-    var p = P.pos, n = Math.max(1, Math.ceil(Math.abs(d) / 0.3)), s = d / n;
-    for (var i = 0; i < n; i++) {
-      var o = p.y, ny = o + s; p.y = ny;
-      if (collides(p.x, p.y, p.z)) {
-        if (d < 0) { p.y = Math.floor(ny + E) + 1; P.onGround = true; }
-        else p.y = Math.floor(ny + HH - E) - HH;
-        P.vel.y = 0; return;
-      }
-    }
-  }
   function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
 
   P.init = function (scene, camera, sp) {
@@ -72,8 +45,10 @@
     var s = (G.dungeon && G.dungeon.respawnPoint && G.dungeon.respawnPoint()) || spawn;
     P.pos.x = s.x; P.pos.y = s.y + 0.001; P.pos.z = s.z;
     P.vel.x = P.vel.y = P.vel.z = 0;
-    P.kb.x = P.kb.z = 0; P.rollT = 0; P.swingT = 0;
+    P.kb.x = P.kb.z = 0; P.rollT = 0; P.swingT = 0; P.stun = 0; P.pos.onGround = false; camInit = false;
   };
+  // knockback impulse (blocks of velocity), briefly reduces ground control
+  P.knock = function (ix, iy, iz) { var v = P.pos; v.vx += ix; v.vz += iz; if (iy > v.vy) v.vy = iy; v.onGround = false; P.stun = 0.22; };
   P.recalc = function () {
     var e = P.equip, w = e.weapon && e.weapon.stats, a = e.armor && e.armor.stats, t = e.trinket && e.trinket.stats;
     P.weapon.damage = w ? w.damage : 10; P.weapon.reach = w ? w.reach : 2.2; P.weapon.cooldown = 0.4 * (w ? w.cdMult : 1);
@@ -84,65 +59,71 @@
     if (P.health > P.maxHealth) P.health = P.maxHealth;
   };
   P.update = function (dt) {
-    var I = G.input, p = P.pos, v = P.vel;
+    var I = G.input, p = P.pos, b = p, v = P.vel;
     I.poll();
     if (P.dead) { I.moveX = I.moveZ = 0; I.jump = false; }
     P.yaw -= I.lookDX; P.pitch = clamp(P.pitch - I.lookDY, -1.45, 1.45); I.lookDX = I.lookDY = 0;
     if (I.viewToggle) { P.third = !P.third; I.viewToggle = false; }
-    wasGround = P.onGround;
-    P.inWater = W.getBlock(p.x, p.y + 0.4, p.z) === W.WATER;
+    wasGround = b.onGround;
+    var inW = b.inWater, ph = G.phys, A = G.audio;
     var sy = Math.sin(P.yaw), cy = Math.cos(P.yaw);
     var wx = -sy * I.moveZ + cy * I.moveX, wz = -cy * I.moveZ - sy * I.moveX, l = Math.hypot(wx, wz);
     if (l > 1) { wx /= l; wz /= l; }
-    var sp = (P.inWater ? 2.6 : 5.4) * P.speedMult, k = Math.min(1, (P.onGround || P.inWater ? 12 : 4) * dt);
+    var sp = (inW ? 2.6 : 5.4) * P.speedMult, k = Math.min(1, (P.stun > 0 ? 5 : b.onGround || inW ? 12 : 4) * dt);
+    if (P.stun > 0) P.stun -= dt;
     if (P.rollT > 0) { P.rollT -= dt; v.x = P.rollDir.x * 11; v.z = P.rollDir.z * 11; }
     else { v.x += (wx * sp - v.x) * k; v.z += (wz * sp - v.z) * k; }
-    if (P.inWater) {
-      v.y -= 8 * dt; if (I.jump) v.y += 20 * dt; v.y -= v.y * Math.min(1, 3 * dt);
-    } else {
-      v.y = Math.max(-35, v.y - 28 * dt);
-      if (I.jump && P.onGround) v.y = 9;
+    // jump: coyote 0.1 s + buffer 0.1 s; in water (more than ~half submerged) jump = swim up
+    if (I.jump && !lastJump) jbuf = 0.1; else if (jbuf > 0) jbuf -= dt;
+    lastJump = I.jump;
+    if (b.onGround) coy = 0.1; else if (coy > 0) coy -= dt;
+    b.swimUp = false;
+    if (inW && b.wet > 0.45) b.swimUp = I.jump;
+    else if ((I.jump && b.onGround) || (jbuf > 0 && coy > 0)) { b.vy = ph.JUMP_V; jbuf = 0; coy = 0; b.onGround = false; if (A) A.play('jump'); }
+    var hs0 = Math.sqrt(b.vx * b.vx + b.vz * b.vz);
+    ph.move(b, dt);
+    if (wallCd > 0) wallCd -= dt;
+    if ((b.hitX || b.hitZ) && hs0 > 6 && wallCd <= 0) { wallCd = 0.3; G.events.emit('hitwall', { speed: hs0 }); }
+    P.onGround = b.onGround; P.inWater = b.inWater;
+    P.stepOff += b.stepDy; b.stepDy = 0;
+    if (b.landV > 3 && !wasGround && !P.dead) { // landing: event + fall damage (none in water, never lethal)
+      var lv = b.landV;
+      G.events.emit('landed', { speed: lv });
+      if (lv > ph.FALL_V && !b.inWater && P.health > 1) {
+        var fd = Math.min(Math.round((lv - ph.FALL_V) * ph.FALL_DMG), P.health - 1);
+        if (fd > 0) { P.health -= fd; P.shake = 0.3; if (A) A.play('hurt'); if (G.combat) G.combat.number(p.x, p.y + 2, p.z, fd, '#ff6666', 'hurt'); }
+      }
     }
-    var vy0 = v.y; P.onGround = false;
-    moveH('x', (v.x + P.kb.x) * dt); moveH('z', (v.z + P.kb.z) * dt); moveV(v.y * dt);
-    if (G.fx && !P.dead) { // dust: landing, running, rolling
+    if (G.fx && !P.dead) { // running / rolling dust
       var dcol = G.dungeon && G.dungeon.active ? 0 : W.topColor(p.x, p.z);
-      if (P.onGround && !wasGround && vy0 < -8) G.fx.burst(p.x, p.y + 0.05, p.z, 'dust', dcol);
-      if (P.rollT > 0 || (P.onGround && !P.inWater && Math.hypot(v.x, v.z) > 3.5)) {
+      if (P.rollT > 0 || (b.onGround && !b.inWater && Math.hypot(v.x, v.z) > 3.5)) {
         stepT -= dt;
         if (stepT <= 0) { stepT = P.rollT > 0 ? 0.07 : 0.27; G.fx.burst(p.x, p.y + 0.05, p.z, 'dust', dcol); }
       }
     }
-    var kd = Math.exp(-9 * dt); P.kb.x *= kd; P.kb.z *= kd;
     if (p.y < -30) P.respawn();
 
     P.stepOff -= P.stepOff * Math.min(1, 10 * dt);
-    var cp = Math.cos(P.pitch), dx = -sy * cp, dy = Math.sin(P.pitch), dz = -cy * cp;
+    var cp = Math.cos(P.pitch), dx = -sy * cp, dy = Math.sin(P.pitch), dz = -cy * cp, camVis = true;
     cam.rotation.set(P.pitch, P.yaw, 0);
+    var hx = p.x, hy = p.y + 1.6 + P.stepOff, hz = p.z;
     if (!P.third) {
-      cam.position.set(p.x, p.y + 1.62 + P.stepOff, p.z);
+      cam.position.set(p.x, p.y + 1.62 + P.stepOff, p.z); camInit = false;
     } else {
-      var hx = p.x, hy = p.y + 1.6 + P.stepOff, hz = p.z;
-      var desired = P.camDist, dist = desired, prev = 0.35, hit = false, t;
-      // Probe the boom from the player outwards, then refine the first collision.
-      for (t = 0.35; t <= desired; t += 0.12) {
-        if (W.solid(hx - dx * t, hy - dy * t, hz - dz * t)) {
-          var lo = prev, hi = t, mid;
-          for (var ci = 0; ci < 5; ci++) {
-            mid = (lo + hi) * 0.5;
-            if (W.solid(hx - dx * mid, hy - dy * mid, hz - dz * mid)) hi = mid;
-            else lo = mid;
-          }
-          dist = Math.max(0.55, lo - 0.12); hit = true; break;
-        }
-        prev = t;
+      // critically damped spring on the pivot (horizontal 20, vertical 14), instant pull-in / smooth restore on the distance
+      if (!camInit || Math.abs(hx - cpx) + Math.abs(hz - cpz) + Math.abs(hy - cpy) > 6) { cpx = hx; cpy = hy; cpz = hz; cvx = cvy = cvz = 0; camCur = P.camDist; camInit = true; }
+      var eh = Math.exp(-20 * dt), ev = Math.exp(-14 * dt), tx, tv;
+      tx = (cvx + 20 * (cpx - hx)) * dt; cvx = (cvx - 20 * tx) * eh; cpx = hx + (cpx - hx + tx) * eh;
+      tx = (cvz + 20 * (cpz - hz)) * dt; cvz = (cvz - 20 * tx) * eh; cpz = hz + (cpz - hz + tx) * eh;
+      tv = (cvy + 14 * (cpy - hy)) * dt; cvy = (cvy - 14 * tv) * ev; cpy = hy + (cpy - hy + tv) * ev;
+      var dist = P.camDist;
+      for (var t = 0.4; t <= dist + 0.4; t += 0.2) {
+        if (ph.blockedAt(cpx - dx * t, cpy - dy * t, cpz - dz * t)) { dist = Math.max(0.5, t - 0.4); break; }
       }
-      // Move inward immediately to avoid clipping; ease outward for a steadier camera.
-      if (P.camCurrentDist == null) P.camCurrentDist = dist;
-      if (dist < P.camCurrentDist) P.camCurrentDist = dist;
-      else P.camCurrentDist += (dist - P.camCurrentDist) * Math.min(1, 7 * dt);
-      dist = P.camCurrentDist;
-      cam.position.set(hx - dx * dist, hy - dy * dist, hz - dz * dist);
+      if (dist < camCur) camCur = dist;
+      else if (dist - camCur > 0.03) camCur += (dist - camCur) * (1 - Math.exp(-5 * dt)); else camCur = dist;
+      cam.position.set(cpx - dx * camCur, cpy - dy * camCur, cpz - dz * camCur);
+      camVis = camCur > 0.8;
     }
     if (P.shake > 0.001) { cam.position.x += (Math.random() - 0.5) * P.shake; cam.position.y += (Math.random() - 0.5) * P.shake; P.shake *= Math.max(0, 1 - 12 * dt); }
     var hs = Math.hypot(v.x, v.z);
@@ -155,10 +136,10 @@
     if (P.swingT > 0) P.swingT -= dt;
     lastSwing = P.swingT;
     rig.tiltX = P.rollT > 0 ? -6.283 * (1 - P.rollT / 0.35) : 0;
-    rig.group.visible = P.third;
+    rig.group.visible = P.third && camVis;
     if (P.third) {
       rig.group.position.set(p.x, p.y + P.stepOff, p.z); rig.group.rotation.y = P.yaw;
-      rig.update(dt, P.onGround || P.inWater ? hs : 0);
+      rig.update(dt, b.onGround || b.inWater ? hs : 0);
     }
   };
 })();

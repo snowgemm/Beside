@@ -159,11 +159,16 @@
     ev.on('landed', function (d) {
       var p = G.player.pos, D = G.dungeon;
       if (G.fx) G.fx.burst(p.x, p.y + 0.05, p.z, 'dust', D && D.active ? 0 : G.world.topColor(p.x, p.z));
-      if (G.audio) G.audio.play('land');
+      if (G.audio) G.audio.play(d.speed > 14 ? 'landhard' : 'land');
     });
     ev.on('splash', function (d) {
       if (G.fx) G.fx.burst(d.x, d.y, d.z, 'splash', 0, Math.min(2, d.speed / 8));
-      if (G.audio && d.speed > 5) G.audio.play('splash');
+      if (G.audio && d.speed > 5) G.audio.play(d.speed > 12 ? 'splashbig' : 'splash');
+    });
+    ev.on('hitwall', function () { if (G.audio) G.audio.play('hitwall'); });
+    ev.on('bounce', function (d) {
+      var p = G.player.pos, dx = d.x - p.x, dz = d.z - p.z;
+      if (G.audio && dx * dx + dz * dz < 400) G.audio.play('bounce');
     });
   };
 })();

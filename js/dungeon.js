@@ -196,7 +196,7 @@
     if (i < 0) return;
     run.inter.splice(i, 1);
     if (it.o.userData.lid) it.o.userData.lid.rotation.x = -1.2;
-    L.spawnDrop(rollChest(run.level, h32(run.seed, it.room.idx * 16 + it.ci, 0xC4E57), it.room.kind === 'treasure' ? 1.1 : null), it.x, it.z, 0.15);
+    L.spawnDrop(rollChest(run.level, h32(run.seed, it.room.idx * 16 + it.ci, 0xC4E57), it.room.kind === 'treasure' ? 1.1 : null), it.x, it.z, 0.15, it.y + 0.9);
     G.audio.play('chest');
   }
   function activate(r) {
@@ -219,7 +219,7 @@
   function clearRoom(r) {
     r.state = 'cleared';
     r.doors.forEach(function (d) { setDoor(d, false); });
-    G.audio.play('door'); G.toast('Phòng đã dọn sạch', '#8affb0');
+    G.audio.play('door'); G.ui.banner('Phòng đã dọn sạch', '', 'clear');
   }
   function updateRun(dt, p) {
     var i, r, j, d, k;
@@ -237,8 +237,11 @@
       }
     }
     if (run.portal) run.portal.rotation.y += dt;
-    var txt = run.cur >= 0 ? 'Phòng ' + (run.cur + 1) + '/' + run.rooms.length : '';
-    if (txt !== hudTxt) { hudTxt = txt; roomHud.textContent = txt; }
+    var txt = run.cur >= 0 ? 'Phòng ' + (run.cur + 1) + '/' + run.rooms.length : '', ft = '', cr = run.cur >= 0 ? run.rooms[run.cur] : null, nn = 0, hk;
+    if (cr && cr.state === 'active' && cr.kind === 'combat') { for (j = 0; j < cr.foes.length; j++) if (!cr.foes[j].dead) nn++; if (nn > 0) ft = 'Còn ' + nn + ' kẻ địch'; }
+    else if (cr && cr.kind === 'boss' && G.boss.active) ft = 'Trùm';
+    hk = txt + '|' + ft;
+    if (hk !== hudTxt) { hudTxt = hk; G.ui.setRoom(txt, ft); }
   }
 
   /* ---------- Enter / leave ---------- */
@@ -270,13 +273,14 @@
     D.active = true; insideKey = ent.key; hudTxt = ''; roomHud.style.display = 'block';
     s = run.rooms[0].mk.S; put(s[0] + 0.5, FLOOR + 0.01, s[1] + 0.5, -Math.PI / 2);
     G.player.iframes = 1; G.save.request();
+    G.ui.banner('Hầm ngục: ' + G.ui.dungeonName(run.seed), 'Cấp ' + run.level, 'entry');
   }
   function leave() {
     if (!run) return null;
     var r = run, out = r.ent.out;
     G.boss.cleanup();
     L.drops.forEach(function (d) {
-      if (G.inventory.add(d.item)) G.toast('Nhặt được: ' + d.item.name, G.items.RARITIES[d.item.rarity].color);
+      if (G.inventory.add(d.item)) G.toast('Nhặt được: ' + d.item.name, G.items.RARITIES[d.item.rarity].color, d.item);
       scene.remove(d.mesh);
     });
     L.drops = r.sDrops; L.drops.forEach(function (d) { d.mesh.visible = true; });
@@ -335,13 +339,13 @@
       if (!run) return;
       var room = run.rooms[run.rooms.length - 1], item, s;
       for (s = 0; s < 80; s++) { item = rollChest(run.level + 1, h32(run.seed, 9000 + s, 0xB055), 1.2); if (item.rarity >= 2) break; }
-      L.spawnDrop(item, d.x, d.z, 0.5);
+      L.spawnDrop(item, d.x, d.z, 0.5, d.y + 1);
       room.state = 'cleared'; room.doors.forEach(function (x) { setDoor(x, false); });
       cleared[run.key] = true; if (gates[run.key]) V.setCleared(gates[run.key], true);
       var o = V.portal(), bx = room.mk.B[0] + 0.5, bz = room.mk.B[1] + 0.5;
       o.position.set(bx, FLOOR, bz); run.grp.add(o); run.portal = o;
       run.inter.push({ x: bx, y: FLOOR, z: bz, r: 2.6, label: 'Rời hầm ngục', act: exitRun });
-      G.toast('Đã hạ trùm!', '#ffd34d'); G.save.request();
+      G.ui.banner('Trùm đã bị hạ!', G.boss.name || '', 'boss'); G.save.request();
     });
     G.save.register('dungeon', function () { return { runs: runs, cleared: cleared, inside: insideKey }; },
       function (d) { runs = d.runs || {}; cleared = d.cleared || {}; insideKey = d.inside || null; });

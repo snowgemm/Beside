@@ -70,6 +70,8 @@
         S('armL', 'torso', [.1, .28, .1], [0, -.12, 0], [-.3, .34, 0], 0xf2e8cc), S('armR', 'torso', [.1, .28, .1], [0, -.12, 0], [.3, .34, 0], 0xf2e8cc)]) } }
   };
   var E = G.enemies = { list: [], types: TYPES };
+  var MASS = { slime: 0.6, goblin: 1, archer: 1, wolf: 1.2, skeleton: 1.1, bat: 0.4, spider: 0.8, mushroom: 0.9, boss: 8 };
+  var ARROW_V = 16, ARROW_G = 12, STICK = 1, cdt = 0.016;
   var W, scene, cam, byChunk = {}, projs = [], geoC = {}, matC = {};
   var flashMat, teleMat, barGeo, barBgMat, barFillMat, projGeo, projMat;
 
@@ -101,7 +103,9 @@
     else if (def.spec) { rig = G.rig.build(def.spec, (Math.random() * 4) | 0); g.add(rig.group); }
     g.position.set(x, y, z); scene.add(g);
     var e = { type: name, def: def, x: x, y: y, z: z, hp: def.hp, group: g, meshes: meshes, rig: rig, rigDone: false, state: 'idle', t: Math.random() * 2,
-      hop: 0, hopY: 0, dirx: 0, dirz: 0, walking: false, kx: 0, kz: 0, flash: 0, alerted: false, dead: false, deathT: 0, bar: null, cd: 1 + Math.random() };
+      hop: 0, hopY: 0, vx: 0, vy: 0, vz: 0, wx: 0, wz: 0, r: name === 'boss' ? 0.9 : Math.max(0.25, def.radius * 0.75), sr: def.radius * 0.9, h: 0,
+      mass: MASS[name] || 1, imass: name === 'boss' ? 0 : 1 / (MASS[name] || 1), onGround: false, inWater: false, autoStep: false, stepDy: 0, fly: false, act: false, jcd: 0, kbT: 0, hopper: (def.ai || name) === 'slime', dirx: 0, dirz: 0, walking: false, kx: 0, kz: 0, flash: 0, alerted: false, dead: false, deathT: 0, bar: null, cd: 1 + Math.random() };
+    e.fly = !!(def.spec && def.spec.gait && def.spec.gait.fly); e.h = e.fly ? 0.8 : def.height;
     E.list.push(e);
     return e;
   }
@@ -159,12 +163,14 @@
     e.group.scale.setScalar(1);
     if (e.rig) e.rig.tint(0); else restore(e);
   }
-  function canStand(e, x, z) { var h = W.getHeight(x, z); return h >= W.SEA && h - e.y <= 1.01; }
+  // AI "step": sets the walking velocity for this frame (displacement / dt); never walks from land into deep water
   function step(e, dx, dz) {
-    if (canStand(e, e.x + dx, e.z + dz)) { e.x += dx; e.z += dz; return; }
-    if (dx && canStand(e, e.x + dx, e.z)) e.x += dx;
-    else if (dz && canStand(e, e.x, e.z + dz)) e.z += dz;
+    var l = Math.sqrt(dx * dx + dz * dz);
+    if (l > 0 && !e.inWater && !e.fly && W.getHeight(e.x + dx / l * (e.r + 0.5), e.z + dz / l * (e.r + 0.5)) < W.SEA) return;
+    e.wx = dx / cdt; e.wz = dz / cdt;
   }
+  // wandering / idle hops avoid deep water and drops of more than 2 blocks
+  function unsafe(e, ux, uz, dist) { if (e.fly) return false; var h = W.getHeight(e.x + ux * dist, e.z + uz * dist); return h < W.SEA || h < e.y - 2; }
   function face(e, dx, dz) { e.group.rotation.y = Math.atan2(-dx, -dz); }
   function wander(e, dt, speed) {
     e.t -= dt;
@@ -172,6 +178,7 @@
       if (e.walking) { e.walking = false; e.t = 1 + Math.random() * 2; }
       else { e.walking = true; e.t = 1 + Math.random() * 1.5; var a = Math.random() * 6.283; e.dirx = Math.cos(a); e.dirz = Math.sin(a); }
     }
+    if (e.walking && unsafe(e, e.dirx, e.dirz, e.r + 1)) { e.dirx = -e.dirx; e.dirz = -e.dirz; if (unsafe(e, e.dirx, e.dirz, e.r + 1)) { e.walking = false; e.t = 0.5; } }
     if (e.walking) { step(e, e.dirx * speed * dt, e.dirz * speed * dt); face(e, e.dirx, e.dirz); }
   }
   function ensureBar(e) {
@@ -180,23 +187,28 @@
     bg.position.x = -0.54; bg.scale.set(1.08, 1.6, 1); f.position.set(-0.5, 0, 0.01);
     b.add(bg, f); b.userData.fill = f; scene.add(b); e.bar = b;
   }
+  // ballistic launch: low-arc solution for speed ARROW_V under ARROW_G, aimed slightly ahead of the player's velocity
   function fire(e, px, py, pz) {
-    var ox = e.x, oy = e.y + 1.2, oz = e.z, tx = px - ox, ty = py + 1 - oy, tz = pz - oz;
-    var l = Math.sqrt(tx * tx + ty * ty + tz * tz) || 1, s = 9 / l;
+    var ox = e.x, oy = e.y + 1.2, oz = e.z, pb = G.player.pos, t0 = Math.sqrt((px - ox) * (px - ox) + (pz - oz) * (pz - oz)) / ARROW_V;
+    var hx = px + pb.vx * t0 * 0.55 - ox, hz = pz + pb.vz * t0 * 0.55 - oz, H = py + 1 - oy, D = Math.sqrt(hx * hx + hz * hz) || 0.1, s2 = ARROW_V * ARROW_V;
+    var disc = s2 * s2 - ARROW_G * (ARROW_G * D * D + 2 * H * s2), tn = disc < 0 ? s2 / (ARROW_G * D) : (s2 - Math.sqrt(disc)) / (ARROW_G * D);
+    var vh = ARROW_V / Math.sqrt(1 + tn * tn);
     var m = new THREE.Mesh(projGeo, e.def.proj ? mat(e.def.proj) : projMat); m.position.set(ox, oy, oz); scene.add(m);
-    projs.push({ m: m, x: ox, y: oy, z: oz, vx: tx * s, vy: ty * s, vz: tz * s, t: 0, dmg: e.def.damage });
+    projs.push({ m: m, x: ox, y: oy, z: oz, vx: hx / D * vh, vy: vh * tn, vz: hz / D * vh, t: 0, st: -1, dmg: e.def.damage });
     G.audio.play('swing');
   }
 
   E.hurt = function (e, dmg, kx, kz) {
     if (e.dead) return;
-    e.hp -= dmg; e.alerted = true; e.kx = kx; e.kz = kz;
+    e.hp -= dmg; e.alerted = true;
+    var kk = kx * kx + kz * kz, ks = (1 + Math.min(dmg, 40) * 0.012) * 0.9 / e.mass * (e.hp <= 0 ? 1.6 : 1);
+    if (kk > 0) { e.vx += kx * ks; e.vz += kz * ks; e.kbT = e.hp <= 0 ? 0.6 : 0.3; if (!e.fly || e.hp <= 0) { e.vy = Math.max(e.vy, (e.hp <= 0 ? 5 : 3.2) / Math.sqrt(e.mass)); e.onGround = false; } }
     if (e.rig) e.rig.play('hurt'); else { e.flash = 0.12; setMat(e, flashMat); }
     G.combat.number(e.x, e.y + e.def.height + 0.4, e.z, dmg, '#ffffff');
     if (G.fx) G.fx.burst(e.x, e.y + e.def.height * 0.55, e.z, 'hit');
     ensureBar(e);
     if (e.hp <= 0) {
-      e.dead = true; e.deathT = 0; e.bar.visible = false; e.group.scale.setScalar(1);
+      e.dead = true; e.fly = false; e.deathT = 0; e.bar.visible = false; e.group.scale.setScalar(1);
       if (e.rig) e.rig.play('death', { onDone: function () { e.rigDone = true; } });
       G.audio.play('death');
       if (G.fx) G.fx.burst(e.x, e.y + e.def.height * 0.5, e.z, 'death', G.fx.colorOf(e), e.def.height > 2.5 ? 2.2 : 1);
@@ -209,17 +221,16 @@
     agg = e.alerted || d < def.aggro;
     if (kind === 'slime') {
       e.t -= dt;
-      if (e.hop > 0) {
-        e.hop -= dt; step(e, e.dirx * def.speed * 1.6 * dt, e.dirz * def.speed * 1.6 * dt);
-        e.hopY = Math.sin(Math.PI * (1 - e.hop / 0.5)) * 0.9;
-        if (e.hop <= 0) e.hopY = 0;
-      } else if (e.t <= 0) {
-        if (agg) { e.dirx = ux; e.dirz = uz; e.hop = 0.5; e.t = 0.9; }
-        else { var a = Math.random() * 6.283; e.dirx = Math.cos(a); e.dirz = Math.sin(a); e.hop = 0.5; e.t = 1.5 + Math.random() * 2; }
-        face(e, e.dirx, e.dirz);
+      if (e.onGround && e.t <= 0 && e.kbT <= 0) { // real jump impulse
+        var hx, hz, a;
+        if (agg) { hx = ux; hz = uz; e.t = 0.9; }
+        else { a = Math.random() * 6.283; hx = Math.cos(a); hz = Math.sin(a); e.t = 1.5 + Math.random() * 2; if (unsafe(e, hx, hz, 2.4)) { hx = -hx; hz = -hz; if (unsafe(e, hx, hz, 2.4)) { hx = hz = 0; e.t = 0.4; } } }
+        if ((hx || hz) && !(agg && !e.inWater && W.getHeight(e.x + hx * 2.2, e.z + hz * 2.2) < W.SEA)) {
+          e.vx = hx * def.speed * 1.6; e.vz = hz * def.speed * 1.6; e.vy = 7.1; e.onGround = false; e.dirx = hx; e.dirz = hz; face(e, hx, hz);
+        } else if (agg) e.t = 0.3;
       }
-      if (e.rig) e.rig.air = e.hop > 0 ? 1 - e.hop / 0.5 : -1; else e.group.scale.y = e.hop > 0 ? 1.15 : 0.9;
-      if (d < 0.95 && Math.abs(py - (e.y + e.hopY)) < 1.4) C.hurtPlayer(def.damage, e.x, e.z);
+      if (e.rig) e.rig.air = e.onGround ? -1 : Math.min(1, Math.max(0, 0.5 - e.vy / 14.2)); else e.group.scale.y = e.onGround ? 0.9 : 1.15;
+      if (d < 0.95 && Math.abs(py - e.y) < 1.4) C.hurtPlayer(def.damage, e.x, e.z);
     } else if (kind === 'goblin') {
       if (e.state === 'wind') {
         face(e, dx, dz); e.t -= dt;
@@ -251,11 +262,26 @@
     removeEnemy(e); G.events.emit('enemyDied', d);
   }
 
+  // velocity blend, step-up jumps, hover for flyers
+  function drive(e, dt) {
+    var acc, k, gh, h2;
+    if (e.fly) {
+      gh = W.getHeight(e.x, e.z); h2 = W.getHeight(e.x + e.wx * 0.3, e.z + e.wz * 0.3); if (h2 > gh) gh = h2; if (gh < W.SEA) gh = W.SEA;
+      e.vy = Math.max(-8, Math.min(8, (gh + 0.1 - e.y) * 6)); acc = e.kbT > 0 ? 3 : 10;
+    } else acc = (e.onGround || e.inWater) ? (e.kbT > 0 ? 7 : 12) : e.hopper ? 0 : (e.kbT > 0 ? 0.5 : 5);
+    if (acc > 0) { k = Math.min(1, acc * dt); e.vx += (e.wx - e.vx) * k; e.vz += (e.wz - e.vz) * k; }
+    if (!e.fly && (e.onGround || e.inWater) && e.jcd <= 0 && e.stepOk && (e.wx || e.wz) && e.kbT <= 0) { e.vy = 8.4; e.jcd = 0.45; e.onGround = false; } // jump up a 1-block step
+  }
+
   E.update = function (dt, px, py, pz) {
-    var list = E.list, i;
+    var list = E.list, i, P = G.phys;
+    cdt = dt > 1e-3 ? dt : 1e-3;
     for (i = list.length - 1; i >= 0; i--) {
       var e = list[i];
-      if (e.dead) {
+      if (e.dead) { // corpse keeps falling / sliding with its last impulse
+        e.act = false;
+        if (e.onGround) { var fr = Math.min(1, 6 * dt); e.vx -= e.vx * fr; e.vz -= e.vz * fr; }
+        P.move(e, dt); e.group.position.set(e.x, e.y, e.z);
         if (e.rig) { e.rig.update(dt, 0); if (e.rigDone) finish(e); continue; }
         e.deathT += dt;
         if (e.deathT >= 0.35) { finish(e); continue; }
@@ -264,32 +290,47 @@
         continue;
       }
       var dx = px - e.x, dz = pz - e.z, d = Math.sqrt(dx * dx + dz * dz);
-      if (d > AI_RANGE) continue;
+      if (d > AI_RANGE) { e.act = false; continue; }
+      e.act = true;
       if (!e.rig && e.flash > 0) { e.flash -= dt; if (e.flash <= 0) restore(e); }
-      if (e.kx || e.kz) {
-        step(e, e.kx * dt, e.kz * dt);
-        var kd = Math.exp(-8 * dt); e.kx *= kd; e.kz *= kd;
-        if (Math.abs(e.kx) + Math.abs(e.kz) < 0.05) e.kx = e.kz = 0;
-      }
+      if (e.kbT > 0) e.kbT -= dt;
+      if (e.jcd > 0) e.jcd -= dt;
       var ox = e.x, oz = e.z;
+      e.wx = e.wz = 0;
       if (e.update) e.update(e, dt, dx, dz, d, px, py, pz); else ai(e, dt, dx, dz, d, px, py, pz);
-      var gh = W.getHeight(e.x, e.z);
-      e.y = gh >= e.y ? gh : Math.max(gh, e.y - 14 * dt);
-      e.group.position.set(e.x, e.y + e.hopY, e.z);
+      drive(e, dt);
+      P.move(e, dt);
+      if (e.landV > P.FALL_V && !e.wasGround && !e.inWater && !e.fly) E.hurt(e, Math.round((e.landV - P.FALL_V) * P.FALL_DMG), 0, 0); // ledge fall
+      e.group.position.set(e.x, e.y, e.z);
       if (e.rig) e.rig.update(dt, dt > 0 ? Math.sqrt((e.x - ox) * (e.x - ox) + (e.z - oz) * (e.z - oz)) / dt : 0);
       if (e.bar) {
         e.bar.position.set(e.x, e.y + e.def.height + 0.55, e.z); e.bar.quaternion.copy(cam.quaternion);
         e.bar.userData.fill.scale.x = Math.max(0.001, e.hp / e.def.hp);
       }
     }
+    P.separate(list, G.player.dead ? null : G.player.pos);
     for (i = projs.length - 1; i >= 0; i--) {
-      var q = projs[i];
-      q.t += dt; q.x += q.vx * dt; q.y += q.vy * dt; q.z += q.vz * dt; q.m.position.set(q.x, q.y, q.z);
-      var kill = q.t > 3.5 || W.solid(q.x, q.y, q.z);
-      if (!kill) {
-        var ex = q.x - px, ez = q.z - pz;
-        if (ex * ex + ez * ez < 0.36 && Math.abs(q.y - (py + 0.9)) < 1) {
-          if (G.combat.hurtPlayer(q.dmg, q.x - q.vx * 0.1, q.z - q.vz * 0.1)) kill = true;
+      var q = projs[i], kill = false;
+      if (q.st >= 0) { // stuck in terrain: 1 s, shrink away over the last 0.3 s
+        q.st += dt;
+        if (q.st > STICK) kill = true; else if (q.st > STICK - 0.3) q.m.scale.setScalar((STICK - q.st) / 0.3);
+      } else {
+        q.t += dt; q.vy -= ARROW_G * dt;
+        var n = Math.max(1, Math.ceil(Math.sqrt(q.vx * q.vx + q.vy * q.vy + q.vz * q.vz) * dt / 0.4)), j, sd = dt / n;
+        for (j = 0; j < n; j++) {
+          var ppx = q.x, ppy = q.y, ppz = q.z;
+          q.x += q.vx * sd; q.y += q.vy * sd; q.z += q.vz * sd;
+          if (W.solid(q.x, q.y, q.z)) { q.x = ppx; q.y = ppy; q.z = ppz; q.st = 0; break; }
+        }
+        q.m.position.set(q.x, q.y, q.z);
+        if (q.st < 0) {
+          if (q.t > 3.5) kill = true;
+          else {
+            var ex = q.x - px, ez = q.z - pz;
+            if (ex * ex + ez * ez < 0.36 && Math.abs(q.y - (py + 0.9)) < 1) {
+              if (G.combat.hurtPlayer(q.dmg, q.x - q.vx * 0.1, q.z - q.vz * 0.1)) kill = true;
+            }
+          }
         }
       }
       if (kill) { scene.remove(q.m); projs.splice(i, 1); }

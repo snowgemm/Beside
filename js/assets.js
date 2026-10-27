@@ -27,6 +27,7 @@
   };
   var A = G.assets = { manifest: MANIFEST }, tpl = {}, bufs = {}, raw = {}, pending = 0, timer = null, wrapped = false;
 
+  // glTF materials are PBR but the game has no lights: convert to unlit basic materials (colour space matched to linear output)
   function toBasic(src, cache) {
     if (Array.isArray(src)) return src.map(function (m) { return toBasic(m, cache); });
     if (cache[src.uuid]) return cache[src.uuid];
@@ -60,6 +61,7 @@
     var s = ctx.createBufferSource(); s.buffer = b; s.connect(G.audio.master); s.start(0);
     return true;
   };
+  // decoding needs an AudioContext, which only exists after the first user gesture
   function decodeAll() {
     var ctx = G.audio && G.audio.ctx;
     if (!ctx) return;
@@ -109,6 +111,8 @@
       if (pending && !timer) timer = setInterval(decodeAll, 500);
     }, function () {});
   };
+  /* ---------- REGISTRY + BUDGETS + VALIDATE (read-only views over existing data; see ART.md) ---------- */
+  // voxel = one box (12 tris); item icons count filled grid cells
   A.budgets = {
     character: { voxels: 24, tris: 288 }, mob_s: { voxels: 16, tris: 192 }, mob_m: { voxels: 20, tris: 240 }, mob_l: { voxels: 28, tris: 336 },
     prop_s: { voxels: 40, tris: 480 }, prop_l: { voxels: 120, tris: 1440 }, item: { voxels: 96, tris: 0 }
@@ -117,8 +121,9 @@
   function rigEntry(id, cat, name, spec) {
     return { id: id, cat: cat, name: name, spec: spec, make: function () { var r = G.rig.build(spec, 0); return { obj: r.group, rig: r, dispose: function () {} }; } };
   }
+  // all assets: [{id, cat:'model'|'mob'|'prop'|'item', name, make()->{obj,rig,dispose}|null, spec?, item?}]
   A.registry = function () {
-    var out = [], T = G.enemies && G.enemies.types, V = G.dungeon && G.dungeon.visuals, B = G.items && G.items.BASES, k, slot;
+    var out = [], T = G.enemies && G.enemies.types, V = G.dungeon && G.dungeon.visuals, B = G.items && G.items.BASES, k, slot, bl;
     if (G.player && G.player.makeSpec && G.rig) out.push(rigEntry('player', 'model', 'Người chơi', G.player.makeSpec({ name: 'Kiếm sắt', rarity: 0 })));
     if (T && G.rig) for (k in T) out.push(rigEntry(k, 'mob', k, T[k].spec || { height: T[k].height || 1, parts: [] }));
     if (G.boss && G.boss.spec && G.rig) out.push(rigEntry('boss', 'mob', G.boss.name || 'boss', G.boss.spec));
@@ -139,6 +144,7 @@
     for (y = 0; y < g.length; y++) for (x = 0; x < g[y].length; x++) if (g[y].charAt(x) !== '.' && g[y].charAt(x) !== ' ') n++;
     return n;
   }
+  // stats(entry) -> {voxels, tris, height, cls, colors[]}  (cached per id+cat)
   A.stats = function (e) {
     var key = e.cat + ':' + e.id, st = statC[key], m, o, box, cols = {}, i, p;
     if (st) return st;
@@ -154,6 +160,7 @@
         if (e.cat === 'prop' && mt && mt.color && !mt.transparent) cols[mt.color.getHex()] = 1;
       });
       if (e.spec) for (i = 0; i < e.spec.parts.length; i++) { p = e.spec.parts[i]; if (p.size) { cols[p.color] = 1; if (p.color2) cols[p.color2] = 1; } }
+      // size from box meshes only (ignores tall glow beams); GLB models fall back to the whole bounding box
       o.updateMatrixWorld(true); box = new THREE.Box3(); var bb = new THREE.Box3(), any = false;
       o.traverse(function (c) { if (c.isMesh && c.geometry && c.geometry.type === 'BoxGeometry') { c.geometry.computeBoundingBox(); bb.copy(c.geometry.boundingBox).applyMatrix4(c.matrixWorld); box.union(bb); any = true; } });
       if (!any) box.setFromObject(o);
@@ -166,6 +173,7 @@
     }
     return (statC[key] = st);
   };
+  // validate() -> {total, counts, missing[{id,why}], overBudget[{id,cat,cls,voxels,tris,maxVoxels,maxTris}], offPalette[{id,total,off[{hex,nearest,dist}]}], errors[], issues}
   A.validate = function () {
     var rep = { total: 0, counts: { model: 0, mob: 0, prop: 0, item: 0 }, missing: [], overBudget: [], offPalette: [], errors: [], issues: 0 };
     var reg = A.registry(), seen = {}, ids = {}, T = G.enemies && G.enemies.types, V = G.dungeon && G.dungeon.visuals, S = G.loot && G.loot.sources, k;

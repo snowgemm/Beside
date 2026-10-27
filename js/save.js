@@ -43,6 +43,7 @@
     if (isFinite(d.hp)) P.health = Math.min(P.maxHealth, Math.max(1, d.hp));
     return true;
   };
+  S.has = function () { return !!(data && data.player); };
   S.init = function () {
     setInterval(S.saveNow, 30000);
     document.addEventListener('visibilitychange', function () { if (document.hidden) S.saveNow(); });

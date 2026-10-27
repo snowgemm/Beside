@@ -13,6 +13,7 @@
       PT('fistL', 'armL', [.8, .7, .8], [0, -.3, 0], [0, -1.15, 0], 0x555965), PT('fistR', 'armR', [.8, .7, .8], [0, -.3, 0], [0, -1.15, 0], 0x555965)] } };
   B.spec = DEF.spec; B.name = DEF.name;
   var scene, e = null, S = null, tele = null, projs = [], bar, fill, nameEl, pGeo, pMat;
+
   function killTele() {
     if (!tele) return;
     scene.remove(tele);
@@ -59,17 +60,19 @@
     var pw = Math.max(0, Math.round(en.hp / def.hp * 100));
     if (pw !== lastPw) { lastPw = pw; fill.style.width = pw + '%'; }
     if (enr !== lastEnr) { lastEnr = enr; bar.classList.toggle('enr', enr); }
-    projectiles(dt, px, py, pz); S.t += dt;
+    projectiles(dt, px, py, pz);
+    S.t += dt;
     if (S.state === 'idle') {
       en.group.rotation.y = Math.atan2(-dx, -dz);
-      if (d > 5.5 && !P.dead) {
+      if (d > 5.5 && !P.dead) { // walking velocity (the body does the moving); free() keeps it off cliffs
         if (free(en.x + ux * 0.4, en.z, en.y)) en.wx = ux * def.speed;
         if (free(en.x, en.z + uz * 0.4, en.y)) en.wz = uz * def.speed;
       }
       S.cd -= dt;
       if (S.cd <= 0 && !P.dead) { S.n++; if (S.n % 2 === 1 && d < 9) slam(enr); else fan(enr, dx, dz); }
     } else if (S.state === 'slam') {
-      k = Math.min(1, S.t / S.dur); S.fillG.scale.set(k, 1, k); en.group.scale.y = 1 + 0.15 * k;
+      k = Math.min(1, S.t / S.dur);
+      S.fillG.scale.set(k, 1, k); en.group.scale.y = 1 + 0.15 * k;
       if (S.t >= S.dur) {
         en.group.scale.y = 1;
         if (Math.sqrt(dx * dx + dz * dz) < S.R && Math.abs(py - en.y) < 2.5) G.combat.hurtPlayer(Math.round(def.damage * 1.6), en.x, en.z);
@@ -92,10 +95,14 @@
     }
     if (tele && S.state === 'slam') tele.position.set(en.x, en.y + 0.06, en.z);
   }
+
   B.init = function (sc) {
     scene = sc; bar = document.getElementById('boss-bar'); fill = document.getElementById('boss-fill'); nameEl = document.getElementById('boss-name');
     pGeo = new THREE.BoxGeometry(0.34, 0.34, 0.34); pMat = new THREE.MeshBasicMaterial({ color: 0xff7a1a });
-    G.events.on('enemyDied', function (d) { if (d.type !== 'boss' || !B.active) return; B.cleanup(); G.events.emit('bossDied', { x: d.x, y: d.y, z: d.z }); });
+    G.events.on('enemyDied', function (d) {
+      if (d.type !== 'boss' || !B.active) return;
+      B.cleanup(); G.events.emit('bossDied', { x: d.x, y: d.y, z: d.z });
+    });
   };
   B.spawn = function (x, y, z, level) {
     var def = Object.create(DEF);
@@ -106,7 +113,9 @@
     G.audio.play('boss');
   };
   B.cleanup = function () {
-    killTele(); projs.forEach(function (q) { scene.remove(q.m); }); projs.length = 0;
-    if (bar) bar.style.display = 'none'; B.active = false; e = null;
+    killTele();
+    projs.forEach(function (q) { scene.remove(q.m); }); projs.length = 0;
+    if (bar) bar.style.display = 'none';
+    B.active = false; e = null;
   };
 })();
