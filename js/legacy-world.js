@@ -125,19 +125,21 @@
       for (i = 0; i < size * size; i++) { c = fn(i % size, (i / size) | 0, i); im.data[i * 4] = c[0]; im.data[i * 4 + 1] = c[1]; im.data[i * 4 + 2] = c[2]; im.data[i * 4 + 3] = 255; }
       cx.putImageData(im, 0, 0);
       var t = new THREE.Texture(cv);
-      t.wrapS = t.wrapT = THREE.RepeatWrapping; t.magFilter = THREE.NearestFilter;
-      t.minFilter = THREE.NearestMipmapLinearFilter || THREE.NearestFilter; // mipmaps stop shimmer at distance
+      t.wrapS = t.wrapT = THREE.RepeatWrapping; t.magFilter = THREE.LinearFilter;
+      t.minFilter = THREE.LinearMipmapLinearFilter || THREE.LinearFilter; // smooth filtering + mipmaps reduce harsh pixel shimmer
       t.needsUpdate = true;
       return t;
     } catch (e) { return null; }
   }
   var gs = 12345;
-  function grainTex() { // subtle 16x16 noise, one tile per block
-    return mkTex(16, function () {
-      gs = (Math.imul(gs, 1103515245) + 12345) | 0;
-      var v = ((gs >>> 16) & 255) / 255, g = 238 + Math.floor(v * 17);
-      if (v < 0.08) g = 216;
-      return [g, g, g];
+  function grainTex() { // seamless, multi-scale matte surface grain; neutral enough to preserve biome vertex colours
+    return mkTex(64, function (x, y) {
+      var coarse = hash((x >> 3) + 31, (y >> 3) - 17), medium = hash(x * 3 + 91, y * 5 + 17), fine = hash(x * 17 - 23, y * 29 + 5);
+      var fleck = hash(x * 11 + 31, y * 13 - 5), g = 222 + Math.floor(coarse * 12 + medium * 10 + fine * 9) - 15;
+      if (fleck < 0.035) g -= 36;
+      else if (fleck > 0.985) g += 7;
+      g = Math.max(160, Math.min(255, g));
+      return [g, Math.min(255, g + (medium > .55 ? 2 : 0)), Math.max(0, g - 2)];
     });
   }
   function rippleTex() { // tileable 32x32 ripple lines
