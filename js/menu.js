@@ -1,6 +1,6 @@
 (function () {
   var G = window.Game = window.Game || {};
-  var M = G.menu = { open: false, settings: { vol: 100, dd: null, map: true } }, root, vol, dd, ddv, map, S = M.settings;
+  var M = G.menu = { open: false, settings: { vol: 100, dd: null, map: true, vib: true } }, root, vol, dd, ddv, map, vib, head, home, S = M.settings;
 
   function apply() {
     if (G.audio.setVolume) G.audio.setVolume(S.vol / 100);
@@ -8,13 +8,14 @@
     G.minimap.setEnabled(S.map);
   }
   function sync() {
-    vol.value = S.vol; dd.value = G.world.drawDistance; ddv.textContent = G.world.drawDistance; map.checked = S.map;
+    vol.value = S.vol; dd.value = G.world.drawDistance; ddv.textContent = G.world.drawDistance; map.checked = S.map; vib.checked = S.vib !== false;
+    var t = !!(G.ui && G.ui.titleOpen); head.textContent = t ? 'Cài đặt' : 'Tạm dừng'; home.style.display = t ? 'none' : '';
   }
   M.setOpen = function (o) {
     if (o === M.open) return;
     M.open = o; root.classList.toggle('open', o);
     if (o) { sync(); G.paused = true; if (document.exitPointerLock && document.pointerLockElement) document.exitPointerLock(); }
-    else { G.paused = !!(G.inventory && G.inventory.open); G.save.request(); }
+    else { G.paused = !!(G.inventory && G.inventory.open) || !!(G.ui && G.ui.titleOpen); G.save.request(); }
   };
   M.clearEdits = function () {
     G.world.clearEdits();
@@ -27,20 +28,26 @@
 
   M.init = function () {
     root = document.getElementById('menu');
-    root.innerHTML = '<div class="menu-panel"><div class="menu-head"><b>Cài đặt</b><button id="menu-close" type="button">✕</button></div>' +
+    root.innerHTML = '<div class="menu-panel"><div class="menu-head"><b id="menu-head">Tạm dừng</b><button id="menu-close" type="button">✕</button></div>' +
+      '<div class="menu-btns"><button id="menu-resume" class="primary" type="button">Tiếp tục</button></div>' +
       '<div class="menu-row"><span>Âm lượng</span><input id="menu-vol" type="range" min="0" max="100" step="5"></div>' +
       '<div class="menu-row"><span>Tầm nhìn: <b id="menu-ddv"></b></span><input id="menu-dd" type="range" min="3" max="7" step="1"></div>' +
       '<div class="menu-row"><span>Bản đồ nhỏ</span><input id="menu-map" type="checkbox"></div>' +
-      '<div class="menu-btns"><button id="menu-clear" type="button">Xóa chỉnh sửa</button><button id="menu-new" type="button">Chơi mới</button></div></div>';
+      '<div class="menu-row"><span>Rung</span><input id="menu-vib" type="checkbox"></div>' +
+      '<div class="menu-btns"><button id="menu-clear" type="button">Xóa chỉnh sửa</button><button id="menu-home" type="button">Về màn hình chính</button><button id="menu-new" type="button">Chơi mới</button></div></div>';
     vol = document.getElementById('menu-vol'); dd = document.getElementById('menu-dd'); ddv = document.getElementById('menu-ddv'); map = document.getElementById('menu-map');
+    vib = document.getElementById('menu-vib'); head = document.getElementById('menu-head'); home = document.getElementById('menu-home');
     document.getElementById('menu-close').onclick = function () { M.setOpen(false); };
+    document.getElementById('menu-resume').onclick = function () { M.setOpen(false); };
     root.addEventListener('click', function (e) { if (e.target === root) M.setOpen(false); });
     vol.oninput = function () { S.vol = +vol.value; apply(); G.save.request(); };
     dd.oninput = function () { S.dd = +dd.value; ddv.textContent = S.dd; apply(); G.save.request(); };
     map.onchange = function () { S.map = map.checked; apply(); G.save.request(); };
+    vib.onchange = function () { S.vib = vib.checked; G.save.request(); if (S.vib && navigator.vibrate) { try { navigator.vibrate(30); } catch (e) {} } };
     document.getElementById('menu-clear').onclick = function () {
       if (window.confirm('Xóa toàn bộ chỉnh sửa khối? Không thể hoàn tác.')) M.clearEdits();
     };
+    home.onclick = function () { G.save.saveNow(); window.location.reload(); };
     document.getElementById('menu-new').onclick = function () {
       if (window.confirm('Chơi mới sẽ xóa toàn bộ tiến trình. Tiếp tục?')) G.save.newGame();
     };
@@ -55,13 +62,14 @@
     // Esc while pointer-locked only releases the lock (no keydown): open the menu then
     var cv = document.querySelector('#game canvas');
     document.addEventListener('pointerlockchange', function () {
-      if (document.pointerLockElement !== cv && !M.open && !(G.inventory && G.inventory.open) && !G.player.dead) M.setOpen(true);
+      if (document.pointerLockElement !== cv && !M.open && !(G.inventory && G.inventory.open) && !(G.ui && G.ui.titleOpen) && !G.player.dead) M.setOpen(true);
     });
-    G.save.register('settings', function () { return { vol: S.vol, dd: S.dd, map: S.map }; }, function (d) {
+    G.save.register('settings', function () { return { vol: S.vol, dd: S.dd, map: S.map, vib: S.vib }; }, function (d) {
       if (!d) return;
       if (typeof d.vol === 'number' && isFinite(d.vol)) S.vol = Math.max(0, Math.min(100, d.vol));
       if (typeof d.dd === 'number' && isFinite(d.dd)) S.dd = Math.max(3, Math.min(7, Math.round(d.dd)));
       if (typeof d.map === 'boolean') S.map = d.map;
+      if (typeof d.vib === 'boolean') S.vib = d.vib;
     });
   };
   M.apply = apply;

@@ -48,26 +48,58 @@
     else if (n === 'pickup') tone('sine', 600, 1000, 0.12, 0.3);
     else if (n === 'equip') tone('triangle', 300, 520, 0.1, 0.3);
     else if (n === 'place') { tone('triangle', 180, 260, 0.08, 0.35); noise(0.05, 0.25, 900, 500); }
+    else if (n === 'jump') { tone('triangle', 260, 480, 0.09, 0.22); noise(0.05, 0.12, 900, 1800); }
+    else if (n === 'land') { tone('sine', 150, 70, 0.09, 0.3); noise(0.06, 0.2, 700, 300); }
+    else if (n === 'landhard') { tone('sine', 110, 40, 0.18, 0.5); noise(0.14, 0.45, 900, 150); tone('square', 90, 45, 0.08, 0.2); }
+    else if (n === 'splash') { noise(0.2, 0.3, 1800, 600); tone('sine', 500, 250, 0.1, 0.12); }
+    else if (n === 'splashbig') { noise(0.4, 0.5, 1400, 300); tone('sine', 300, 90, 0.25, 0.3); }
+    else if (n === 'bounce') { tone('triangle', 420, 240, 0.07, 0.2); }
+    else if (n === 'hitwall') { tone('square', 120, 50, 0.08, 0.3); noise(0.06, 0.3, 600, 200); }
     else if (n === 'break') { noise(0.16, 0.5, 1800, 300); tone('square', 140, 60, 0.1, 0.25); }
   };
 
   /* ---------- Combat ---------- */
   var C = G.combat = {};
   var COS_HALF_ARC = Math.cos(50 * Math.PI / 180);
-  var cam, hpFill, hpText, fade, lastHp = -1, lastMax = -1, attackCd = 0, dodgeCd = 0, deadT = 0, nums = [];
-  var pv = null;
+  var cam, hpFill, hpText, hpGhost, hpBox, dodgeBtn, fade, lastHp = -1, lastMax = -1, attackCd = 0, dodgeCd = 0, deadT = 0, deathShown = false, lastCd = -1, lastWpn;
+  var pool = [], POOL = 12, activeN = 0, pv = null;
 
   C.init = function (camera) {
     cam = camera; pv = new THREE.Vector3();
     hpFill = document.getElementById('hp-fill'); hpText = document.getElementById('hp-text'); fade = document.getElementById('fade');
+    hpGhost = document.getElementById('hp-ghost'); hpBox = document.getElementById('hp'); dodgeBtn = document.getElementById('btn-dodge');
+    for (var i = 0; i < POOL; i++) {
+      var el = document.createElement('div'), dn = document.createElement('span');
+      el.className = 'dmg'; dn.className = 'dn'; el.appendChild(dn); document.body.appendChild(el);
+      pool.push({ el: el, dn: dn, x: 0, y: 0, z: 0, t: 0, on: false, shown: false });
+    }
   };
 
-  C.number = function (x, y, z, v, color) {
-    var el = document.createElement('div');
-    el.className = 'dmg'; el.textContent = Math.round(v) + (C.critHit ? '!' : ''); el.style.color = C.critHit ? '#ffd34d' : (color || '#fff');
-    document.body.appendChild(el);
-    nums.push({ el: el, x: x, y: y, z: z, t: 0 });
-    if (nums.length > 16) { var o = nums.shift(); o.el.remove(); }
+  // pool of 12 elements; kind: 'hit' (white) | 'crit' (large orange, '!') | 'hurt' (red) | 'heal' (green); CSS animates the fade
+  C.number = function (x, y, z, v, color, kind) {
+    var n = null, i, old = -1;
+    kind = kind || (C.critHit ? 'crit' : 'hit');
+    for (i = 0; i < POOL; i++) {
+      if (!pool[i].on) { n = pool[i]; break; }
+      if (pool[i].t > old) { old = pool[i].t; n = pool[i]; }
+    }
+    if (!n) n = pool[0];
+    if (!n.on) activeN++;
+    n.on = true; n.t = 0; n.x = x; n.y = y; n.z = z; n.shown = false;
+    n.el.className = 'dmg k-' + kind; n.el.style.display = 'none';
+    n.dn.textContent = (kind === 'heal' ? '+' : '') + Math.round(v) + (kind === 'crit' ? '!' : '');
+  };
+  C.haptic = function () {
+    var s = G.menu && G.menu.settings;
+    if (s && s.vib === false) return;
+    if (navigator.vibrate) { try { navigator.vibrate(30); } catch (e) {} }
+  };
+  C.dodgeLeft = function () { return dodgeCd > 0 ? dodgeCd : 0; };
+  C.respawn = function () {
+    var P = G.player;
+    if (!P.dead) return;
+    P.respawn(); P.health = P.maxHealth; P.dead = false; P.iframes = 1.5; fade.style.opacity = 0; deadT = 0; deathShown = false;
+    if (G.ui) G.ui.showDeath(false);
   };
 
   C.attack = function () {
@@ -102,8 +134,8 @@
     dmg = Math.max(1, Math.round(dmg * (1 - P.dr)));
     P.health = Math.max(0, P.health - dmg); P.iframes = 0.6;
     var dx = P.pos.x - fx, dz = P.pos.z - fz, d = Math.max(0.001, Math.sqrt(dx * dx + dz * dz));
-    P.kb.x += dx / d * 9; P.kb.z += dz / d * 9; P.shake = 0.3;
-    A.play('hurt'); C.number(P.pos.x, P.pos.y + 2, P.pos.z, dmg, '#ff6666');
+    P.knock(dx / d * 7, 4, dz / d * 7); P.shake = 0.3;
+    A.play('hurt'); C.number(P.pos.x, P.pos.y + 2, P.pos.z, dmg, '#ff6666', 'hurt'); C.haptic();
     if (P.health <= 0) { P.dead = true; deadT = 0; fade.style.opacity = 1; A.play('death'); }
     return true;
   };
@@ -115,7 +147,8 @@
     if (P.iframes > 0) P.iframes -= dt;
     if (P.dead) {
       deadT += dt;
-      if (deadT > 1.6) { P.respawn(); P.health = P.maxHealth; P.dead = false; P.iframes = 1.5; fade.style.opacity = 0; }
+      if (G.ui && G.ui.hasDeath) { if (deadT > 0.9 && !deathShown) { deathShown = true; G.ui.showDeath(true); } }
+      else if (deadT > 1.6) C.respawn();
     } else {
       if (I.attackQ) C.attack();
       if (I.dodgeQ) C.dodge();
@@ -123,18 +156,24 @@
     I.attackQ = I.dodgeQ = false;
     if (P.health !== lastHp || P.maxHealth !== lastMax) {
       lastHp = P.health; lastMax = P.maxHealth;
-      hpFill.style.width = (P.health / P.maxHealth * 100) + '%';
+      var pc = Math.max(0, P.health / P.maxHealth * 100);
+      hpFill.style.width = pc + '%'; hpGhost.style.width = pc + '%';
       hpText.textContent = Math.ceil(P.health) + '/' + P.maxHealth;
+      hpBox.classList.toggle('low', pc < 30 && P.health > 0);
     }
-    if (nums.length) {
+    if (P.equip.weapon !== lastWpn) { lastWpn = P.equip.weapon; if (G.ui) G.ui.setWeapon(lastWpn); }
+    var cs = dodgeCd > 0 ? Math.ceil(dodgeCd * 36) : 0;
+    if (cs !== lastCd) { lastCd = cs; dodgeBtn.style.setProperty('--cd', (cs * 10) + 'deg'); dodgeBtn.classList.toggle('cool', cs > 0); }
+    if (activeN > 0) {
       cam.updateMatrixWorld();
-      for (var i = nums.length - 1; i >= 0; i--) {
-        var n = nums[i]; n.t += dt; n.y += 1.3 * dt;
-        if (n.t > 0.8) { n.el.remove(); nums.splice(i, 1); continue; }
+      for (var i = 0; i < POOL; i++) {
+        var n = pool[i];
+        if (!n.on) continue;
+        n.t += dt; n.y += 1.3 * dt;
+        if (n.t > 0.9) { n.on = false; n.shown = false; n.el.style.display = 'none'; activeN--; continue; }
         pv.set(n.x, n.y, n.z).project(cam);
-        if (pv.z > 1) { n.el.style.display = 'none'; continue; }
-        n.el.style.display = 'block';
-        n.el.style.opacity = 1 - (n.t / 0.8) * (n.t / 0.8);
+        if (pv.z > 1) { if (n.shown) { n.shown = false; n.el.style.display = 'none'; } continue; }
+        if (!n.shown) { n.shown = true; n.el.style.display = 'block'; }
         n.el.style.transform = 'translate(' + ((pv.x * 0.5 + 0.5) * window.innerWidth) + 'px,' + ((-pv.y * 0.5 + 0.5) * window.innerHeight) + 'px) translate(-50%,-50%)';
       }
     }

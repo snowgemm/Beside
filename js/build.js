@@ -50,7 +50,7 @@
     if (forbidden(h.x, h.z)) { say('Không thể chỉnh sửa gần cổng hoặc điểm xuất hiện'); return; }
     var col = W.getHeight(h.x, h.z);
     var bc = W.topColor(h.x, h.z);
-    if (result(W.setColumn(h.x, h.z, col - 1), 'break') === 'ok' && G.fx) G.fx.burst(h.x + 0.5, col - 0.5, h.z + 0.5, 'blockbreak', bc);
+    if (result(W.setColumn(h.x, h.z, col - 1), 'break') === 'ok' && G.fx) G.fx.chips(h.x + 0.5, col - 0.5, h.z + 0.5, bc);
   };
   B.placeBlock = function () {
     if (!canEdit()) return;
@@ -60,7 +60,7 @@
     // block would occupy [px,px+1] x [col,col+1] x [pz,pz+1]: refuse if the player stands there
     if (p.x + 0.3 > h.px && p.x - 0.3 < h.px + 1 && p.z + 0.3 > h.pz && p.z - 0.3 < h.pz + 1 && p.y + 1.8 > col && p.y < col + 1) { say('Vướng người chơi'); return; }
     var pc = W.topColor(h.x, h.z);
-    if (result(W.setColumn(h.px, h.pz, col + 1), 'place') === 'ok' && G.fx) G.fx.burst(h.px + 0.5, col + 1, h.pz + 0.5, 'blockplace', pc);
+    if (result(W.setColumn(h.px, h.pz, col + 1), 'place') === 'ok' && G.fx) G.fx.chips(h.px + 0.5, col + 1, h.pz + 0.5, pc, 10);
   };
 
   B.setMode = function (on) {

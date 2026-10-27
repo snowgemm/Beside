@@ -215,6 +215,7 @@
     if (lz === CS - 1) rebuildChunk(cx, cz + 1);
   }
   W.chunkCount = function () { return chunks.size; };
+  W.decorBlockers = decorBlockers;
   W.chunkMesh = function (cx, cz) { return chunks.get(cx + ',' + cz) || null; };
 
   /* ---------- terrain mesh ---------- */
@@ -276,6 +277,7 @@
     mesh.position.set(ox, 0, oz); mesh.matrixAutoUpdate = false; mesh.updateMatrix();
     mesh.cx = cx; mesh.cz = cz;
     var dm = decorMesh(ox, oz, H, BIO);
+    bmap.set(bk(cx, cz), dbl.length ? new Float32Array(dbl) : null);
     if (dm) { dm.matrixAutoUpdate = false; dm.updateMatrix(); mesh.add(dm); mesh.decor = dm; }
     scene.add(mesh);
     chunks.set(cx + ',' + cz, mesh);
@@ -348,9 +350,13 @@
     if (!D || !D.gatesNear) return null;
     try { return D.gatesNear(ox - 10, oz - 10, ox + CS + 10, oz + CS + 10); } catch (e) { return null; }
   }
+  var bmap = new Map(), dbl = [];
+  function bk(cx, cz) { return (cx + 4096) * 8192 + (cz + 4096); }
+  // tree trunks (r .32, 2.5 high) and rocks (r .5, .55 high) as short cylinders: Float32Array stride 5 = x, z, r, y0, y1; null when none
+  function decorBlockers(cx, cz) { return bmap.get(bk(cx, cz)) || null; }
   function decorMesh(ox, oz, H, BIO) {
     var N = 18, gates = gatesFor(ox, oz), sp = G.player && G.player.spawnPos, n = 0, trees = 0, lx, lz, g, gl = gates ? gates.length : 0;
-    dp = []; dc = []; di = [];
+    dp = []; dc = []; di = []; dbl = [];
     outer:
     for (lz = 0; lz < CS; lz++) for (lx = 0; lx < CS; lx++) {
       if (n >= DMAX) break outer;
@@ -368,7 +374,7 @@
       for (g = 0; g < gl; g++) { var dx = wx + .5 - gates[g].x, dz = wz + .5 - gates[g].z; if (dx * dx + dz * dz < 64) { near = true; break; } }
       if (near) continue;
       var cx = lx + .5 + (hash(wx + 1, wz + 2) - .5) * .5, cz = lz + .5 + (hash(wx + 2, wz + 1) - .5) * .5, j = .9 + .2 * hash(wx + 5, wz + 9), r2 = hash(wx + 3, wz + 4), L, c;
-      if (kind === 1) { tree(bi, cx, h, cz, r2, j); trees++; }
+      if (kind === 1) { tree(bi, cx, h, cz, r2, j); trees++; dbl.push(ox + cx, oz + cz, 0.32, h, h + 2.5); }
       else if (kind === 2) {
         L = leafCol(bi, r2);
         dbox(cx, h - 0.05, cz, 1.1, .6, 1.1, L[0] * j * .9, L[1] * j * .9, L[2] * j * .9);
@@ -381,6 +387,7 @@
         c = bi === 3 ? [.82, .86, .92] : bi === 2 ? [.7, .55, .4] : [.55, .55, .58];
         dbox(cx, h - 0.05, cz, .9, .55, .8, c[0] * j, c[1] * j, c[2] * j);
         dbox(cx + .35, h - 0.05, cz + .25, .5, .35, .5, c[0] * j * 1.1, c[1] * j * 1.1, c[2] * j * 1.1);
+        dbl.push(ox + cx, oz + cz, 0.5, h, h + 0.55);
       }
       n++;
     }
@@ -399,7 +406,7 @@
     chunks.forEach(function (m, k) {
       var ax = m.cx - pcx, az = m.cz - pcz;
       if (ax * ax + az * az > ur) { drop(m); chunks.delete(k);
-      if (W.onChunkUnload) W.onChunkUnload(m.cx, m.cz); }
+      bmap.delete(bk(m.cx, m.cz)); if (W.onChunkUnload) W.onChunkUnload(m.cx, m.cz); }
     });
     queue = []; qi = 0;
     for (dx = -R; dx <= R; dx++) for (dz = -R; dz <= R; dz++) {

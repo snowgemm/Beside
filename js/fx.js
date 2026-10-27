@@ -2,6 +2,7 @@
   var G = window.Game = window.Game || {};
   var MAX = 300, AMB = 36, F = G.fx = {};
   var P, C, pa, ca, pts, T = 0, next = AMB;
+  var CH = 24, chM = null, chD, chCol, chN = 0, chAct = 0, chx = new Float32Array(CH), chy = new Float32Array(CH), chz = new Float32Array(CH), chvx = new Float32Array(CH), chvy = new Float32Array(CH), chvz = new Float32Array(CH), chl = new Float32Array(CH);
   var vx = new Float32Array(MAX), vy = new Float32Array(MAX), vz = new Float32Array(MAX), life = new Float32Array(MAX), grav = new Float32Array(MAX);
   var bx = new Float32Array(AMB), by = new Float32Array(AMB), bz = new Float32Array(AMB), ph = new Float32Array(AMB), sp = new Float32Array(AMB);
   function rnd(a, b) { return a + Math.random() * (b - a); }
@@ -16,7 +17,42 @@
     pts = new THREE.Points(geo, new THREE.PointsMaterial({ size: 0.26, sizeAttenuation: true, vertexColors: true, fog: true }));
     pts.frustumCulled = false;
     scene.add(pts);
+    chM = new THREE.InstancedMesh(new THREE.BoxGeometry(0.16, 0.16, 0.16), new THREE.MeshBasicMaterial({ color: 0xffffff }), CH);
+    chM.frustumCulled = false; chD = new THREE.Object3D(); chCol = new THREE.Color();
+    chD.scale.set(0, 0, 0); chD.updateMatrix();
+    for (i = 0; i < CH; i++) { chM.setMatrixAt(i, chD.matrix); chM.setColorAt(i, chCol.setHex(0x808080)); }
+    scene.add(chM);
   };
+  // block debris: up to 24 pooled cubes (one InstancedMesh), gravity + bounce, 0.8 s
+  F.chips = function (x, y, z, color, n) {
+    if (!chM) return;
+    var i, k, a, s; n = Math.min(CH, n || CH); chCol.setHex(color > 0 ? color : 0x80704f);
+    for (i = 0; i < n; i++) {
+      k = chN; chN = (chN + 1) % CH; a = rnd(0, 6.283); s = rnd(1, 3.2);
+      chx[k] = x + rnd(-0.35, 0.35); chy[k] = y + rnd(-0.2, 0.3); chz[k] = z + rnd(-0.35, 0.35);
+      chvx[k] = Math.cos(a) * s; chvy[k] = rnd(2.5, 5); chvz[k] = Math.sin(a) * s; chl[k] = 0.8;
+      chM.setColorAt(k, chCol);
+    }
+    if (chM.instanceColor) chM.instanceColor.needsUpdate = true;
+    chAct = CH;
+  };
+  function chipsUpdate(dt) {
+    var i, live = 0, gh, W = G.world, sc;
+    for (i = 0; i < CH; i++) {
+      if (chl[i] <= 0) continue;
+      chl[i] -= dt;
+      if (chl[i] <= 0) { chD.scale.set(0, 0, 0); chD.updateMatrix(); chM.setMatrixAt(i, chD.matrix); continue; }
+      live++;
+      chvy[i] -= 24 * dt; chx[i] += chvx[i] * dt; chy[i] += chvy[i] * dt; chz[i] += chvz[i] * dt;
+      gh = W.getHeight(chx[i], chz[i]) + 0.08;
+      if (chy[i] < gh && chvy[i] < 0) { chy[i] = gh; chvy[i] *= -0.4; chvx[i] *= 0.6; chvz[i] *= 0.6; }
+      sc = chl[i] < 0.2 ? chl[i] / 0.2 : 1;
+      chD.position.set(chx[i], chy[i], chz[i]); chD.rotation.set(chl[i] * 7, chl[i] * 5, 0); chD.scale.set(sc, sc, sc); chD.updateMatrix();
+      chM.setMatrixAt(i, chD.matrix);
+    }
+    chM.instanceMatrix.needsUpdate = true;
+    if (!live) chAct = 0;
+  }
   function emit(x, y, z, ax, ay, az, g, l, r, gg, b) {
     var i = next, k = i * 3; next = next + 1 >= MAX ? AMB : next + 1;
     P[k] = x; P[k + 1] = y; P[k + 2] = z; C[k] = r; C[k + 1] = gg; C[k + 2] = b;
@@ -42,6 +78,9 @@
     } else if (kind === 'dust') {
       r = c ? 0.65 * c[0] + 0.35 : 0.78; g = c ? 0.65 * c[1] + 0.35 : 0.74; b = c ? 0.65 * c[2] + 0.35 : 0.66;
       for (i = 0; i < 3; i++) { j = rnd(0.9, 1.1); emit(x + rnd(-0.2, 0.2), y, z + rnd(-0.2, 0.2), rnd(-0.9, 0.9), rnd(0.6, 1.2), rnd(-0.9, 0.9), 2.5, rnd(0.3, 0.5), r * j, g * j, b * j); }
+    } else if (kind === 'splash') {
+      n = Math.round(12 * sc);
+      for (i = 0; i < n; i++) { a = rnd(0, 6.283); s = rnd(0.6, 2) * sc; j = rnd(0.9, 1); emit(x + rnd(-0.3, 0.3), y, z + rnd(-0.3, 0.3), Math.cos(a) * s, rnd(2.5, 5) * Math.min(sc, 1.5), Math.sin(a) * s, 12, rnd(0.4, 0.7), 0.7 * j, 0.86 * j, j); }
     } else if (kind === 'blockbreak' || kind === 'blockplace') {
       var brk = kind === 'blockbreak'; n = brk ? 12 : 6; r = c ? c[0] : 0.5; g = c ? c[1] : 0.45; b = c ? c[2] : 0.4;
       for (i = 0; i < n; i++) { a = rnd(0, 6.283); s = brk ? rnd(1.5, 4) : rnd(0.8, 1.8); j = rnd(0.75, 1.1); emit(x + rnd(-0.4, 0.4), y + rnd(-0.3, 0.3), z + rnd(-0.4, 0.4), Math.cos(a) * s, brk ? rnd(2, 4) : rnd(1, 2), Math.sin(a) * s, brk ? 14 : 12, brk ? rnd(0.5, 0.9) : rnd(0.35, 0.55), r * j, g * j, b * j); }
@@ -50,6 +89,7 @@
   F.update = function (dt, px, py, pz) {
     if (!pts) return;
     T += dt;
+    if (chAct && dt > 0) chipsUpdate(dt);
     var D = G.dungeon, inD = D && D.active, W = G.world, night = G.sky ? G.sky.night : 0, i, k, h, dx, dz, bl;
     for (i = 0; i < AMB; i++) { // ambient: pollen by day, fireflies at night
       k = i * 3;

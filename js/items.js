@@ -87,7 +87,7 @@
     if (it.slot === 'weapon' && !(isFinite(it.stats.damage) && isFinite(it.stats.cdMult) && isFinite(it.stats.reach))) return false;
     return true;
   }
-  G.items = { SLOTS: SLOTS, SLOT_NAME: SLOT_NAME, RARITIES: RAR, STAT: STAT, ORDER: ORDER, rng: rng, hash32: hash32, generate: gen, valid: valid,
+  G.items = { BASES: BASES, SLOTS: SLOTS, SLOT_NAME: SLOT_NAME, RARITIES: RAR, STAT: STAT, ORDER: ORDER, rng: rng, hash32: hash32, generate: gen, valid: valid,
     DEFAULT: { weapon: { damage: 10, cdMult: 1, reach: 2.2 }, armor: {}, trinket: {} } };
 
   /* ---------- Loot: rolls, world drops, pickup ---------- */
@@ -116,10 +116,12 @@
     it.seed = seed; it.id = 'i' + seed.toString(36);
     return it;
   };
-  L.spawnDrop = function (item, x, z, delay) {
-    var y = G.world.getHeight(x, z), m = new THREE.Mesh(dropGeo, dropMats[item.rarity] || dropMats[0]);
-    m.rotation.x = 0.6; m.position.set(x, y + 0.6, z); scene.add(m);
-    L.drops.push({ item: item, mesh: m, y: y, x: x, z: z, t: 0, delay: delay || 0, bob: Math.random() * 6 });
+  // y (optional) = start height of the pop; the drop gets an outward + upward impulse, falls, bounces twice, settles
+  L.spawnDrop = function (item, x, z, delay, y0) {
+    var y = y0 != null ? y0 : G.world.getHeight(x, z) + 0.5, m = new THREE.Mesh(dropGeo, dropMats[item.rarity] || dropMats[0]), a = Math.random() * 6.283, sp = 1.2 + Math.random() * 1.8;
+    var b = { x: x, y: y, z: z, vx: Math.cos(a) * sp, vy: 4 + Math.random() * 2, vz: Math.sin(a) * sp, r: 0.18, h: 0.35, onGround: false, inWater: false, mass: 0.3, autoStep: false, stepDy: 0, wet: 0, swimUp: false };
+    m.rotation.x = 0.6; m.position.set(x, y + 0.3, z); scene.add(m);
+    L.drops.push({ item: item, mesh: m, b: b, y: y, x: x, z: z, t: 0, delay: delay || 0, bob: Math.random() * 6, bounces: 0, settled: false });
     while (L.drops.length > MAXD) removeDrop(L.drops[0]);
   };
   function removeDrop(d) { scene.remove(d.mesh); var i = L.drops.indexOf(d); if (i >= 0) L.drops.splice(i, 1); }
@@ -134,22 +136,31 @@
       L.counter++;
       var seed = hash32(G.world.seed, L.counter, strHash(e.type));
       if (rng(seed ^ 0x9e3779b9)() > src.chance) return;
-      L.spawnDrop(L.roll(L.levelAt(e.x, e.z), e.type, seed), e.x, e.z, 0.4);
+      L.spawnDrop(L.roll(L.levelAt(e.x, e.z), e.type, seed), e.x, e.z, 0.4, e.y + 0.6);
     });
   };
   L.update = function (dt) {
-    var P = G.player, p = P.pos;
+    var P = G.player, p = P.pos, W = G.world;
     clock += dt;
     for (var i = L.drops.length - 1; i >= 0; i--) {
       var d = L.drops[i];
       d.t += dt; d.delay -= dt;
       if (d.t > LIFE) { removeDrop(d); continue; }
-      d.mesh.rotation.y += dt * 2.5; d.mesh.position.y = d.y + 0.6 + Math.sin(d.t * 3 + d.bob) * 0.12;
+      var b = d.b;
+      if (d.settled) { if (!W.solid(b.x, b.y - 0.1, b.z)) d.settled = false; } // ground removed under it
+      if (!d.settled) {
+        if (b.onGround) { var fr = Math.min(1, 8 * dt); b.vx -= b.vx * fr; b.vz -= b.vz * fr; }
+        G.phys.move(b, dt);
+        if (b.landV > 1 && d.bounces < 2) { b.vy = b.landV * 0.5; b.vx *= 0.6; b.vz *= 0.6; d.bounces++; b.onGround = false; G.events.emit('bounce', { x: b.x, z: b.z, speed: b.vy }); }
+        else if (b.onGround && !b.inWater) { b.vx = b.vz = 0; d.settled = true; }
+        d.x = b.x; d.y = b.y; d.z = b.z;
+        d.mesh.rotation.y += dt * (d.settled ? 2.5 : 6); d.mesh.position.set(b.x, b.y + 0.3, b.z);
+      } else { d.mesh.rotation.y += dt * 2.5; d.mesh.position.y = b.y + 0.45 + Math.sin(d.t * 3 + d.bob) * 0.1; }
       if (d.delay > 0 || P.dead) continue;
       var dx = d.x - p.x, dz = d.z - p.z;
       if (dx * dx + dz * dz < 2.25 && Math.abs(p.y + 0.9 - d.mesh.position.y) < 2.5) {
         if (G.inventory.add(d.item)) {
-          G.toast('Nhặt được: ' + d.item.name, RAR[d.item.rarity].color); G.audio.play('pickup'); if (G.fx) G.fx.burst(d.x, d.y + 0.6, d.z, 'pickup'); removeDrop(d);
+          G.toast('Nhặt được: ' + d.item.name, RAR[d.item.rarity].color, d.item); G.audio.play('pickup'); if (G.fx) G.fx.burst(d.x, d.y + 0.6, d.z, 'pickup'); removeDrop(d);
         } else if (clock - lastFull > 2.5) { lastFull = clock; G.toast('Hành trang đầy', '#ff8080'); }
       }
     }
