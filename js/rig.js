@@ -30,7 +30,7 @@
   }
   function shaded(hex, key, seed) {
     var c = vary(hex, key + '|' + seed);
-    return shadedC[c] || (shadedC[c] = new THREE.MeshBasicMaterial({ color: c, vertexColors: true }));
+    return shadedC[c] || (shadedC[c] = new THREE.MeshStandardMaterial({ color: c, vertexColors: true, roughness: 0.96, metalness: 0, flatShading: false }));
   }
   function flat(hex) { return flatC[hex] || (flatC[hex] = new THREE.MeshBasicMaterial({ color: hex })); }
   function ease(k) { return k * k * (3 - 2 * k); }
