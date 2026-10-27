@@ -27,7 +27,6 @@
   };
   var A = G.assets = { manifest: MANIFEST }, tpl = {}, bufs = {}, raw = {}, pending = 0, timer = null, wrapped = false;
 
-  // glTF materials are PBR but the game has no lights: convert to unlit basic materials (colour space matched to linear output)
   function toBasic(src, cache) {
     if (Array.isArray(src)) return src.map(function (m) { return toBasic(m, cache); });
     if (cache[src.uuid]) return cache[src.uuid];
@@ -61,7 +60,6 @@
     var s = ctx.createBufferSource(); s.buffer = b; s.connect(G.audio.master); s.start(0);
     return true;
   };
-  // decoding needs an AudioContext, which only exists after the first user gesture
   function decodeAll() {
     var ctx = G.audio && G.audio.ctx;
     if (!ctx) return;
@@ -110,5 +108,88 @@
     return Promise.all(jobs).then(function () {
       if (pending && !timer) timer = setInterval(decodeAll, 500);
     }, function () {});
+  };
+  A.budgets = {
+    character: { voxels: 24, tris: 288 }, mob_s: { voxels: 16, tris: 192 }, mob_m: { voxels: 20, tris: 240 }, mob_l: { voxels: 28, tris: 336 },
+    prop_s: { voxels: 40, tris: 480 }, prop_l: { voxels: 120, tris: 1440 }, item: { voxels: 96, tris: 0 }
+  };
+  var REQ_PROPS = ['gate', 'door', 'chest', 'portal'], statC = {};
+  function rigEntry(id, cat, name, spec) {
+    return { id: id, cat: cat, name: name, spec: spec, make: function () { var r = G.rig.build(spec, 0); return { obj: r.group, rig: r, dispose: function () {} }; } };
+  }
+  A.registry = function () {
+    var out = [], T = G.enemies && G.enemies.types, V = G.dungeon && G.dungeon.visuals, B = G.items && G.items.BASES, k, slot;
+    if (G.player && G.player.makeSpec && G.rig) out.push(rigEntry('player', 'model', 'Người chơi', G.player.makeSpec({ name: 'Kiếm sắt', rarity: 0 })));
+    if (T && G.rig) for (k in T) out.push(rigEntry(k, 'mob', k, T[k].spec || { height: T[k].height || 1, parts: [] }));
+    if (G.boss && G.boss.spec && G.rig) out.push(rigEntry('boss', 'mob', G.boss.name || 'boss', G.boss.spec));
+    if (V) Object.keys(V).forEach(function (n) {
+      var f = V[n];
+      if (typeof f !== 'function' || f.length !== 0) return;
+      out.push({ id: n, cat: 'prop', name: n, make: function () { var o = f(); return { obj: o, rig: null, dispose: function () { o.traverse(function (c) { if (c.geometry) c.geometry.dispose(); }); } }; } });
+    });
+    if (B && G.icons) for (slot in B) B[slot].forEach(function (b) {
+      var kind = G.icons.kindOf({ name: b.name, slot: slot });
+      out.push({ id: kind, cat: 'item', name: b.name, slot: slot, make: null, item: { name: b.name, slot: slot, rarity: 0 } });
+    });
+    return out;
+  };
+  function cellCount(kind) {
+    var g = G.icons && G.icons.GRID && G.icons.GRID[kind], n = 0, y, x;
+    if (!g) return 0;
+    for (y = 0; y < g.length; y++) for (x = 0; x < g[y].length; x++) if (g[y].charAt(x) !== '.' && g[y].charAt(x) !== ' ') n++;
+    return n;
+  }
+  A.stats = function (e) {
+    var key = e.cat + ':' + e.id, st = statC[key], m, o, box, cols = {}, i, p;
+    if (st) return st;
+    st = { voxels: 0, tris: 0, height: 0, cls: 'item', colors: [] };
+    if (e.cat === 'item') { st.voxels = cellCount(e.id); st.cls = 'item'; }
+    else {
+      m = e.make(); o = m.obj;
+      o.traverse(function (c) {
+        var g = c.geometry, mt = c.material;
+        if (!c.isMesh || !g) return;
+        if (g.type === 'BoxGeometry') st.voxels++;
+        st.tris += g.index ? g.index.count / 3 : (g.attributes.position ? g.attributes.position.count / 3 : 0);
+        if (e.cat === 'prop' && mt && mt.color && !mt.transparent) cols[mt.color.getHex()] = 1;
+      });
+      if (e.spec) for (i = 0; i < e.spec.parts.length; i++) { p = e.spec.parts[i]; if (p.size) { cols[p.color] = 1; if (p.color2) cols[p.color2] = 1; } }
+      o.updateMatrixWorld(true); box = new THREE.Box3(); var bb = new THREE.Box3(), any = false;
+      o.traverse(function (c) { if (c.isMesh && c.geometry && c.geometry.type === 'BoxGeometry') { c.geometry.computeBoundingBox(); bb.copy(c.geometry.boundingBox).applyMatrix4(c.matrixWorld); box.union(bb); any = true; } });
+      if (!any) box.setFromObject(o);
+      st.height = Math.round((box.max.y - box.min.y) * 100) / 100; st.width = Math.round(Math.max(box.max.x - box.min.x, box.max.z - box.min.z) * 100) / 100;
+      st.colors = Object.keys(cols).map(Number);
+      if (e.cat === 'model') st.cls = 'character';
+      else if (e.cat === 'mob') { i = (e.spec && e.spec.height) || st.height; st.cls = i <= 1 ? 'mob_s' : i <= 2 ? 'mob_m' : 'mob_l'; }
+      else st.cls = st.height <= 1.5 ? 'prop_s' : 'prop_l';
+      m.dispose();
+    }
+    return (statC[key] = st);
+  };
+  A.validate = function () {
+    var rep = { total: 0, counts: { model: 0, mob: 0, prop: 0, item: 0 }, missing: [], overBudget: [], offPalette: [], errors: [], issues: 0 };
+    var reg = A.registry(), seen = {}, ids = {}, T = G.enemies && G.enemies.types, V = G.dungeon && G.dungeon.visuals, S = G.loot && G.loot.sources, k;
+    function miss(id, why) { rep.missing.push({ id: id, why: why }); }
+    rep.total = reg.length;
+    reg.forEach(function (e) {
+      var key = e.cat + ':' + e.id, st, b, off = [];
+      rep.counts[e.cat]++; ids[e.id] = 1;
+      if (seen[key]) miss(e.id, 'id trùng trong nhóm ' + e.cat); seen[key] = 1;
+      if (e.cat === 'item' && !(G.icons && G.icons.GRID && G.icons.GRID[e.id])) miss(e.id, 'vật phẩm "' + e.name + '" chưa có icon (GRID)');
+      if (e.cat === 'mob' && e.spec && !e.spec.parts.length) miss(e.id, 'mob chưa có spec');
+      try { st = A.stats(e); } catch (err) { rep.errors.push(e.id + ': ' + err.message); return; }
+      b = A.budgets[st.cls];
+      if (b && (st.voxels > b.voxels || st.tris > b.tris)) rep.overBudget.push({ id: e.id, cat: e.cat, cls: st.cls, voxels: st.voxels, tris: st.tris, maxVoxels: b.voxels, maxTris: b.tris });
+      if (G.palette) {
+        st.colors.forEach(function (c) { var n = G.palette.nearest(c); if (n.dist > 30) off.push({ hex: c, nearest: n.id, dist: n.dist }); });
+        if (off.length) rep.offPalette.push({ id: e.id, cat: e.cat, total: st.colors.length, off: off });
+      } else if (!rep.paletteMissing) { rep.paletteMissing = true; miss('palette', 'Game.palette chưa được nạp'); }
+    });
+    for (k in MANIFEST.models) if (!ids[k]) miss(k, 'có trong manifest nhưng không có định nghĩa mob/prop/model');
+    if (T) for (k in T) if (T[k].ai && !T[T[k].ai]) miss(k, 'ai "' + T[k].ai + '" không tồn tại');
+    if (S && T) for (k in S) if (!T[k] && k !== 'boss' && k !== 'chest' && k !== 'misc') miss(k, 'loot.sources trỏ tới mob không tồn tại');
+    if (V) REQ_PROPS.forEach(function (n) { if (typeof V[n] !== 'function') miss(n, 'dungeon.visuals thiếu prop'); });
+    rep.issues = rep.missing.length + rep.overBudget.length + rep.offPalette.length + rep.errors.length;
+    return rep;
   };
 })();
