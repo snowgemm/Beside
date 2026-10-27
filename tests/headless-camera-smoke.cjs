@@ -212,6 +212,31 @@ check('player lands on the smooth rendered terrain instead of integer voxel step
  // so their shadow receiver flag must be safe at construction time, not just toggled once.
 const terrainSource = fs.readFileSync(path.join(jsDir, 'legacy-world.js'), 'utf8');
 const assetSource = fs.readFileSync(path.join(jsDir, 'assets.js'), 'utf8');
+check('terrain chunk edge slope samples stay inside a one-cell padded grid',
+  terrainSource.includes('var N=CS+3,H=new Float32Array(N*N)') &&
+  terrainSource.includes('for(z=-1;z<=CS+1;z++)for(x=-1;x<=CS+1;x++)') &&
+  !terrainSource.includes('var N=18,H=new Float32Array(N*N)'));
+{
+  // Exercise every terrain-vertex edge and corner using the same grid/index scheme as build().
+  const chunkSize = 16;
+  const stride = chunkSize + 3;
+  const heightGrid = new Float32Array(stride * stride);
+  for (let z = -1; z <= chunkSize + 1; z++) {
+    for (let x = -1; x <= chunkSize + 1; x++) {
+      heightGrid[(z + 1) * stride + x + 1] = x * 0.25 + z * 0.5;
+    }
+  }
+  let finiteSlopes = true;
+  for (let z = 0; z <= chunkSize; z++) {
+    for (let x = 0; x <= chunkSize; x++) {
+      const i = (z + 1) * stride + x + 1;
+      const dx = heightGrid[i + 1] - heightGrid[i - 1];
+      const dz = heightGrid[i + stride] - heightGrid[i - stride];
+      if (![dx, dz, Math.sqrt(dx * dx + dz * dz)].every(Number.isFinite)) finiteSlopes = false;
+    }
+  }
+  check('all 4 terrain borders and corners produce finite slopes', finiteSlopes);
+}
 check('newly streamed terrain chunks never receive shadow-map shadows',
   terrainSource.includes('mesh.receiveShadow=false') &&
   !terrainSource.includes("mesh.receiveShadow=!!(G.quality&&G.quality.value==='high')"));
