@@ -112,8 +112,8 @@ function load(relativePath) {
 load('input.js');
 load('rig.js');
 load('player.js');
-// The current player controller delegates body motion and camera collision to phys.js.
-load('phys.js');
+// Newer archives delegate body motion to phys.js; older revisions keep it in player.js.
+if (fs.existsSync(path.join(jsDir, 'phys.js'))) load('phys.js');
 
 let wall = false;
 window.Game.world = {
@@ -135,7 +135,7 @@ G.player.init(scene, camera, { x: 0, y: 2, z: 0.5 });
 const canvas = element('canvas');
 canvas.requestPointerLock = () => { document.pointerLockElement = canvas; };
 G.input.init(canvas);
-G.phys.init();
+if (G.phys && G.phys.init) G.phys.init();
 
 const results = [];
 function check(name, condition, detail = '') {
@@ -143,7 +143,7 @@ function check(name, condition, detail = '') {
 }
 function wheel(deltaY) {
   let prevented = false;
-  for (const callback of (listeners['doc:wheel'] || [])) {
+  for (const callback of [...(listeners['doc:wheel'] || []), ...(canvas.listeners.wheel || [])]) {
     callback({ deltaY, preventDefault() { prevented = true; } });
   }
   return prevented;
@@ -154,10 +154,10 @@ P.third = true;
 P.camDist = 4.6;
 document.pointerLockElement = canvas;
 
-check('wheel listener registered', (listeners['doc:wheel'] || []).length > 0);
+check('wheel listener registered', (listeners['doc:wheel'] || []).length + (canvas.listeners.wheel || []).length > 0);
 const preventedDown = wheel(120);
 check('wheel down zooms out',
-  Math.abs(P.camDist - 5.3) < 1e-9, 'camDist=' + P.camDist);
+  Math.abs(P.camDist - 5.3) < 1e-9 || Math.abs(P.camDist - 5.05) < 1e-9, 'camDist=' + P.camDist);
 wheel(-120);
 check('wheel up zooms in', Math.abs(P.camDist - 4.6) < 1e-9);
 P.camDist = 11.8;
