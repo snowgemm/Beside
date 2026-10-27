@@ -1,6 +1,6 @@
 (function () {
   var G = window.Game = window.Game || {};
-    var P = G.player = { pos: { x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, r: 0.3, h: 1.8, sr: 0.45, mass: 1.2, imass: 1 / 1.2, onGround: false, inWater: false, autoStep: true, stepDy: 0, wet: 0, swimUp: false }, stun: 0, yaw: 0, pitch: 0, onGround: false, inWater: false, third: true, camDist: 6.5, stepOff: 0,
+    var P = G.player = { pos: { x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, r: 0.3, h: 1.8, sr: 0.45, mass: 1.2, imass: 1 / 1.2, onGround: false, inWater: false, autoStep: true, stepDy: 0, wet: 0, swimUp: false }, stun: 0, yaw: 0, pitch: 0, onGround: false, inWater: false, third: true, camDist: 6.5, cameraMode: 'rear', stepOff: 0,
     health: 100, maxHealth: 100, weapon: { damage: 10, reach: 2.2, cooldown: 0.4 }, dead: false, rollT: 0, rollDir: { x: 0, z: 0 }, kb: { x: 0, z: 0 }, shake: 0, swingT: 0, iframes: 0,
     equip: { weapon: null, armor: null, trinket: null }, dr: 0, crit: 0.05, speedMult: 1 };
   (function () { var b = P.pos; P.vel = Object.defineProperties({}, { x: { get: function () { return b.vx; }, set: function (v) { b.vx = v; }, enumerable: true }, y: { get: function () { return b.vy; }, set: function (v) { b.vy = v; }, enumerable: true }, z: { get: function () { return b.vz; }, set: function (v) { b.vz = v; }, enumerable: true } }); })();
@@ -116,8 +116,12 @@
     }
 
     P.stepOff -= P.stepOff * Math.min(1, 10 * dt);
-    var cp = Math.cos(P.pitch), dx = -sy * cp, dy = Math.sin(P.pitch), dz = -cy * cp, camVis = true;
-    cam.rotation.set(P.pitch, P.yaw, 0);
+    var cameraMode = P.cameraMode || 'rear', frontView = cameraMode === 'front';
+    var cameraYaw = P.yaw + (cameraMode === 'cinematic' ? 0.22 : 0);
+    var cp = Math.cos(P.pitch), dx = -Math.sin(cameraYaw) * cp, dy = Math.sin(P.pitch), dz = -Math.cos(cameraYaw) * cp, camVis = true;
+    var camSign = frontView ? 1 : -1, sideX = Math.cos(P.yaw), sideZ = -Math.sin(P.yaw);
+    var sideOffset = cameraMode === 'cinematic' ? 0.95 : 0, liftOffset = cameraMode === 'cinematic' ? 0.7 : 0;
+    cam.rotation.set(P.pitch, P.yaw + (frontView ? Math.PI : cameraMode === 'cinematic' ? -0.22 : 0), 0);
     var hx = p.x, hy = p.y + 1.6 + P.stepOff, hz = p.z;
     if (!P.third) {
       cam.position.set(p.x, p.y + 1.62 + P.stepOff, p.z); camInit = false;
@@ -130,11 +134,12 @@
       tv = (cvy + 14 * (cpy - hy)) * dt; cvy = (cvy - 14 * tv) * ev; cpy = hy + (cpy - hy + tv) * ev;
       var dist = P.camDist;
       for (var t = 0.4; t <= dist + 0.4; t += 0.2) {
-        if (ph.blockedAt(cpx - dx * t, cpy - dy * t, cpz - dz * t)) { dist = Math.max(0.5, t - 0.4); break; }
+        if (ph.blockedAt(cpx + sideX * sideOffset + camSign * dx * t, cpy + liftOffset + camSign * dy * t, cpz + sideZ * sideOffset + camSign * dz * t)) { dist = Math.max(0.5, t - 0.4); break; }
       }
       if (dist < camCur) camCur = dist;
       else if (dist - camCur > 0.03) camCur += (dist - camCur) * (1 - Math.exp(-5 * dt)); else camCur = dist;
-      cam.position.set(cpx - dx * camCur, cpy - dy * camCur, cpz - dz * camCur);
+      cam.position.set(cpx + sideX * sideOffset + camSign * dx * camCur, cpy + liftOffset + camSign * dy * camCur, cpz + sideZ * sideOffset + camSign * dz * camCur);
+      cam.lookAt(cpx, cpy, cpz);
       camVis = camCur > 0.8;
     }
     if (P.shake > 0.001) { cam.position.x += (Math.random() - 0.5) * P.shake; cam.position.y += (Math.random() - 0.5) * P.shake; P.shake *= Math.max(0, 1 - 12 * dt); }
