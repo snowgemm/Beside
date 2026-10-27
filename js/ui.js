@@ -55,8 +55,7 @@
 
   U.init = function () {
     bEl = $('banner'); bT = $('bn-t'); bS = $('bn-s'); wpn = $('wpn'); rhRoom = $('rh-room'); rhFoes = $('rh-foes'); deathEl = $('death'); titleEl = $('title');
-    var btns = [['btn-attack', 'sword', 'Đánh', 40], ['btn-dodge', 'roll', 'Lăn', 26], ['btn-bag', 'bag', 'Túi', 26], ['btn-jump', 'jump', 'Nhảy', 30], ['btn-view', 'view', 'Góc nhìn', 24],
-      ['btn-build', 'build', 'Xây', 26], ['btn-break', 'pick', 'Phá', 26], ['btn-place', 'block', 'Đặt', 26], ['btn-menu', 'gear', '', 30]];
+    var btns = [['btn-attack', 'sword', 'Đánh', 40], ['btn-dodge', 'roll', 'Lăn', 26], ['btn-bag', 'bag', 'Túi', 26], ['btn-jump', 'jump', 'Nhảy', 30], ['btn-view', 'view', 'Góc nhìn', 24], ['btn-menu', 'gear', '', 30]];
     btns.forEach(function (b) {
       var e = $(b[0]); if (!e) return;
       e.textContent = ''; e.setAttribute('aria-label', b[2] || 'Cài đặt');
