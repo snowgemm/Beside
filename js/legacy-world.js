@@ -116,7 +116,7 @@
   W.useProvider = function (p) { p = p || W.ow; W.getHeight = p.getHeight; W.getBlock = p.getBlock; W.solid = p.solid; };
   W.hold = function (on) { W.held=!!on; chunks.forEach(function(m){m.visible=!on;}); if(water)water.visible=!on; if(grassMesh)grassMesh.visible=!on; if(flowerMesh)flowerMesh.visible=!on; if(!on)dirty=true; };
   var scene, material, decorMat, water, waterGeom, waterPos, waterCol, waterTime=0, waterAx=1e9, waterAz=1e9, wtex, grain, tr=1,tg=1,tb=1,chunks=new Map(),queue=[],qi=0,lcx=1e9,lcz=1e9,dirty=true;
-  var grassMesh,flowerMesh,grassMaterial,flowerMaterial,grassShader=null,grassTarget=650,flowerTarget=80,grassDirty=true,grassX=1e9,grassZ=1e9,grassDummy,flowerColor;
+  var grassMesh,flowerMesh,grassMaterial,flowerMaterial,grassShader=null,grassTarget=650,flowerTarget=80,grassDirty=true,grassX=1e9,grassZ=1e9,grassDummy,flowerColor,grassColor;
 
   function mkTex(size, fn, rep) {
     try {
@@ -177,7 +177,7 @@
     };
     grassMesh=new THREE.InstancedMesh(grassGeometry(),grassMaterial,1050);flowerMesh=new THREE.InstancedMesh(new THREE.ConeGeometry(.065,.16,5),flowerMaterial,135);
     grassMesh.count=flowerMesh.count=0;grassMesh.frustumCulled=flowerMesh.frustumCulled=false;grassMesh.userData.noShadow=flowerMesh.userData.noShadow=true;
-    scene.add(grassMesh);scene.add(flowerMesh);grassDummy=new THREE.Object3D();flowerColor=new THREE.Color();
+    scene.add(grassMesh);scene.add(flowerMesh);grassDummy=new THREE.Object3D();flowerColor=new THREE.Color();grassColor=new THREE.Color();
     setGrassQuality(G.quality?G.quality.value:'medium');
   }
   function rebuildGrass(px,pz){
@@ -190,13 +190,17 @@
       sl=Math.max(Math.abs(getHeight(wx+1,wz)-getHeight(wx-1,wz)),Math.abs(getHeight(wx,wz+1)-getHeight(wx,wz-1)))*.5;if(sl>1.25)continue;
       bi=biomeW(wx,wz);if(bi===2||bi===3)continue;
       grassDummy.position.set(wx,h+.015,wz);grassDummy.rotation.set(0,n*6.283,0);scale=.65+hash(Math.floor(wx*3),Math.floor(wz*3))*.7;
-      grassDummy.scale.set(scale,scale,scale);grassDummy.updateMatrix();grassMesh.setMatrixAt(gn++,grassDummy.matrix);
+      grassDummy.scale.set(scale*(.82+hash(Math.floor(wx+11),Math.floor(wz-7))*.34),scale*(.72+hash(Math.floor(wx-13),Math.floor(wz+17))*.46),scale*(.82+hash(Math.floor(wx+23),Math.floor(wz+5))*.34));
+      grassDummy.updateMatrix();grassMesh.setMatrixAt(gn,grassDummy.matrix);
+      var shade=.72+hash(Math.floor(wx*7+13),Math.floor(wz*7-31))*.36;
+      grassColor.setRGB(shade,Math.min(1,shade*1.05),shade*.88);if(grassMesh.setColorAt)grassMesh.setColorAt(gn,grassColor);gn++;
       if(fn<flowerTarget&&hash(Math.floor(wx+121),Math.floor(wz-91))<.09){
         flowerColor.setRGB(.95,.76+hash(Math.floor(wx),Math.floor(wz))*.22,.88);flowerMesh.setColorAt(fn,flowerColor);
         grassDummy.position.y=h+.025;grassDummy.scale.setScalar(.7+n*.6);grassDummy.updateMatrix();flowerMesh.setMatrixAt(fn++,grassDummy.matrix);
       }
     }
     grassMesh.count=gn;flowerMesh.count=fn;grassMesh.instanceMatrix.needsUpdate=true;flowerMesh.instanceMatrix.needsUpdate=true;
+    if(grassMesh.instanceColor)grassMesh.instanceColor.needsUpdate=true;
     if(flowerMesh.instanceColor)flowerMesh.instanceColor.needsUpdate=true;
   }
   function paintWater(ax,az){
