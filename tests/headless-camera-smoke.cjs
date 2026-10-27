@@ -261,7 +261,14 @@ check('grass uses stable two-sided cards without injected wind distortion',
   terrainSource.includes('grassShader=null;') &&
   !terrainSource.includes('uWindTime + instanceMatrix'));
 check('grass density is capped for mobile instead of filling the horizon with spikes',
-  terrainSource.includes("grassTarget=level==='low'?90:level==='high'?300:180"));
+  terrainSource.includes("grassTarget=level==='low'?48:level==='high'?120:72"));
+check('decor placement uses the same padded height-grid stride as terrain generation',
+  terrainSource.includes('var N = CS + 3, gates = gatesFor(ox, oz)') &&
+  !terrainSource.includes('var N = 18, gates = gatesFor(ox, oz)'));
+check('grass is restricted to a closer radius and lower density to avoid subpixel spikes',
+  terrainSource.includes('if(dist>17*17)continue;') &&
+  terrainSource.includes("grassTarget=level==='low'?48:level==='high'?120:72") &&
+  terrainSource.includes('var shade=.88+hash('));
 check('terrain normals are generated from the final indexed triangles',
   terrainSource.includes('geo.computeVertexNormals();geo.computeBoundingSphere();'));
 check('grass uses solid low-poly tufts instead of thin crossed cards',
