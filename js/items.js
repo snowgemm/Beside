@@ -92,6 +92,7 @@
 
   /* ---------- Loot: rolls, world drops, pickup ---------- */
   var MAXD = 30, LIFE = 120, scene, dropGeo, dropMats = [], lastFull = -9, clock = 0;
+  var haloGeo, haloMats;
   var L = G.loot = { counter: 0, drops: [],
     sources: { slime: { chance: 0.25, bonus: 0 }, goblin: { chance: 0.4, bonus: 0.15 }, archer: { chance: 0.35, bonus: 0.15 },
       wolf: { chance: 0.35, bonus: 0.1 }, skeleton: { chance: 0.4, bonus: 0.15 }, bat: { chance: 0.2, bonus: 0 }, spider: { chance: 0.3, bonus: 0.05 }, mushroom: { chance: 0.3, bonus: 0.1 }, chest: { chance: 1, bonus: 0.5 } } };
@@ -118,17 +119,28 @@
   };
   // y (optional) = start height of the pop; the drop gets an outward + upward impulse, falls, bounces twice, settles
   L.spawnDrop = function (item, x, z, delay, y0) {
-    var y = y0 != null ? y0 : G.world.getHeight(x, z) + 0.5, m = new THREE.Mesh(dropGeo, dropMats[item.rarity] || dropMats[0]), a = Math.random() * 6.283, sp = 1.2 + Math.random() * 1.8;
+    var y = y0 != null ? y0 : G.world.getHeight(x, z) + 0.5, name = item && item.name || '', modelKey = null, m, a = Math.random() * 6.283, sp = 1.2 + Math.random() * 1.8, imported = false;
+    if (item && item.slot === 'weapon') {
+      if (name.indexOf('Giáo') >= 0) modelKey = 'lootSpear';
+      else if (name.indexOf('Kiếm') >= 0) modelKey = 'lootSword';
+    } else if (item && item.slot === 'armor') modelKey = 'lootShield';
+    else if (item && item.slot === 'trinket') modelKey = 'coin';
+    if (modelKey && G.assets && G.assets.model) { m = G.assets.model(modelKey); imported = !!m; }
+    if (!m) m = new THREE.Mesh(dropGeo, dropMats[item.rarity] || dropMats[0]);
+    if (imported && haloGeo) {
+      var ring = new THREE.Mesh(haloGeo, haloMats[item.rarity] || haloMats[0]); ring.rotation.x = Math.PI / 2; ring.position.y = 0.025; ring.userData.noShadow = true; m.add(ring);
+    }
     var b = { x: x, y: y, z: z, vx: Math.cos(a) * sp, vy: 4 + Math.random() * 2, vz: Math.sin(a) * sp, r: 0.18, h: 0.35, onGround: false, inWater: false, mass: 0.3, autoStep: false, stepDy: 0, wet: 0, swimUp: false };
-    m.rotation.x = 0.6; m.position.set(x, y + 0.3, z); scene.add(m);
+    m.rotation.x = imported ? 0 : 0.6; m.position.set(x, y + 0.3, z); scene.add(m);
     L.drops.push({ item: item, mesh: m, b: b, y: y, x: x, z: z, t: 0, delay: delay || 0, bob: Math.random() * 6, bounces: 0, settled: false });
     while (L.drops.length > MAXD) removeDrop(L.drops[0]);
   };
   function removeDrop(d) { scene.remove(d.mesh); var i = L.drops.indexOf(d); if (i >= 0) L.drops.splice(i, 1); }
 
   L.init = function (sc) {
-    scene = sc; dropGeo = new THREE.BoxGeometry(0.35, 0.35, 0.35);
+    scene = sc; dropGeo = new THREE.BoxGeometry(0.35, 0.35, 0.35); haloGeo = new THREE.TorusGeometry(0.24, 0.025, 4, 12);
     dropMats = RAR.map(function (q) { return new THREE.MeshBasicMaterial({ color: q.hex }); });
+    haloMats = RAR.map(function (q) { return new THREE.MeshBasicMaterial({ color: q.hex, transparent: true, opacity: 0.85, depthWrite: false }); });
     G.save.register('loot', function () { return { counter: L.counter }; }, function (d) { L.counter = d.counter | 0; });
     G.events.on('enemyDied', function (e) {
       var src = L.sources[e.type];
