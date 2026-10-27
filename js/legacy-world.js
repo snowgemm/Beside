@@ -34,8 +34,8 @@
   function baseHeight(x, z) {
     var px = Math.floor(x) + 0.5, pz = Math.floor(z) + 0.5;
     var n = fbm(px * 0.006, pz * 0.006, 3), m = fbm(px * 0.03 + 50, pz * 0.03 - 70, 4);
-    var h = 12 + (n - 0.5) * 70 + (m - 0.5) * 14;
-    return Math.max(1, Math.min(MAXH - 1, Math.floor(h)));
+    var h = 12 + (n - 0.5) * 50 + (m - 0.5) * 10;
+    return Math.max(3, Math.min(MAXH - 3, Math.floor(h)));
   }
   /* ---------- edit layer: sparse column (x,z) -> height over the heightmap ---------- */
   var EMAX = 20000, EMIN_H = 1, EMAX_H = 48, edits = new Map();
@@ -281,6 +281,10 @@
     if (lz === CS - 1) rebuildChunk(cx, cz + 1);
   }
   W.chunkCount = function () { return chunks.size; };
+  W.refreshDecor = function () {
+    chunks.forEach(function (m) { drop(m); });
+    chunks.clear(); bmap.clear(); queue = []; qi = 0; lcx = 1e9; lcz = 1e9; dirty = true;
+  };
   W.decorBlockers = decorBlockers;
   W.chunkMesh = function (cx, cz) { return chunks.get(cx + ',' + cz) || null; };
 
@@ -338,7 +342,7 @@
   var AUT = [[.9, .5, .12], [.8, .28, .12], [.92, .72, .16]];
   var FLW = [[.95, .25, .25], [.98, .85, .2], [.98, .98, .95], [.95, .5, .75], [.4, .5, .95]];
   var DMAX = 40, TMAX = 18;
-  var dp, dc, di;
+  var dp, dc, di, modelDecor = [];
   function dv(x, y, z, r, g, b) { dp.push(x, y, z); dc.push(r, g, b); }
   function dbox(cx, y0, cz, sx, sy, sz, r, g, b) { // 5 faces (no bottom)
     var x0 = cx - sx / 2, x1 = cx + sx / 2, z0 = cz - sz / 2, z1 = cz + sz / 2, y1 = y0 + sy, base = dp.length / 3, k, q, s, sb;
@@ -357,7 +361,13 @@
     return bi === 4 ? AUT[(r * 3) | 0] : bi === 1 ? [.15, .44, .2] : bi === 3 ? [.13, .36, .27] : bi === 2 ? [.3, .5, .2] : [.3, .64, .24];
   }
   function tree(bi, cx, h, cz, r2, j) {
-    var th, L, tk = [.4 * j, .26 * j, .14 * j], k;
+    var th, L, tk = [.4 * j, .26 * j, .14 * j], k, ext = null;
+    if (bi !== 2 && G.assets && G.assets.model) ext = G.assets.model(bi === 3 ? 'pine' : 'tree');
+    if (ext) {
+      ext.position.set(cx, h - 0.05, cz); ext.rotation.y = r2 * Math.PI * 2; ext.scale.multiplyScalar(j);
+      ext.traverse(function (o) { if (o.isMesh) { o.castShadow = false; o.userData = o.userData || {}; o.userData.noShadow = true; } });
+      modelDecor.push(ext); return;
+    }
     if (bi === 2) {
       if (r2 < 0.25) { // dead tree
         th = 2.8 + r2 * 4; k = [.44 * j, .36 * j, .3 * j];
@@ -404,7 +414,7 @@
   function decorBlockers(cx, cz) { return bmap.get(bk(cx, cz)) || null; }
   function decorMesh(ox, oz, H, BIO) {
     var N = 18, gates = gatesFor(ox, oz), sp = G.player && G.player.spawnPos, n = 0, trees = 0, lx, lz, g, gl = gates ? gates.length : 0;
-    dp = []; dc = []; di = []; dbl = [];
+    dp = []; dc = []; di = []; dbl = []; modelDecor = [];
     outer:
     for (lz = 0; lz < CS; lz++) for (lx = 0; lx < CS; lx++) {
       if (n >= DMAX) break outer;
@@ -425,16 +435,22 @@
       if (kind === 1) { tree(bi, cx, h, cz, r2, j); trees++; dbl.push(ox + cx, oz + cz, 0.32, h, h + 2.5); }
       else if (kind === 2) {
         L = leafCol(bi, r2);
-        dbox(cx, h - 0.05, cz, 1.1, .6, 1.1, L[0] * j * .9, L[1] * j * .9, L[2] * j * .9);
-        dbox(cx + .15, h + .45, cz - .1, .7, .5, .7, L[0] * j * 1.05, L[1] * j * 1.05, L[2] * j * 1.05);
+        var bushModel = G.assets && G.assets.model ? G.assets.model('bush') : null;
+        if (bushModel) {
+          bushModel.position.set(cx, h - 0.05, cz); bushModel.rotation.y = r2 * Math.PI * 2; bushModel.scale.multiplyScalar(j * 1.2);
+          bushModel.traverse(function (o) { if (o.isMesh) { o.castShadow = false; o.userData = o.userData || {}; o.userData.noShadow = true; } }); modelDecor.push(bushModel);
+        } else { dbox(cx, h - 0.05, cz, 1.1, .6, 1.1, L[0] * j * .9, L[1] * j * .9, L[2] * j * .9); dbox(cx + .15, h + .45, cz - .1, .7, .5, .7, L[0] * j * 1.05, L[1] * j * 1.05, L[2] * j * 1.05); }
       } else if (kind === 3) {
         c = FLW[(r2 * 5) | 0];
         dbox(cx, h - 0.05, cz, .08, .38, .08, .2, .5, .2); dbox(cx, h + .33, cz, .26, .2, .26, c[0], c[1], c[2]);
         dbox(cx + .35, h - 0.05, cz + .2, .08, .3, .08, .2, .5, .2); dbox(cx + .35, h + .25, cz + .2, .24, .18, .24, c[0] * .95, c[1] * .95, c[2] * .95);
       } else {
         c = bi === 3 ? [.82, .86, .92] : bi === 2 ? [.7, .55, .4] : [.55, .55, .58];
-        dbox(cx, h - 0.05, cz, .9, .55, .8, c[0] * j, c[1] * j, c[2] * j);
-        dbox(cx + .35, h - 0.05, cz + .25, .5, .35, .5, c[0] * j * 1.1, c[1] * j * 1.1, c[2] * j * 1.1);
+        var rockModel = G.assets && G.assets.model ? G.assets.model('rock') : null;
+        if (rockModel) {
+          rockModel.position.set(cx, h - 0.05, cz); rockModel.rotation.y = r2 * Math.PI * 2; rockModel.scale.multiplyScalar(j * 0.8);
+          rockModel.traverse(function (o) { if (o.isMesh) { o.castShadow = false; o.userData = o.userData || {}; o.userData.noShadow = true; } }); modelDecor.push(rockModel);
+        } else { dbox(cx, h - 0.05, cz, .9, .55, .8, c[0] * j, c[1] * j, c[2] * j); dbox(cx + .35, h - 0.05, cz + .25, .5, .35, .5, c[0] * j * 1.1, c[1] * j * 1.1, c[2] * j * 1.1); }
         dbl.push(ox + cx, oz + cz, 0.5, h, h + 0.55);
       }
       n++;
@@ -445,6 +461,7 @@
     geo.setAttribute('color', new THREE.Float32BufferAttribute(dc, 3));
     geo.setIndex(di);
     var m = new THREE.Mesh(geo, decorMat);
+    for (var mi = 0; mi < modelDecor.length; mi++) m.add(modelDecor[mi]);
     m.userData = { items: n };
     return m;
   }
@@ -476,7 +493,7 @@
     plan(Math.floor(px / CS), Math.floor(pz / CS)); process(1e9);
     W.drawDistance = old; dirty = true;
   };
-  W.update = function(px,pz,budgetMs){
+  W.update = function(px,pz,budgetMs,dt){
     if(W.held)return;var pcx=Math.floor(px/CS),pcz=Math.floor(pz/CS);
     if(dirty||pcx!==lcx||pcz!==lcz){lcx=pcx;lcz=pcz;dirty=false;plan(pcx,pcz);}
     process(budgetMs);dt=typeof dt==='number'&&isFinite(dt)?Math.max(0,Math.min(.05,dt)):.016;updateWater(px,pz,dt);
