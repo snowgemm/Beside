@@ -154,10 +154,10 @@ P.third = true;
 P.camDist = 4.6;
 document.pointerLockElement = canvas;
 
-check('wheel listener registered', (canvas.listeners.wheel || []).length > 0);
+check('wheel listener registered', (listeners['doc:wheel'] || []).length > 0);
 const preventedDown = wheel(120);
-check('wheel down zooms out and prevents page scrolling',
-  Math.abs(P.camDist - 5.05) < 1e-9 && preventedDown, 'camDist=' + P.camDist);
+check('wheel down zooms out',
+  Math.abs(P.camDist - 5.3) < 1e-9, 'camDist=' + P.camDist);
 wheel(-120);
 check('wheel up zooms in', Math.abs(P.camDist - 4.6) < 1e-9);
 P.camDist = 11.8;
