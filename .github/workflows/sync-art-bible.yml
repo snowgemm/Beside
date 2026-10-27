@@ -1,0 +1,45 @@
+name: Sync uploaded art bible archive
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "incoming-art-bible.zip"
+
+permissions:
+  contents: write
+
+jobs:
+  sync-archive:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: true
+
+      - name: Validate archive
+        run: unzip -t incoming-art-bible.zip
+
+      - name: Extract all files and commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          unzip -o incoming-art-bible.zip -d .
+          rm incoming-art-bible.zip
+
+          # Preserve the current audio compatibility fix if the archive's index predates it.
+          if [[ -f index.html ]] && ! grep -q 'js/audio-fix.js' index.html; then
+            sed -i '/<script src="js\/combat.js"><\/script>/a <script src="js/audio-fix.js"></script>' index.html
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "Archive contains no tracked changes."
+            exit 0
+          fi
+          git commit -m "Sync complete art bible archive"
+          git push origin HEAD:main
