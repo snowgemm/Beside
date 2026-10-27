@@ -119,12 +119,8 @@
   };
   // y (optional) = start height of the pop; the drop gets an outward + upward impulse, falls, bounces twice, settles
   L.spawnDrop = function (item, x, z, delay, y0) {
-    var y = y0 != null ? y0 : G.world.getHeight(x, z) + 0.5, name = item && item.name || '', modelKey = null, m, a = Math.random() * 6.283, sp = 1.2 + Math.random() * 1.8, imported = false;
-    if (item && item.slot === 'weapon') {
-      if (name.indexOf('Giáo') >= 0) modelKey = 'lootSpear';
-      else if (name.indexOf('Kiếm') >= 0) modelKey = 'lootSword';
-    } else if (item && item.slot === 'armor') modelKey = 'lootShield';
-    else if (item && item.slot === 'trinket') modelKey = 'coin';
+    var y = y0 != null ? y0 : G.world.getHeight(x, z) + 0.5, modelKey = null, m, a = Math.random() * 6.283, sp = 1.2 + Math.random() * 1.8, imported = false;
+    if (item && item.slot === 'trinket') modelKey = 'coin';
     if (modelKey && G.assets && G.assets.model) { m = G.assets.model(modelKey); imported = !!m; }
     if (!m) m = new THREE.Mesh(dropGeo, dropMats[item.rarity] || dropMats[0]);
     if (imported && haloGeo) {
