@@ -86,15 +86,88 @@
     });
     if (!pending && timer) { clearInterval(timer); timer = null; }
   }
+  // Persist downloaded GLB buffers in IndexedDB. A first-ever offline launch still uses the
+  // procedural fallback, but any model successfully loaded once is reusable with no network.
+  var modelDBPromise = null;
+  function openModelDB() {
+    if (!window.indexedDB) return Promise.resolve(null);
+    if (!modelDBPromise) modelDBPromise = new Promise(function (resolve) {
+      try {
+        var req = window.indexedDB.open('besidevalley-model-cache', 1);
+        req.onupgradeneeded = function () {
+          var db = req.result;
+          if (!db.objectStoreNames.contains('models')) db.createObjectStore('models');
+        };
+        req.onsuccess = function () { resolve(req.result); };
+        req.onerror = function () { resolve(null); };
+        req.onblocked = function () { resolve(null); };
+      } catch (e) { resolve(null); }
+    });
+    return modelDBPromise;
+  }
+  function readModelBuffer(url) {
+    return openModelDB().then(function (db) {
+      return new Promise(function (resolve) {
+        if (!db) return resolve(null);
+        try {
+          var req = db.transaction('models', 'readonly').objectStore('models').get(url);
+          req.onsuccess = function () { resolve(req.result instanceof ArrayBuffer ? req.result : null); };
+          req.onerror = function () { resolve(null); };
+        } catch (e) { resolve(null); }
+      });
+    });
+  }
+  function writeModelBuffer(url, buffer) {
+    return openModelDB().then(function (db) {
+      return new Promise(function (resolve) {
+        if (!db) return resolve(false);
+        try {
+          var tx = db.transaction('models', 'readwrite');
+          tx.objectStore('models').put(buffer.slice(0), url);
+          tx.oncomplete = function () { resolve(true); };
+          tx.onerror = function () { resolve(false); };
+          tx.onabort = function () { resolve(false); };
+        } catch (e) { resolve(false); }
+      });
+    });
+  }
+  function getModelBuffer(url) {
+    return readModelBuffer(url).then(function (cached) {
+      if (cached) return cached;
+      if (!window.fetch) return null;
+      return fetch(url, { mode: 'cors', cache: 'force-cache' }).then(function (response) {
+        if (!response.ok) throw new Error('GLB request failed: ' + response.status);
+        return response.arrayBuffer();
+      }).then(function (buffer) {
+        return writeModelBuffer(url, buffer).then(function () { return buffer; });
+      }).catch(function () { return null; });
+    });
+  }
   function loadModel(name, def) {
     return new Promise(function (done) {
-      try {
-        new THREE.GLTFLoader().load(def.url || ('assets/models/' + def.file), function (g) {
-          try { tpl[name] = fit(g.scene, def); } catch (e) {}
-          if (!envRefreshed && A.has('tree') && A.has('pine') && A.has('bush') && A.has('rock') && A.has('mushroomProp') && G.world && G.world.refreshDecor) { envRefreshed = true; G.world.refreshDecor(); }
-          done();
-        }, undefined, function () { done(); });
-      } catch (e) { done(); }
+      var finished = false;
+      function finish() { if (finished) return; finished = true; done(); }
+      function loaded(g) {
+        try { tpl[name] = fit(g.scene, def); } catch (e) {}
+        if (!envRefreshed && A.has('tree') && A.has('pine') && A.has('bush') && A.has('rock') && A.has('mushroomProp') && G.world && G.world.refreshDecor) {
+          envRefreshed = true; G.world.refreshDecor();
+        }
+        finish();
+      }
+      function fallbackLoad() {
+        try {
+          new THREE.GLTFLoader().load(def.url || ('assets/models/' + def.file), loaded, undefined, finish);
+        } catch (e) { finish(); }
+      }
+      if (!def.url || !window.fetch || !THREE.GLTFLoader || !THREE.GLTFLoader.prototype.parse) {
+        fallbackLoad(); return;
+      }
+      getModelBuffer(def.url).then(function (buffer) {
+        if (!buffer) { fallbackLoad(); return; }
+        try {
+          new THREE.GLTFLoader().parse(buffer, '', loaded, function () { fallbackLoad(); });
+        } catch (e) { fallbackLoad(); }
+      }).catch(fallbackLoad);
     });
   }
   function loadSound(name, files) {
