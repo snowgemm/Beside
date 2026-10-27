@@ -23,7 +23,17 @@
       }
     }
   }
+  function smoothWorld() { return !!(W && W.surfaceHeight && !(G.dungeon && G.dungeon.active)); }
+  // Take the highest point under the body's footprint so feet do not sink into a hillside.
+  function groundY(x,z,r) {
+    var f=W.surfaceHeight, q=Math.max(0,r||0)*0.7, h=f(x,z);
+    if(q>0){h=Math.max(h,f(x-q,z-q),f(x+q,z-q),f(x-q,z+q),f(x+q,z+q));}
+    return h;
+  }
   function collides(b, x, y, z) {
+    // The overworld is a triangle-meshed heightfield, not a stack of invisible voxel columns.
+    // Smooth ground contact is resolved in move(); voxel collision remains for dungeon rooms.
+    if (smoothWorld()) return false;
     var r = b.r, x0 = Math.floor(x - r + E), x1 = Math.floor(x + r - E), y0 = Math.floor(y + E), y1 = Math.floor(y + b.h - E),
         z0 = Math.floor(z - r + E), z1 = Math.floor(z + r - E), ix, iy, iz, s = W.solid;
     for (ix = x0; ix <= x1; ix++) for (iz = z0; iz <= z1; iz++) for (iy = y0; iy <= y1; iy++) if (s(ix, iy, iz)) return true;
@@ -47,7 +57,8 @@
 
   P.blockedAt = function (x, y, z) {
     W = G.world;
-    if (W.solid(x, y, z)) return true;
+    if (smoothWorld()) { if (y < groundY(x,z,0) + 0.18) return true; }
+    else if (W.solid(x, y, z)) return true;
     gather(x, z, 1);
     for (var i = 0; i < nc; i++) {
       var k = i * 5, dx = x - cand[k], dz = z - cand[k + 1];
@@ -60,13 +71,14 @@
   // out: onGround, inWater, wet (0..1 submerged), landV (impact speed this call), wasGround, splash (entry speed), hitX/hitZ, stepOk, stepDy (sum of auto step-ups, negative)
   P.move = function (b, dt) {
     W = G.world;
+    var smooth = smoothWorld();
     if (dt > P.DT_MAX) dt = P.DT_MAX;
     if (!(dt > 0)) return;
     var wasGround = b.onGround, wasWater = b.inWater, i, n, s, nx, ny, sp;
     b.wasGround = wasGround; b.landV = 0; b.splash = 0; b.hitX = b.hitZ = false; b.stepOk = false; b.bt = (b.bt || 0) + dt;
     b.inWater = W.getBlock(b.x, b.y + b.h * 0.22, b.z) === W.WATER;
     b.wet = 0;
-    if (!b.inWater && wasGround && !b.fly && b.vy <= 0 && b.vx * b.vx + b.vz * b.vz < 1e-4 && collides(b, b.x, b.y - 0.05, b.z)) { b.vy = 0; return; } // resting: one cheap support check
+    if (!smooth && !b.inWater && wasGround && !b.fly && b.vy <= 0 && b.vx * b.vx + b.vz * b.vz < 1e-4 && collides(b, b.x, b.y - 0.05, b.z)) { b.vy = 0; return; } // resting: one cheap support check
     if (b.fly) { /* hover: no gravity */ }
     else if (b.inWater) {
       var f = (W.SEA - b.y) / (b.h * 0.85); f = f < 0 ? 0 : f > 1 ? 1 : f; b.wet = f;
@@ -82,9 +94,10 @@
     sp = Math.max(Math.abs(b.vx), Math.abs(b.vy), Math.abs(b.vz)) * dt;
     n = sp < SUB ? 1 : Math.min(8, Math.ceil(sp / SUB)); s = dt / n;
     gather(b.x, b.z, b.r + 0.9 + Math.sqrt(b.vx * b.vx + b.vz * b.vz) * dt);
-    if (collides(b, b.x, b.y, b.z) && !collides(b, b.x, b.y + 1, b.z)) b.y += 1;   // unstick (one block)
+    if (!smooth && collides(b, b.x, b.y, b.z) && !collides(b, b.x, b.y + 1, b.z)) b.y += 1;   // unstick (one block)
     b.onGround = false;
     for (i = 0; i < n; i++) {
+      var startX = b.x, startZ = b.z;
       if (b.vx !== 0) {
         nx = b.x + b.vx * s;
         if (!collides(b, nx, b.y, b.z)) b.x = nx;
@@ -98,12 +111,28 @@
         else { b.hitZ = true; if (!b.fly && !collides(b, b.x, b.y + P.STEP, nx)) b.stepOk = true; b.vz = 0; }
       }
       if (nc) blk(b);
-      ny = b.y + b.vy * s;
-      if (collides(b, b.x, ny, b.z)) {
-        if (b.vy < 0) { if (-b.vy > b.landV) b.landV = -b.vy; b.y = Math.floor(ny + E) + 1; b.onGround = true; }
-        else b.y = Math.floor(ny + b.h - E) - b.h;
-        b.vy = 0;
-      } else b.y = ny;
+      if (smooth) {
+        var floor = groundY(b.x, b.z, b.r);
+        // Do not allow a grounded actor to climb a cliff higher than one block in a substep.
+        if ((wasGround || b.onGround) && floor > b.y + P.STEP + 0.025) {
+          b.x = startX; b.z = startZ; b.vx = b.vz = 0; floor = groundY(b.x, b.z, b.r);
+        }
+        ny = b.y + b.vy * s;
+        if (ny <= floor) {
+          if (b.y > floor + E && b.vy < 0) b.landV = Math.max(b.landV, -b.vy);
+          b.y = floor; b.vy = 0; b.onGround = true;
+        } else if (b.y < floor) {
+          b.y = floor;
+          if (b.vy <= 0) { b.vy = 0; b.onGround = true; }
+        } else b.y = ny;
+      } else {
+        ny = b.y + b.vy * s;
+        if (collides(b, b.x, ny, b.z)) {
+          if (b.vy < 0) { if (-b.vy > b.landV) b.landV = -b.vy; b.y = Math.floor(ny + E) + 1; b.onGround = true; }
+          else b.y = Math.floor(ny + b.h - E) - b.h;
+          b.vy = 0;
+        } else b.y = ny;
+      }
     }
   };
 
