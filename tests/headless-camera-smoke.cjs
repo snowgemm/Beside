@@ -416,8 +416,8 @@ check('distant idle mob animation is throttled while AI and physics remain full-
   enemySource.includes('e.rig.update(dt, rigSpeed)') &&
   enemySource.includes('e.rig.update(rigDt,'));
 check('camera hit feedback only fires after a valid combat target is hit',
-  combatSource.includes('P.shake = Math.max(P.shake || 0, crit ? 0.11 : 0.045)') &&
-  combatSource.indexOf('P.shake = Math.max(P.shake || 0, crit ? 0.11 : 0.045)') > combatSource.indexOf('C.attack = function ()'));
+  fs.readFileSync(path.join(jsDir, 'combat.js'), 'utf8').includes('P.shake = Math.max(P.shake || 0, crit ? 0.11 : 0.045)') &&
+  fs.readFileSync(path.join(jsDir, 'combat.js'), 'utf8').indexOf('P.shake = Math.max(P.shake || 0, crit ? 0.11 : 0.045)') > fs.readFileSync(path.join(jsDir, 'combat.js'), 'utf8').indexOf('C.attack = function ()'));
 const failures = results.filter((result) => !result.pass);
 console.log('JavaScript syntax: ' + jsFiles.length + ' files passed');
 console.log('Headless camera/input checks: ' + (results.length - failures.length) + '/' + results.length + ' passed');
