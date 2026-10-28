@@ -295,11 +295,11 @@ check('terrain generation CPU budget adapts to the measured FPS instead of alway
   mainSource.includes('var chunkBudget = touch ? 1.4 : 2.4') &&
   mainSource.includes('G.world.update(p.x, p.z, chunkBudget, dt)'));
 check('expanded minimap renders cached 16x16 terrain tiles rather than one fillRect per world cell',
-  minimapSource.includes('function terrainTile(cx, cz)') &&
-  minimapSource.includes('c.drawImage(tile, px, pz, 16 * s, 16 * s)') &&
-  minimapSource.includes('cache.clear(); tileCache.clear()'));
+  fs.readFileSync(path.join(jsDir, 'minimap.js'), 'utf8').includes('function terrainTile(cx, cz)') &&
+  fs.readFileSync(path.join(jsDir, 'minimap.js'), 'utf8').includes('c.drawImage(tile, px, pz, 16 * s, 16 * s)') &&
+  fs.readFileSync(path.join(jsDir, 'minimap.js'), 'utf8').includes('cache.clear(); tileCache.clear()'));
 check('expanded minimap shows XYZ and its controls wrap on narrow screens',
-  minimapSource.includes("'  Y ' + p.y.toFixed(1)") &&
+  fs.readFileSync(path.join(jsDir, 'minimap.js'), 'utf8').includes("'  Y ' + p.y.toFixed(1)") &&
   fs.readFileSync(path.join(root, 'css', 'style.css'), 'utf8').includes('#map-legend{flex:1 1 260px;min-width:0;white-space:normal'));
 check('grass uses solid low-poly tufts instead of thin crossed cards',
   terrainSource.includes('new THREE.ConeGeometry(.085,.28,5,1)') &&
