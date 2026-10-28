@@ -404,6 +404,20 @@ check('minimap zoom saves are debounced during continuous gestures',
   minimapSource.includes('function queueZoomSave()') &&
   minimapSource.includes('zoomSaveTimer = setTimeout(function ()') &&
   minimapSource.includes('}, 220)'));
+check('camera shake is deterministic and smooth across refresh rates',
+  playerSource.includes('var shakeAmp = P.shake') &&
+  playerSource.includes('Math.sin(shakeTime * 42)') &&
+  playerSource.includes('Math.sin(shakeTime * 53 + 0.8)') &&
+  !playerSource.includes('(Math.random() - 0.5) * P.shake'));
+check('distant idle mob animation is throttled while AI and physics remain full-rate',
+  enemySource.includes('if (d > 18 && !rigBusy)') &&
+  enemySource.includes('e.rigAnimAcc >= 1 / 15') &&
+  enemySource.includes('P.move(e, dt);') &&
+  enemySource.includes('e.rig.update(dt, rigSpeed)') &&
+  enemySource.includes('e.rig.update(rigDt,'));
+check('camera hit feedback only fires after a valid combat target is hit',
+  combatSource.includes('P.shake = Math.max(P.shake || 0, crit ? 0.11 : 0.045)') &&
+  combatSource.indexOf('P.shake = Math.max(P.shake || 0, crit ? 0.11 : 0.045)') > combatSource.indexOf('C.attack = function ()'));
 const failures = results.filter((result) => !result.pass);
 console.log('JavaScript syntax: ' + jsFiles.length + ' files passed');
 console.log('Headless camera/input checks: ' + (results.length - failures.length) + '/' + results.length + ' passed');
