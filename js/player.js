@@ -4,7 +4,7 @@
     health: 100, maxHealth: 100, weapon: { damage: 10, reach: 2.2, cooldown: 0.4 }, dead: false, rollT: 0, rollDir: { x: 0, z: 0 }, kb: { x: 0, z: 0 }, shake: 0, swingT: 0, iframes: 0,
     equip: { weapon: null, armor: null, trinket: null }, dr: 0, crit: 0.05, speedMult: 1 };
   (function () { var b = P.pos; P.vel = Object.defineProperties({}, { x: { get: function () { return b.vx; }, set: function (v) { b.vx = v; }, enumerable: true }, y: { get: function () { return b.vy; }, set: function (v) { b.vy = v; }, enumerable: true }, z: { get: function () { return b.vz; }, set: function (v) { b.vz = v; }, enumerable: true } }); })();
-  var W, cam, scn, rig, curW, spawn, shadow = null, wasGround = false, lastJump = false, wallCd = 0, jbuf = 0, coy = 0, camInit = false, cpx = 0, cpy = 0, cpz = 0, cvx = 0, cvy = 0, cvz = 0, camCur = 6.5, lastSwing = 0, lastHp = -1, wasDead = false, stepT = 0;
+  var W, cam, scn, rig, curW, spawn, shadow = null, wasGround = false, lastJump = false, wallCd = 0, jbuf = 0, coy = 0, camInit = false, cpx = 0, cpy = 0, cpz = 0, cvx = 0, cvy = 0, cvz = 0, camCur = 6.5, lastSwing = 0, lastHp = -1, wasDead = false, stepT = 0, shakeTime = 0;
 
   function weaponKind(w) {
     var n = (w && w.name) || '';
@@ -144,7 +144,14 @@
       else cam.rotation.set(P.pitch, P.yaw + (frontView ? Math.PI : cameraMode === 'cinematic' ? -0.22 : 0), 0);
       camVis = camCur > 0.8;
     }
-    if (P.shake > 0.001) { cam.position.x += (Math.random() - 0.5) * P.shake; cam.position.y += (Math.random() - 0.5) * P.shake; P.shake *= Math.max(0, 1 - 12 * dt); }
+    if (P.shake > 0.001) {
+      // Deterministic decaying camera impulse: smoother on 60–144 Hz screens than per-frame random jitter.
+      shakeTime += dt; var shakeAmp = P.shake;
+      cam.position.x += (Math.sin(shakeTime * 42) + Math.sin(shakeTime * 61 + 1.7) * 0.22) * shakeAmp * 0.22;
+      cam.position.y += Math.sin(shakeTime * 53 + 0.8) * shakeAmp * 0.16;
+      cam.position.z += Math.sin(shakeTime * 37 + 2.4) * shakeAmp * 0.06;
+      P.shake *= Math.max(0, 1 - 10 * dt);
+    } else shakeTime = 0;
     var hs = Math.hypot(v.x, v.z);
     if (P.equip.weapon !== curW) mkRig();
     if (P.dead && !wasDead) rig.play('death', { keep: true }); else if (!P.dead && wasDead) rig.play('idle');
