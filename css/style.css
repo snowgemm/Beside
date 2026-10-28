@@ -252,3 +252,27 @@ body.map-expanded #btn-view,body.map-expanded #btn-attack,body.map-expanded #btn
   #map-legend{font-size:10px}
   .map-zoom-controls{gap:5px}
 }
+
+
+/* Expanded world map: responsive, compact controls with no horizontal overflow. */
+#map-label{
+  width:min(96vw,900px);box-sizing:border-box;white-space:normal;
+  display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 14px;
+}
+#map-label .map-title{flex:1 1 100%;font-size:12px;font-weight:900;letter-spacing:.7px}
+#map-legend{flex:1 1 260px;min-width:0;white-space:normal;line-height:1.5;color:#c7d9d8;font-size:11px}
+#map-label .map-zoom-controls{display:flex;flex:0 0 auto;align-items:center;justify-content:flex-end;gap:7px;min-width:0}
+#map-zoom-value{min-width:34px;text-align:center;font-variant-numeric:tabular-nums}
+#map-label #map-close{min-height:36px}
+@media(max-width:600px){
+  #map-label{width:calc(100vw - 24px);gap:7px;padding:8px 9px}
+  #map-legend{flex-basis:100%;font-size:10px;order:3}
+  #map-label .map-zoom-controls{width:100%;justify-content:flex-end;order:4}
+  #map-label .map-title{font-size:11px}
+}
+@media(max-height:520px){
+  #map-label{top:calc(env(safe-area-inset-top,0px) + 6px);padding:6px 8px;gap:5px 8px}
+  #map-label .map-title{font-size:10px}
+  #map-legend{font-size:9px}
+  #map-label button{min-height:30px;padding:5px 8px}
+}
