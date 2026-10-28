@@ -1,6 +1,6 @@
 (function () {
   var G = window.Game = window.Game || {};
-  var M = G.minimap = {}, SZ = 256, H = SZ / 2, cv, c, acc = 0, shade, label, labelTitle, cache = new Map(), cacheSeed = null, cacheEditCount = -1, zoomSaveTimer = null;
+  var M = G.minimap = {}, SZ = 256, H = SZ / 2, cv, c, acc = 0, shade, label, labelTitle, cache = new Map(), tileCache = new Map(), cacheSeed = null, cacheEditCount = -1, zoomSaveTimer = null;
   M.enabled = true; M.expanded = false; M.zoom = 2.35;
 
   function dot(x, y, r, col) { c.fillStyle = col; c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2); c.fill(); }
@@ -13,17 +13,27 @@
     }
     return hexColor(col);
   }
+  function terrainTile(cx, cz) {
+    var key = cx + ',' + cz, tile = tileCache.get(key);
+    if (tile) return tile;
+    tile = document.createElement('canvas'); tile.width = tile.height = 16;
+    var tc = tile.getContext('2d'), x, z;
+    for (z = 0; z < 16; z++) for (x = 0; x < 16; x++) {
+      tc.fillStyle = terrainColor(cx * 16 + x, cz * 16 + z); tc.fillRect(x, z, 1, 1);
+    }
+    tileCache.set(key, tile);
+    if (tileCache.size > 224) { var it = tileCache.keys(); for (var n = 0; n < 32; n++) { var k = it.next(); if (k.done) break; tileCache.delete(k.value); } }
+    return tile;
+  }
   function drawTerrain(p, s) {
     var span = Math.ceil(H / s) + 1, x0 = Math.floor(p.x) - span, x1 = Math.floor(p.x) + span,
-        z0 = Math.floor(p.z) - span, z1 = Math.floor(p.z) + span, x, z, px, pz;
-    // Build a cached, local world map only while expanded. Cells are generated once per coordinate.
-    for (z = z0; z <= z1; z++) {
-      pz = H + (z + 0.5 - p.z) * s;
-      for (x = x0; x <= x1; x++) {
-        px = H + (x + 0.5 - p.x) * s;
-        c.fillStyle = terrainColor(x, z);
-        c.fillRect(px - s * 0.5, pz - s * 0.5, s + 0.35, s + 0.35);
-      }
+        z0 = Math.floor(p.z) - span, z1 = Math.floor(p.z) + span,
+        cx0 = Math.floor(x0 / 16), cx1 = Math.floor(x1 / 16), cz0 = Math.floor(z0 / 16), cz1 = Math.floor(z1 / 16), cx, cz, tile, px, pz;
+    // Render a cached 16x16 terrain tile per draw call instead of thousands of per-cell fillRect calls.
+    c.imageSmoothingEnabled = false;
+    for (cz = cz0; cz <= cz1; cz++) for (cx = cx0; cx <= cx1; cx++) {
+      tile = terrainTile(cx, cz); px = H + (cx * 16 - p.x) * s; pz = H + (cz * 16 - p.z) * s;
+      c.drawImage(tile, px, pz, 16 * s, 16 * s);
     }
     // A subtle coordinate grid helps read distance without making the map noisy.
     c.strokeStyle = 'rgba(255,255,255,.12)'; c.lineWidth = 1;
@@ -94,7 +104,7 @@
     c.save(); c.translate(H, H); c.rotate(-P.yaw);
     c.fillStyle = '#fff'; c.beginPath(); c.moveTo(0, -9); c.lineTo(6, 7); c.lineTo(0, 4); c.lineTo(-6, 7); c.closePath(); c.fill(); c.restore();
     dot(H, H, 3, '#ffffff');
-    if (M.expanded && labelTitle) labelTitle.textContent = 'BẢN ĐỒ THẾ GIỚI  ·  X ' + p.x.toFixed(1) + '  Z ' + p.z.toFixed(1);
+    if (M.expanded && labelTitle) labelTitle.textContent = 'BẢN ĐỒ THẾ GIỚI  ·  X ' + p.x.toFixed(1) + '  Y ' + p.y.toFixed(1) + '  Z ' + p.z.toFixed(1);
     if (cache.size > 28000) {
       var removeN = cache.size - 20000, it = cache.keys();
       while (removeN-- > 0) { var n = it.next(); if (n.done) break; cache.delete(n.value); }
@@ -156,7 +166,7 @@
     acc += Math.max(0, dt || 0);
     if (acc < (M.expanded ? 0.25 : 0.12) || !c || !M.enabled) return;
     acc = 0;
-    if (cacheSeed !== G.world.seed || cacheEditCount !== G.world.editCount()) { cache.clear(); cacheSeed = G.world.seed; cacheEditCount = G.world.editCount(); }
+    if (cacheSeed !== G.world.seed || cacheEditCount !== G.world.editCount()) { cache.clear(); tileCache.clear(); cacheSeed = G.world.seed; cacheEditCount = G.world.editCount(); }
     draw();
   };
 })();
