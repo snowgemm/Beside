@@ -3,6 +3,9 @@
   var touch = G.input.isTouch;
   var renderer = new THREE.WebGLRenderer({ antialias: !touch, powerPreference: 'high-performance' });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, touch ? 1.35 : 1.65));
+  // Three.js r128 defaults to linear output. Explicit sRGB output plus ACES filmic tone mapping avoids washed-out sand and keeps PBR materials consistent.
+  if (THREE.sRGBEncoding !== undefined) renderer.outputEncoding = THREE.sRGBEncoding;
+  if (THREE.ACESFilmicToneMapping !== undefined) { renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.0; }
   renderer.shadowMap.enabled = false;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.setSize(window.innerWidth, window.innerHeight);
@@ -18,6 +21,7 @@
     // Real-time shadow maps caused black terrain wedges on some mobile GPUs. Use contact shading instead.
     renderer.shadowMap.enabled=false;if(G.sky&&G.sky.setShadows)G.sky.setShadows(false);
     if(G.world&&G.world.setGrassQuality)G.world.setGrassQuality(q.grass);
+    if(G.world&&G.world.setSurfaceQuality)G.world.setSurfaceQuality(touch&&level==='high'?'medium':level);
     if(scene&&scene.traverse)scene.traverse(function(o){
       if((!o.isMesh&&!o.isInstancedMesh)||!o.geometry)return;
       if(o.userData&&o.userData.noShadow){o.castShadow=false;o.receiveShadow=false;return;}
@@ -32,6 +36,7 @@
     // A sustained GPU slowdown lowers vegetation density as well as render resolution; restore the chosen preset when headroom returns.
     var base=qualityData[this.value]||qualityData[touch?'medium':'high'];
     if(G.world&&G.world.setGrassQuality)G.world.setGrassQuality(next<.82?'low':next<.93?'medium':base.grass);
+    if(G.world&&G.world.setSurfaceQuality)G.world.setSurfaceQuality(touch||next<.88?'medium':this.value);
     return true;
   };
 
@@ -82,7 +87,12 @@
     G.sky.update(G.paused ? 0 : dt);
     G.fx.update(G.paused ? 0 : dt, p.x, p.y, p.z);
     G.minimap.update(raw);
-    G.world.update(p.x, p.z, 4, dt);
+    // Keep chunk generation within a small CPU budget; allow more work only after measured frame time shows spare headroom.
+    var chunkBudget = touch ? 1.4 : 2.4;
+    if (fps > 100 && !touch) chunkBudget = 3.4;
+    else if (fps > 70) chunkBudget = touch ? 1.8 : 3.0;
+    else if (fps > 0 && fps < 35) chunkBudget = 0.7;
+    G.world.update(p.x, p.z, chunkBudget, dt);
     renderer.render(scene, camera);
 
     if (raw < 0.25) { accT += raw; accN++; hudT += raw; }
