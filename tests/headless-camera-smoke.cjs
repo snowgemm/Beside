@@ -350,6 +350,13 @@ check('three distinct close-range tree models use merged procedural trees at dis
   assetSource.includes("tree2: { url: 'https://raw.githubusercontent.com/anshaneja5/skyline-run/main/public/assets/models/tree2.glb'") &&
   assetSource.includes("tree3: { url: 'https://raw.githubusercontent.com/anshaneja5/skyline-run/main/public/assets/models/tree3.glb'") &&
   terrainSource.includes('42*42') && terrainSource.includes("r2<.34?'tree':r2<.67?'tree2':'tree3'"));
+check('adaptive GPU scaling also reduces and restores vegetation density',
+  mainSource.includes("G.world.setGrassQuality(next<.82?'low':next<.93?'medium':base.grass)") &&
+  mainSource.includes('resizeForQuality();'));
+check('tree wind animation is throttled to 30 Hz and culled by player distance',
+  terrainSource.includes('var swayAccumulator = 0;') &&
+  terrainSource.includes('swayAccumulator>=1/30') &&
+  terrainSource.includes('dx*dx+dz*dz>58*58'));
 check('adaptive resolution uses hysteresis and respects the selected FPS cap',
   mainSource.includes('G.quality.setAdaptiveScale=function(value)') &&
   mainSource.includes('desiredFps === 0 && !G.paused') &&
