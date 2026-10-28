@@ -551,12 +551,24 @@
     plan(Math.floor(px / CS), Math.floor(pz / CS)); process(1e9);
     W.drawDistance = old; dirty = true;
   };
+  var swayAccumulator = 0;
   W.update = function(px,pz,budgetMs,dt){
     if(W.held)return;var pcx=Math.floor(px/CS),pcz=Math.floor(pz/CS);
     if(dirty||pcx!==lcx||pcz!==lcz){lcx=pcx;lcz=pcz;dirty=false;plan(pcx,pcz);}
-    process(budgetMs);dt=typeof dt==='number'&&isFinite(dt)?Math.max(0,Math.min(.05,dt)):.016;updateWater(px,pz,dt);
-    // Gentle tree sway; only direct model roots in loaded chunks are animated.
-    chunks.forEach(function(m){if(!m.visible||!m.decor)return;var a=m.decor.children;for(var i=0;i<a.length;i++){var o=a[i];if(o.userData&&o.userData.windAmp)o.rotation.z=Math.sin(waterTime*.55+o.userData.windPhase)*o.userData.windAmp;}});
+    dt=typeof dt==='number'&&isFinite(dt)?Math.max(0,Math.min(.05,dt)):.016;
+    process(budgetMs);updateWater(px,pz,dt);
+    // Animate only nearby model foliage at 30 Hz; avoid walking every streamed chunk on every render frame.
+    swayAccumulator+=dt;
+    if(swayAccumulator>=1/30){
+      var swayDt=Math.min(.1,swayAccumulator);swayAccumulator=0;
+      chunks.forEach(function(m){
+        if(!m.visible||!m.decor)return;
+        var dx=m.cx*CS+CS*.5-px,dz=m.cz*CS+CS*.5-pz;
+        if(dx*dx+dz*dz>58*58)return;
+        var a=m.decor.children;
+        for(var i=0;i<a.length;i++){var o=a[i];if(o.userData&&o.userData.windAmp)o.rotation.z=Math.sin(waterTime*.55+o.userData.windPhase)*o.userData.windAmp;}
+      });
+    }
   };
   W.findSpawn = function () {
     for (var r = 0; r < 400; r += 6) {
