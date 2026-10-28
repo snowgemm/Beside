@@ -300,7 +300,7 @@ check('expanded minimap renders cached 16x16 terrain tiles rather than one fillR
   minimapSource.includes('cache.clear(); tileCache.clear()'));
 check('expanded minimap shows XYZ and its controls wrap on narrow screens',
   minimapSource.includes("'  Y ' + p.y.toFixed(1)") &&
-  fs.readFileSync(path.join(root, 'css', 'style.css'), 'utf8').includes('#map-legend{flex:1 1 260px;min-width:0;white-space:normal')));
+  fs.readFileSync(path.join(root, 'css', 'style.css'), 'utf8').includes('#map-legend{flex:1 1 260px;min-width:0;white-space:normal'));
 check('grass uses solid low-poly tufts instead of thin crossed cards',
   terrainSource.includes('new THREE.ConeGeometry(.085,.28,5,1)') &&
   !terrainSource.includes('-.09,0,0,.09,0,0,0,.48,0'));
