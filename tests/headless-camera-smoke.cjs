@@ -277,8 +277,30 @@ check('grass is restricted to a closer radius and lower density to avoid subpixe
   terrainSource.includes('if(dist>17*17)continue;') &&
   terrainSource.includes("grassTarget=level==='low'?48:level==='high'?120:72") &&
   terrainSource.includes('var shade=.88+hash('));
-check('terrain normals are generated from the final indexed triangles',
-  terrainSource.includes('geo.computeVertexNormals();geo.computeBoundingSphere();'));
+check('terrain normals are derived from padded heights and stay consistent across streamed chunk seams',
+  terrainSource.includes('normals.push(nx*inv,ny*inv,nz*inv)') &&
+  terrainSource.includes("setAttribute('normal',new THREE.Float32BufferAttribute(normals,3))") &&
+  terrainSource.includes('var N=CS+3,H=new Float32Array(N*N)') &&
+  !terrainSource.includes('geo.computeVertexNormals();geo.computeBoundingSphere();'));
+check('desktop high quality enables a subtle periodic ground normal map while mobile stays lightweight',
+  terrainSource.includes('function terrainNormalTex()') &&
+  terrainSource.includes('colorTexture !== false') &&
+  terrainSource.includes('W.setSurfaceQuality=function(level)') &&
+  terrainSource.includes("surfaceQuality==='high'&&!!terrainNormal") &&
+  mainSource.includes('G.world.setSurfaceQuality(touch&&level===\'high\'?\'medium\':level)'));
+check('renderer uses sRGB output and filmic tone mapping for coherent PBR materials',
+  mainSource.includes('renderer.outputEncoding = THREE.sRGBEncoding') &&
+  mainSource.includes('renderer.toneMapping = THREE.ACESFilmicToneMapping'));
+check('terrain generation CPU budget adapts to the measured FPS instead of always consuming 4 ms',
+  mainSource.includes('var chunkBudget = touch ? 1.4 : 2.4') &&
+  mainSource.includes('G.world.update(p.x, p.z, chunkBudget, dt)'));
+check('expanded minimap renders cached 16x16 terrain tiles rather than one fillRect per world cell',
+  minimapSource.includes('function terrainTile(cx, cz)') &&
+  minimapSource.includes('c.drawImage(tile, px, pz, 16 * s, 16 * s)') &&
+  minimapSource.includes('cache.clear(); tileCache.clear()'));
+check('expanded minimap shows XYZ and its controls wrap on narrow screens',
+  minimapSource.includes("'  Y ' + p.y.toFixed(1)") &&
+  fs.readFileSync(path.join(root, 'css', 'style.css'), 'utf8').includes('#map-legend{flex:1 1 260px;min-width:0;white-space:normal')));
 check('grass uses solid low-poly tufts instead of thin crossed cards',
   terrainSource.includes('new THREE.ConeGeometry(.085,.28,5,1)') &&
   !terrainSource.includes('-.09,0,0,.09,0,0,0,.48,0'));
