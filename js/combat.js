@@ -115,6 +115,8 @@
       if ((dx * fx + dz * fz) / d < COS_HALF_ARC && d > e.def.radius + 0.3) continue;
       var crit = Math.random() < P.crit; C.critHit = crit;
       G.enemies.hurt(e, Math.round(w.damage * (crit ? 2 : 1)), dx / d * 6, dz / d * 6);
+      // Small confirmed-hit feedback; only set after a target passes range and arc checks.
+      P.shake = Math.max(P.shake || 0, crit ? 0.11 : 0.045);
       C.critHit = false;
     }
   };
