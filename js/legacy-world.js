@@ -115,10 +115,10 @@
   // swap collision/height provider (null = overworld); hold(true) hides the overworld and pauses chunk streaming
   W.useProvider = function (p) { p = p || W.ow; W.getHeight = p.getHeight; W.getBlock = p.getBlock; W.solid = p.solid; };
   W.hold = function (on) { W.held=!!on; chunks.forEach(function(m){m.visible=!on;}); if(water)water.visible=!on; if(grassMesh)grassMesh.visible=!on; if(flowerMesh)flowerMesh.visible=!on; if(!on)dirty=true; };
-  var scene, material, decorMat, water, waterGeom, waterPos, waterCol, waterTime=0, waterAx=1e9, waterAz=1e9, wtex, grain, tr=1,tg=1,tb=1,chunks=new Map(),queue=[],qi=0,lcx=1e9,lcz=1e9,dirty=true;
+  var scene, material, decorMat, water, waterGeom, waterPos, waterCol, waterTime=0, waterAx=1e9, waterAz=1e9, wtex, grain, terrainNormal, surfaceQuality='medium', tr=1,tg=1,tb=1,chunks=new Map(),queue=[],qi=0,lcx=1e9,lcz=1e9,dirty=true;
   var grassMesh,flowerMesh,grassMaterial,flowerMaterial,grassShader=null,grassTarget=650,flowerTarget=80,grassDirty=true,grassX=1e9,grassZ=1e9,grassDummy,flowerColor,grassColor,grassBaseColor,grassTintColor;
 
-  function mkTex(size, fn, rep) {
+  function mkTex(size, fn, rep, colorTexture) {
     try {
       var cv = document.createElement('canvas'); cv.width = cv.height = size;
       var cx = cv.getContext('2d'), im = cx.createImageData(size, size), i, c;
@@ -127,7 +127,7 @@
       var t = new THREE.Texture(cv);
       t.wrapS = t.wrapT = THREE.RepeatWrapping; t.magFilter = THREE.LinearFilter;
       t.minFilter = THREE.LinearMipmapLinearFilter || THREE.LinearFilter; // smooth filtering + mipmaps reduce harsh pixel shimmer
-      if (THREE.sRGBEncoding !== undefined) t.encoding = THREE.sRGBEncoding;
+      if (colorTexture !== false && THREE.sRGBEncoding !== undefined) t.encoding = THREE.sRGBEncoding;
       t.anisotropy = 2;
       t.needsUpdate = true;
       return t;
@@ -151,6 +151,14 @@
       return [g,Math.min(255,g+(medium>.56?2:0)),Math.max(0,g-(coarse>.62?4:2))];
     });
   }
+  function terrainNormalTex() { // periodic, subtle tangent-space detail for close-range ground only
+    var size=128;
+    return mkTex(size,function(x,y){
+      function h(ax,ay){return tileNoise((ax+size)%size,(ay+size)%size,size,16,41)*.62+tileNoise((ax+size)%size,(ay+size)%size,size,32,89)*.28+tileNoise((ax+size)%size,(ay+size)%size,size,64,137)*.10;}
+      var dx=(h(x+1,y)-h(x-1,y))*2.4,dy=(h(x,y+1)-h(x,y-1))*2.4,nx=-dx,ny=-dy,nz=1,inv=1/Math.sqrt(nx*nx+ny*ny+nz*nz);
+      return [Math.round((nx*inv*.5+.5)*255),Math.round((ny*inv*.5+.5)*255),Math.round((nz*inv*.5+.5)*255)];
+    },null,false);
+  }
   function rippleTex() { // tileable 32x32 ripple lines
     return mkTex(32, function (x, y, i) {
       var a = Math.sin((x * 2 + y) * 0.19635) + Math.sin((y * 3 - x) * 0.19635), v = 0.78 + 0.1 * a, hl = hash(i, 4242) > 0.965 ? 0.2 : 0;
@@ -173,6 +181,15 @@
   }
   function setGrassQuality(level){grassTarget=level==='low'?48:level==='high'?120:72;flowerTarget=level==='low'?16:level==='high'?48:28;grassDirty=true;}
   W.setGrassQuality=setGrassQuality;
+  W.setSurfaceQuality=function(level){
+    surfaceQuality=level==='high'?'high':level==='low'?'low':'medium';
+    if(!material)return;
+    // Normal mapping is reserved for desktop high quality; mobile stays on the lower-cost tiled albedo.
+    var enabled=surfaceQuality==='high'&&!!terrainNormal;
+    material.normalMap=enabled?terrainNormal:null;
+    if(material.normalScale)material.normalScale.set(enabled?.16:0,enabled?.16:0);
+    material.needsUpdate=true;
+  };
   function initGrass(){
     if(grassMesh||!scene)return;
     var p=G.palette||{},r=p.grass&&(p.grass.plains||p.grass.forest),green=Array.isArray(r)?r[2]:0x6eaa48;
@@ -232,8 +249,8 @@
   }
 
   W.init = function(sc){
-    scene=sc;grain=grainTex();
-    material=new THREE.MeshStandardMaterial({vertexColors:true,fog:true,map:grain,roughness:1,metalness:0,side:THREE.DoubleSide});
+    scene=sc;grain=grainTex();terrainNormal=terrainNormalTex();
+    material=new THREE.MeshStandardMaterial({vertexColors:true,fog:true,map:grain,normalMap:null,normalScale:new THREE.Vector2(0,0),roughness:1,metalness:0,side:THREE.DoubleSide});
     decorMat=new THREE.MeshStandardMaterial({vertexColors:true,fog:true,roughness:1,metalness:0,side:THREE.DoubleSide});
     wtex=rippleTex();if(wtex)wtex.repeat.set(28,28);
     waterGeom=new THREE.PlaneGeometry(112,112,48,48);waterGeom.rotateX(-Math.PI/2);waterPos=waterGeom.attributes.position;waterCol=new Float32Array(waterPos.count*3);
@@ -241,7 +258,7 @@
     waterGeom.setAttribute('color',new THREE.BufferAttribute(waterCol,3));waterGeom.computeVertexNormals();
     water=new THREE.Mesh(waterGeom,new THREE.MeshStandardMaterial({color:0xffffff,map:wtex,vertexColors:true,transparent:true,opacity:.76,depthWrite:false,side:THREE.DoubleSide,roughness:.28,metalness:.02,fog:true}));
     water.renderOrder=1;water.position.y=SEA-.035;water.userData.noShadow=true;scene.add(water);initGrass();
-    scene.fog=new THREE.Fog(0xa8c9d7,20,80);scene.background=new THREE.Color(0xa8c9d7);W.setDrawDistance(W.drawDistance);
+    scene.fog=new THREE.Fog(0xa8c9d7,20,80);scene.background=new THREE.Color(0xa8c9d7);W.setSurfaceQuality(surfaceQuality);W.setDrawDistance(W.drawDistance);
   };
   // day cycle tint (sky.js): multiplies terrain, decor and water
   W.tint = function (r, g, b) {
@@ -358,20 +375,20 @@
     // One full sample ring is required beyond every terrain vertex so finite-difference slopes never read undefined.
     var N=CS+3,H=new Float32Array(N*N),ox=cx*CS,oz=cz*CS,x,z;
     for(z=-1;z<=CS+1;z++)for(x=-1;x<=CS+1;x++)H[(z+1)*N+x+1]=getHeight(ox+x,oz+z);
-    var positions=[],colors=[],uvs=[],indices=[],BIO=new Uint8Array(CS*CS);
+    var positions=[],colors=[],normals=[],uvs=[],indices=[],BIO=new Uint8Array(CS*CS);
     for(z=0;z<=CS;z++)for(x=0;x<=CS;x++){
       var hi=(z+1)*N+x+1,h=H[hi],hl=H[hi-1],hr=H[hi+1],hb=H[hi-N],hf=H[hi+N];
-      var dx=hr-hl,dz=hf-hb,paint=vertexPaint(ox+x,oz+z,h,Math.sqrt(dx*dx+dz*dz)*.5);
-      positions.push(x,h,z);colors.push(paint[0],paint[1],paint[2]);uvs.push((ox+x)*0.16,(oz+z)*0.16);
+      var dx=hr-hl,dz=hf-hb,nx=-dx,ny=2,nz=-dz,inv=1/Math.sqrt(nx*nx+ny*ny+nz*nz),paint=vertexPaint(ox+x,oz+z,h,Math.sqrt(dx*dx+dz*dz)*.5);
+      positions.push(x,h,z);colors.push(paint[0],paint[1],paint[2]);normals.push(nx*inv,ny*inv,nz*inv);uvs.push((ox+x)*0.16,(oz+z)*0.16);
     }
     for(z=0;z<CS;z++)for(x=0;x<CS;x++){
       var wx=ox+x,wz=oz+z;BIO[z*CS+x]=biomeW(wx+.5,wz+.5);
       var a=z*(CS+1)+x,b=a+1,d=a+CS+1,c=d+1;
       if(hash(wx,wz)>.5)indices.push(a,d,c,a,c,b);else indices.push(a,d,b,b,d,c);
     }
-    var geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));geo.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));geo.setAttribute('uv',new THREE.Float32BufferAttribute(uvs,2));geo.setIndex(indices);
-    // Recalculate normals from the final indexed triangles. Hand-written normals became inconsistent with terrain slopes on some mobile renderers.
-    geo.computeVertexNormals();geo.computeBoundingSphere();
+    var geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));geo.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));geo.setAttribute('normal',new THREE.Float32BufferAttribute(normals,3));geo.setAttribute('uv',new THREE.Float32BufferAttribute(uvs,2));geo.setIndex(indices);
+    // Normals use the padded height samples, so the same world-space vertex receives the same normal on both sides of a chunk seam.
+    geo.computeBoundingSphere();
     var mesh=new THREE.Mesh(geo,material);mesh.position.set(ox,0,oz);mesh.matrixAutoUpdate=false;mesh.updateMatrix();mesh.cx=cx;mesh.cz=cz;mesh.userData.terrain=true;mesh.castShadow=false;
     // Never receive shadow-map shadows: streamed terrain chunks bypass scene.traverse(), and this caused the black triangular acne seen on Android.
     // The player and vegetation use soft contact shading instead.
