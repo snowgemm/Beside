@@ -27,7 +27,13 @@
       o.castShadow=false;o.receiveShadow=false;
     });
   }};
-  G.quality.setAdaptiveScale=function(value){var next=Math.max(.72,Math.min(1,+value||1));if(Math.abs(next-adaptiveScale)<.035)return false;adaptiveScale=next;resizeForQuality();return true;};
+  G.quality.setAdaptiveScale=function(value){
+    var next=Math.max(.72,Math.min(1,+value||1));if(Math.abs(next-adaptiveScale)<.035)return false;adaptiveScale=next;resizeForQuality();
+    // A sustained GPU slowdown lowers vegetation density as well as render resolution; restore the chosen preset when headroom returns.
+    var base=qualityData[this.value]||qualityData[touch?'medium':'high'];
+    if(G.world&&G.world.setGrassQuality)G.world.setGrassQuality(next<.82?'low':next<.93?'medium':base.grass);
+    return true;
+  };
 
   var camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 500);
   G.camera = camera; G.renderer = renderer;
