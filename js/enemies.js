@@ -303,7 +303,25 @@
       if (e.rig && e.landV > 3 && !e.wasGround) e.rig.play('land', { strength: Math.min(1, Math.max(0.2, e.landV / 18)) });
       if (e.landV > P.FALL_V && !e.wasGround && !e.inWater && !e.fly) E.hurt(e, Math.round((e.landV - P.FALL_V) * P.FALL_DMG), 0, 0); // ledge fall
       e.group.position.set(e.x, e.y, e.z);
-      if (e.rig) e.rig.update(dt, dt > 0 ? Math.sqrt((e.x - ox) * (e.x - ox) + (e.z - oz) * (e.z - oz)) / dt : 0);
+      if (e.rig) {
+        var rigSpeed = dt > 0 ? Math.sqrt((e.x - ox) * (e.x - ox) + (e.z - oz) * (e.z - oz)) / dt : 0;
+        // Keep AI and collision at full simulation rate, but LOD only distant, non-reactive procedural poses.
+        // Combat, hit, jump, landing and death animations are always evaluated every frame.
+        var rigBusy = !!(e.rig.atk || e.rig.death || e.rig.hurtT > 0 || e.rig.jumpT > 0 || e.rig.impactT > 0 || e.rig.flashT > 0 || e.kbT > 0);
+        if (d > 18 && !rigBusy) {
+          e.rigAnimAcc = (e.rigAnimAcc || 0) + dt;
+          if (e.rigAnimAcc >= 1 / 15) {
+            var rigDt = Math.min(0.16, e.rigAnimAcc); e.rigAnimAcc = 0;
+            var oldRigX = typeof e.rigAnimX === 'number' ? e.rigAnimX : e.x;
+            var oldRigZ = typeof e.rigAnimZ === 'number' ? e.rigAnimZ : e.z;
+            e.rigAnimX = e.x; e.rigAnimZ = e.z;
+            e.rig.update(rigDt, Math.hypot(e.x - oldRigX, e.z - oldRigZ) / Math.max(rigDt, 1e-4));
+          }
+        } else {
+          e.rigAnimAcc = 0; e.rigAnimX = e.x; e.rigAnimZ = e.z;
+          e.rig.update(dt, rigSpeed);
+        }
+      }
       if (e.bar) {
         e.bar.position.set(e.x, e.y + e.def.height + 0.55, e.z); e.bar.quaternion.copy(cam.quaternion);
         e.bar.userData.fill.scale.x = Math.max(0.001, e.hp / e.def.hp);
