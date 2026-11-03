@@ -22,12 +22,20 @@
     EV.forEach(function (e) { window.removeEventListener(e, unlock, true); });
     unlockBound = false;
   }
+  var audioSuspendPending = false;
   function suspendHiddenAudio() {
-    if (!A.ctx || A.ctx.state !== 'running' || !A.ctx.suspend) return;
+    if (!A.ctx || A.ctx.state !== 'running' || !A.ctx.suspend || audioSuspendPending) return;
+    audioSuspendPending = true;
     try {
       var p = A.ctx.suspend();
-      if (p && p.catch) p.catch(function () {});
-    } catch (e) {}
+      if (p && p.then) {
+        p.then(function () {
+          audioSuspendPending = false;
+          // If the user returned while suspend() was still settling, restore the gesture listener now.
+          if (!document.hidden && A.ctx && A.ctx.state !== 'running') attach();
+        }, function () { audioSuspendPending = false; });
+      } else audioSuspendPending = false;
+    } catch (e) { audioSuspendPending = false; }
   }
   function unlock() {
     if (!A.ctx) {
