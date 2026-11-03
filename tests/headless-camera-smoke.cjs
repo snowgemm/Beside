@@ -405,6 +405,7 @@ check('audio reattaches its gesture unlock after BFCache pageshow',
 check('audio suspends in background and resumes only after a user gesture',
   audioSource.includes("document.addEventListener('visibilitychange'") &&
   audioSource.includes("A.ctx.suspend()") &&
+  audioSource.includes("if (!document.hidden && A.ctx && A.ctx.state !== 'running') attach()") &&
   audioSource.includes('else if (A.ctx && A.ctx.state !== \'running\') attach()') &&
   audioSource.includes('A.ctx.resume()') &&
   audioSource.includes('function attach()'));
