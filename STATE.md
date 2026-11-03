@@ -131,3 +131,10 @@ Stage 13 (WebGL context-loss gameplay safety; 2026-11-04):
 - On `webglcontextrestored`, Three.js r128 has already rebuilt its renderer internals; the app resets its frame-time accumulators, hides the notice, and resumes the existing game state. It does not create a second renderer or duplicate the scene.
 - The regression suite checks the loss/restore contract and the offline shell cache was bumped to v13 with asset token `20261104-webgl-recovery-v13`.
 - Verified in CI: JavaScript parse checks and the repository's headless camera/input suite. Real GPU loss/restore on Android and desktop remains a manual device/browser check.
+
+
+Stage 14 (input safety on focus loss; 2026-11-04):
+- Touch and keyboard controls now clear held movement, jump, look deltas and queued actions when the window blurs, the page is hidden, or pagehide fires. The virtual joystick is visually reset and active touch identifiers are discarded.
+- This prevents a missed touchend/touchcancel during app switching from leaving movement or jump stuck when the player returns.
+- Regression coverage drives keyboard, joystick and jump input, then verifies blur/visibility reset and queued-action clearing.
+- Browser lifecycle behavior follows the Page Visibility API; real-device app-switch testing remains recommended.
