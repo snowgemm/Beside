@@ -149,4 +149,4 @@ Stage 15 (asset ownership and visual-quality foundation; 2026-11-04):
 - Refreshed `ART.md` for the current smooth-toon heightmap world with chunky procedural rigs; corrected stale PBR/material guidance in `assets/README.md`.
 - Corrected the asset source notes: Quaternius publishes QAL v1.0 (updated 2026-08-28); mirror attribution is not sufficient evidence to label the exact assets CC0. Verify the original package license before shipping.
 - Added `QUALITY_ROADMAP.md` spanning UI/UX, animation, models, textures, sound, items, gameplay systems, performance and release QA.
-- CI and GPU/audio/device validation are pending for this branch; do not treat headless assertions as evidence of real rendering or phone behavior.
+- Verified in GitHub Actions: 26 JavaScript files parsed and 66/66 headless camera/input checks passed. Real GPU-memory trends, visual appearance, audio mix and Android interactions remain manual device checks.
