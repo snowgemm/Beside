@@ -119,3 +119,8 @@ Owner real-device checklist (five):
 3. Observe dawn, noon, dusk and night; verify sky, sun/moon, fog, light colour and night visibility transition smoothly.
 4. Compare Thấp, Vừa and Cao on the same phone; record FPS, hitching and heat, including the trade-off from High shadows.
 5. Load ?safe=1; confirm no injected-shader errors and that terrain, water and gameplay load with static grass.
+
+Stage 12 (offline asset cache correctness; 2026-11-04):
+- Service worker cache v12 preserves the `?v=` asset version in cache keys. A changed asset version therefore misses the old cache entry and fetches the new file instead of receiving stale JavaScript/CSS under the same path.
+- Successful versioned fetches refresh both the version-specific entry and the canonical unversioned shell entry. If the network is unavailable, the version-specific entry or precached canonical shell remains the offline fallback.
+- `index.html` local assets use `20261104-offline-v12`; bump this token when shipping a new local asset set. CDN Three.js remains pinned to r128; do not jump directly to a modern major release without staged migration and browser/GPU regression coverage.

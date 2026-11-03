@@ -1,6 +1,6 @@
 /* Besidevalley offline shell cache. Remote GLB models are cached separately in IndexedDB. */
 'use strict';
-const CACHE_NAME = 'besidevalley-shell-v11';
+const CACHE_NAME = 'besidevalley-shell-v12';
 const EXTERNAL_SCRIPTS = [
   'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js',
   'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js'
@@ -65,6 +65,15 @@ self.addEventListener('activate', event => {
 
 function cacheKey(requestUrl) {
   const url = new URL(requestUrl);
+  const version = url.searchParams.get('v');
+  url.hash = '';
+  if (version) return url.origin + url.pathname + '?v=' + encodeURIComponent(version);
+  url.search = '';
+  return url.origin + url.pathname;
+}
+
+function fallbackCacheKey(requestUrl) {
+  const url = new URL(requestUrl);
   url.search = '';
   url.hash = '';
   return url.origin + url.pathname;
@@ -77,6 +86,7 @@ self.addEventListener('fetch', event => {
 
   if (url.origin === self.location.origin) {
     const key = cacheKey(request.url);
+    const fallbackKey = fallbackCacheKey(request.url);
     const isNavigation = request.mode === 'navigate';
     event.respondWith((async () => {
       const cache = await caches.open(CACHE_NAME);
@@ -86,10 +96,14 @@ self.addEventListener('fetch', event => {
       }
       try {
         const response = await fetch(request);
-        if (response.ok) await cache.put(key, response.clone());
+        if (response.ok) {
+          await cache.put(key, response.clone());
+          // Keep an unversioned copy for the precached shell and offline fallback.
+          if (key !== fallbackKey) await cache.put(fallbackKey, response.clone());
+        }
         return response;
       } catch (error) {
-        const cached = await cache.match(key);
+        const cached = await cache.match(key) || await cache.match(fallbackKey);
         if (cached) return cached;
         throw error;
       }
