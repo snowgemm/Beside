@@ -150,3 +150,11 @@ Stage 15 (asset ownership and visual-quality foundation; 2026-11-04):
 - Corrected the asset source notes: Quaternius publishes QAL v1.0 (updated 2026-08-28); mirror attribution is not sufficient evidence to label the exact assets CC0. Verify the original package license before shipping.
 - Added `QUALITY_ROADMAP.md` spanning UI/UX, animation, models, textures, sound, items, gameplay systems, performance and release QA.
 - Verified in GitHub Actions: 26 JavaScript files parsed and 66/66 headless camera/input checks passed. Real GPU-memory trends, visual appearance, audio mix and Android interactions remain manual device checks.
+
+
+Stage 16 (hidden-page simulation and audio lifecycle; 2026-11-04):
+- The render loop now skips simulation and rendering while the document is hidden or in pagehide, and resets frame/FPS/adaptive-quality accumulators on visibility return and pageshow.
+- Web Audio suspends when the document becomes hidden/pagehide. On visibility/pageshow return, gesture-unlock listeners are reattached; AudioContext resumes only from a fresh keyboard/mouse/touch/click user gesture, not automatically on foreground.
+- Existing save and held-input handlers continue to own their respective visibilitychange/pagehide behavior; no duplicate save timer was introduced.
+- Added regression assertions for hidden-loop gating, frame-clock reset, audio suspend/resume policy, BFCache gesture reattachment and v16 offline-cache versioning.
+- Real background/foreground behavior, Android Chrome audio policy and BFCache transitions remain manual device/browser checks.
