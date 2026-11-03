@@ -11,8 +11,24 @@
 
   /* ---------- WebAudio (generated SFX) ---------- */
   var A = G.audio = { ctx: null, master: null, noise: null };
-  var EV = ['keydown', 'mousedown', 'touchstart', 'touchend', 'click'];
-  function detach() { if (A.ctx && A.ctx.state === 'running') EV.forEach(function (e) { window.removeEventListener(e, unlock, true); }); }
+  var EV = ['keydown', 'mousedown', 'touchstart', 'touchend', 'click'], unlockBound = false;
+  function attach() {
+    if (unlockBound) return;
+    unlockBound = true;
+    EV.forEach(function (e) { window.addEventListener(e, unlock, true); });
+  }
+  function detach() {
+    if (!A.ctx || A.ctx.state !== 'running' || !unlockBound) return;
+    EV.forEach(function (e) { window.removeEventListener(e, unlock, true); });
+    unlockBound = false;
+  }
+  function suspendHiddenAudio() {
+    if (!A.ctx || A.ctx.state !== 'running' || !A.ctx.suspend) return;
+    try {
+      var p = A.ctx.suspend();
+      if (p && p.catch) p.catch(function () {});
+    } catch (e) {}
+  }
   function unlock() {
     if (!A.ctx) {
       var C = window.AudioContext || window.webkitAudioContext;
@@ -22,9 +38,20 @@
       for (var i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
       A.noise = b;
     }
-    if (A.ctx.state !== 'running') { var p = A.ctx.resume(); if (p && p.then) p.then(detach); } else detach();
+    if (A.ctx.state !== 'running') {
+      try {
+        var p = A.ctx.resume();
+        if (p && p.then) p.then(detach, function () {});
+        else detach();
+      } catch (e) {}
+    } else detach();
   }
-  EV.forEach(function (e) { window.addEventListener(e, unlock, true); });
+  attach();
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) suspendHiddenAudio();
+    else if (A.ctx && A.ctx.state !== 'running') attach();
+  });
+  window.addEventListener('pagehide', suspendHiddenAudio);
   function tone(type, f0, f1, dur, vol) {
     var c = A.ctx, t = c.currentTime, o = c.createOscillator(), g = c.createGain();
     o.type = type; o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(Math.max(1, f1), t + dur);
