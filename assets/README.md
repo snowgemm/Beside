@@ -1,35 +1,26 @@
-# Besidevalley assets (all optional)
+# Besidevalley assets
 
-Drop files here; missing files fall back to built-in primitives / synth sounds. No code changes needed.
-Models: binary glTF (`.glb`) in `assets/models/`. Models are auto-fitted (centred on x/z, feet at y=0, scaled to the height below).
-Sounds: any ONE of `.ogg` / `.mp3` / `.wav` in `assets/sfx/` (tried in that order).
-Optional node names inside a model: `lid` (chest lid, rotated open). Characters should face +Z (glTF default). Materials are converted to unlit.
-Pack names are suggestions from memory; check the pack still exists and is CC0 before downloading (kenney.nl, quaternius.com).
+Optional local assets live in this folder. The checked-in `models/` and `sfx/` directories currently contain only placeholders; missing files use procedural or synthesized fallbacks.
 
-## Models (`assets/models/<file>`)
-| Name | File | Height | Suggested CC0 pack |
-|---|---|---|---|
-| gate | gate.glb | 6 | Kenney Castle Kit (gate/archway) |
-| door | door.glb | 5 | Kenney Castle Kit / Quaternius modular dungeon (door; width along its X axis) |
-| chest | chest.glb | 0.9 | Quaternius Ultimate Fantasy RPG / Kenney Pirate Kit (chest) |
-| portal | portal.glb | 3 | Quaternius Ultimate Fantasy RPG (portal/obelisk) or Kenney Graveyard Kit |
-| boss | boss.glb | 3.4 | Quaternius Ultimate Monsters (golem/ogre) |
-| slime | slime.glb | 0.9 | Quaternius Ultimate Monsters (blob) |
-| goblin | goblin.glb | 1.5 | Quaternius Ultimate Monsters (goblin) |
-| archer | archer.glb | 1.6 | Quaternius Ultimate Modular Men / Kenney Blocky Characters |
+## Models
 
-Static meshes only (no skeletal animation).
+Place local binary glTF files at `assets/models/<name>.glb`. `js/assets.js` defines the names and target heights in its manifest. Models are auto-fitted to the configured height, centered on X/Z and placed with their feet at Y=0.
 
-## Sounds (`assets/sfx/<name>.ogg|mp3|wav`)
-| Name | Played when | Suggested CC0 pack |
-|---|---|---|
-| door | room door opens/closes | Kenney Impact Sounds / RPG Audio |
-| chest | chest opens | Kenney RPG Audio |
-| boss | boss spawns | Kenney Sci-fi Sounds / Impact Sounds (low rumble) |
-| hit | enemy hit | Kenney Impact Sounds |
-| swing | weapon swing, arrows | Kenney RPG Audio |
-| death | enemy/player death | Kenney Digital Audio / Impact Sounds |
-| pickup | loot picked up | Kenney Interface Sounds |
-| equip | item equipped | Kenney RPG Audio |
+- The active runtime uses Three.js r128 and its matching `GLTFLoader`.
+- Keep the GLB's PBR material and texture data. The loader currently keeps Standard materials, raises roughness to at least 0.82 and sets metalness to 0.
+- Environment props are static. The current character and creature animation system is procedural; imported skeletal clips are not automatically applied.
+- Optional named node: `lid` on a chest model, if it should animate when opened.
+- Characters imported through the current manifest should face +Z before the manifest's configured rotation is applied.
+- Keep source scale and orientation documented. Never add a model only because it is available; check silhouette, visual fit and device cost first.
 
-Stage 7 mobs (optional GLB overrides, same rules as above): wolf.glb (height 1), skeleton.glb (1.7), bat.glb (0.9), spider.glb (0.8), mushroom.glb (1.3). Without a file the code-built rig is used.
+## Sounds
+
+Place one file for each manifest event at `assets/sfx/<name>.ogg`, `.mp3` or `.wav`. The loader tries those formats in that order. Audio is decoded after a user gesture creates the AudioContext. If no file is present or decoding fails, the generated Web Audio sound remains the fallback.
+
+Current optional event names are: `door`, `chest`, `boss`, `hit`, `swing`, `death`, `pickup`, `equip`, `place` and `break`. Do not add an audio file until its source, license, duration, peak level and actual in-game mix have been checked.
+
+## Ownership and cleanup
+
+`Game.assets.model(name)` returns a scene instance that borrows geometry/material from the cached GLB template. Do not dispose those borrowed resources when removing an instance. Use `Game.assets.disposeInstance(root)`; it skips borrowed GLB mesh resources and disposes local mesh geometry/material owned by the removed object.
+
+Textures referenced by shared GLB materials remain owned by the asset cache. Do not dispose them from a scene instance.

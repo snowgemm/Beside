@@ -131,6 +131,7 @@ window.Game.dungeon = { respawnPoint() { return null; } };
 const scene = new Object3D();
 const camera = new Object3D();
 const G = window.Game;
+load('assets.js');
 G.events = { on() {}, emit() {} };
 G.player.init(scene, camera, { x: 0, y: 2, z: 0.5 });
 const canvas = element('canvas');
@@ -143,6 +144,35 @@ const results = [];
 function check(name, condition, detail = '') {
   results.push({ name, pass: Boolean(condition), ...(detail ? { detail } : {}) });
 }
+
+let sharedGeometryDisposals = 0, sharedMaterialDisposals = 0;
+let ownedGeometryDisposals = 0, ownedMaterialDisposals = 0;
+const sharedMesh = {
+  isMesh: true,
+  userData: { sharedAssetResources: true },
+  geometry: { dispose() { sharedGeometryDisposals++; } },
+  material: { dispose() { sharedMaterialDisposals++; } }
+};
+const ownedGeometry = { dispose() { ownedGeometryDisposals++; } };
+const ownedMaterialA = { dispose() { ownedMaterialDisposals++; } };
+const ownedMaterialB = { dispose() { ownedMaterialDisposals++; } };
+const ownedMesh = { isMesh: true, userData: {}, geometry: ownedGeometry, material: [ownedMaterialA, ownedMaterialB] };
+const ownedMeshSharingResources = { isMesh: true, userData: {}, geometry: ownedGeometry, material: ownedMaterialA };
+const instance = {
+  userData: {},
+  traverse(callback) {
+    callback(this);
+    callback(sharedMesh);
+    callback(ownedMesh);
+    callback(ownedMeshSharingResources);
+  }
+};
+G.assets.disposeInstance(instance);
+G.assets.disposeInstance(instance);
+check('disposing an instance preserves borrowed GLB template resources',
+  sharedGeometryDisposals === 0 && sharedMaterialDisposals === 0);
+check('disposing an instance releases each owned geometry/material only once',
+  ownedGeometryDisposals === 1 && ownedMaterialDisposals === 2);
 
 function fire(list, event) {
   for (const callback of [...(list || [])]) callback(event);
@@ -246,6 +276,11 @@ check('player lands on the smooth rendered terrain instead of integer voxel step
  // so their shadow receiver flag must be safe at construction time, not just toggled once.
 const terrainSource = fs.readFileSync(path.join(jsDir, 'legacy-world.js'), 'utf8');
 const assetSource = fs.readFileSync(path.join(jsDir, 'assets.js'), 'utf8');
+check('GLB clones mark shared mesh resources and prop previews use the shared-safe disposer',
+  assetSource.includes('o.userData.sharedAssetResources = true') &&
+  assetSource.includes('dispose: function () { A.disposeInstance(o); }') &&
+  fs.readFileSync(path.join(jsDir, 'dungeon.js'), 'utf8').includes('G.assets.disposeInstance(o)'));
+
 check('terrain chunk edge slope samples stay inside a one-cell padded grid',
   terrainSource.includes('var N=CS+3,H=new Float32Array(N*N)') &&
   terrainSource.includes('for(z=-1;z<=CS+1;z++)for(x=-1;x<=CS+1;x++)') &&
@@ -352,6 +387,12 @@ const physicsSource = fs.readFileSync(path.join(jsDir, 'phys.js'), 'utf8');
 const minimapSource = fs.readFileSync(path.join(jsDir, 'minimap.js'), 'utf8');
 const fxSource = fs.readFileSync(path.join(jsDir, 'fx.js'), 'utf8');
 const swSource = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
+const styleSource = fs.readFileSync(path.join(root, 'css', 'style.css'), 'utf8');
+check('UI honors reduced-motion preferences while keeping timed feedback visible',
+  styleSource.includes('@media (prefers-reduced-motion: reduce)') &&
+  styleSource.includes('#hp.low, #hp.low #hp-fill') &&
+  styleSource.includes('#banner.show { opacity: 1; transform: translateX(-50%); }'));
+
 check('story-driven UI no longer exposes block-build/place controls',
   !/id="btn-(build|break|place)"/.test(indexSource) &&
   !indexSource.includes('js/build.js') &&
@@ -434,11 +475,11 @@ check('expanded minimap has interactive wheel and pinch zoom that persist settin
   minimapSource.includes('map-zoom-in') &&
   minimapSource.includes('G.menu.settings.mapZoom=M.zoom'));
 check('offline cache is bumped and versioned local assets prevent stale code from loading',
-  swSource.includes("CACHE_NAME = 'besidevalley-shell-v14'") &&
+  swSource.includes("CACHE_NAME = 'besidevalley-shell-v15'") &&
   swSource.includes("url.searchParams.get('v')") &&
   swSource.includes('function fallbackCacheKey(requestUrl)') &&
   swSource.includes('cache.match(fallbackKey)') &&
-  indexSource.includes('20261104-input-reset-v14'));
+  indexSource.includes('20261104-quality-foundation-v15'));
 check('player jump input triggers a short takeoff pose independent of refresh rate',
   rigSource.includes("state === 'jump'") && rigSource.includes('this.jumpT = 0.32') &&
   rigSource.includes('var jumpPulse = Math.sin') && playerSource.includes("rig.play('jump'"));

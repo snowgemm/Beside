@@ -9,7 +9,10 @@
   function h32(a, b, c) { var h = (Math.imul(a | 0, 374761393) + Math.imul(b | 0, 668265263) + Math.imul(c | 0, 1274126177)) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); return (h ^ (h >>> 16)) >>> 0; }
   function box(w, h, d, c, x, y, z) { var m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshBasicMaterial({ color: c })); m.position.set(x, y, z); return m; }
   function glow(geo, c, op) { return new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: op, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, side: THREE.DoubleSide })); }
-  function dispose(o) { o.traverse(function (c) { if (c.geometry) c.geometry.dispose(); if (c.material) c.material.dispose(); }); }
+  function dispose(o) {
+    // Asset-manager clones borrow GLB geometry/material; dispose only resources owned by this dungeon instance.
+    if (G.assets && G.assets.disposeInstance) G.assets.disposeInstance(o);
+  }
 
   /* ---------- Visuals: every look lives here so stage 5 can replace the factories ---------- */
   var V = D.visuals = {
