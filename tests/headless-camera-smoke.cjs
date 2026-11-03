@@ -429,11 +429,11 @@ check('expanded minimap has interactive wheel and pinch zoom that persist settin
   minimapSource.includes('map-zoom-in') &&
   minimapSource.includes('G.menu.settings.mapZoom=M.zoom'));
 check('offline cache is bumped and versioned local assets prevent stale code from loading',
-  swSource.includes("CACHE_NAME = 'besidevalley-shell-v13'") &&
+  swSource.includes("CACHE_NAME = 'besidevalley-shell-v14'") &&
   swSource.includes("url.searchParams.get('v')") &&
   swSource.includes('function fallbackCacheKey(requestUrl)') &&
   swSource.includes('cache.match(fallbackKey)') &&
-  indexSource.includes('20261104-webgl-recovery-v13'));
+  indexSource.includes('20261104-input-reset-v14'));
 check('player jump input triggers a short takeoff pose independent of refresh rate',
   rigSource.includes("state === 'jump'") && rigSource.includes('this.jumpT = 0.32') &&
   rigSource.includes('var jumpPulse = Math.sin') && playerSource.includes("rig.play('jump'"));
