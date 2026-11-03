@@ -294,6 +294,7 @@ check('renderer uses sRGB output and filmic tone mapping for coherent PBR materi
 check('terrain generation CPU budget adapts to the measured FPS instead of always consuming 4 ms',
   mainSource.includes('var chunkBudget = touch ? 1.4 : 2.4') &&
   mainSource.includes('G.world.update(p.x, p.z, chunkBudget, dt)'));
+const minimapSource = fs.readFileSync(path.join(jsDir, 'minimap.js'), 'utf8');
 check('expanded minimap renders cached 16x16 terrain tiles rather than one fillRect per world cell',
   fs.readFileSync(path.join(jsDir, 'minimap.js'), 'utf8').includes('function terrainTile(cx, cz)') &&
   fs.readFileSync(path.join(jsDir, 'minimap.js'), 'utf8').includes('c.drawImage(tile, px, pz, 16 * s, 16 * s)') &&
@@ -315,7 +316,6 @@ const playerSource = fs.readFileSync(path.join(jsDir, 'player.js'), 'utf8');
 const enemySource = fs.readFileSync(path.join(jsDir, 'enemies.js'), 'utf8');
 const rigSource = fs.readFileSync(path.join(jsDir, 'rig.js'), 'utf8');
 const physicsSource = fs.readFileSync(path.join(jsDir, 'phys.js'), 'utf8');
-const minimapSource = fs.readFileSync(path.join(jsDir, 'minimap.js'), 'utf8');
 const fxSource = fs.readFileSync(path.join(jsDir, 'fx.js'), 'utf8');
 const swSource = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
 check('story-driven UI no longer exposes block-build/place controls',
