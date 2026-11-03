@@ -384,6 +384,9 @@ check('flower accents use round low-poly buds instead of additional cone spikes'
   terrainSource.includes('function flowerGeometry()') &&
   terrainSource.includes('new THREE.SphereGeometry(.045, 6, 4)') &&
   terrainSource.includes('flowerGeometry(),flowerMaterial'));
+check('round flower buds are positioned just above the ground instead of floating',
+  terrainSource.includes('grassDummy.position.y=h+.055;') &&
+  !terrainSource.includes('grassDummy.position.y=h+.16;'));
 check('terrain and sand use separate exposure compression to reduce midday clipping',
   terrainSource.includes('var sr=sand?.87:.90, sg=sand?.83:.88, sb=sand?.78:.90') &&
   terrainSource.includes('r*low*fine*sr') && terrainSource.includes('g*low*fine*sg') && terrainSource.includes('b*low*fine*sb'));
