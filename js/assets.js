@@ -79,12 +79,23 @@
   };
   A.disposeInstance = function (root) {
     if (!root || typeof root.traverse !== 'function') return;
+    root.userData = root.userData || {};
+    if (root.userData.assetInstanceDisposed) return;
+    root.userData.assetInstanceDisposed = true;
+    var geometries = [], materials = [];
     root.traverse(function (o) {
       if (!o.isMesh || (o.userData && o.userData.sharedAssetResources)) return;
-      if (o.geometry && o.geometry.dispose) o.geometry.dispose();
-      if (Array.isArray(o.material)) {
-        o.material.forEach(function (m) { if (m && m.dispose) m.dispose(); });
-      } else if (o.material && o.material.dispose) o.material.dispose();
+      var g = o.geometry;
+      if (g && geometries.indexOf(g) < 0) {
+        geometries.push(g);
+        if (g.dispose) g.dispose();
+      }
+      var list = Array.isArray(o.material) ? o.material : [o.material];
+      list.forEach(function (m) {
+        if (!m || materials.indexOf(m) >= 0) return;
+        materials.push(m);
+        if (m.dispose) m.dispose();
+      });
     });
   };
   A.sound = function (name) {
