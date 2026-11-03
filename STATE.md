@@ -162,7 +162,7 @@ Stage 16 (hidden-page simulation and audio lifecycle; 2026-11-04):
 
 ## Stage 17: remove cone-like grass and square particle artifacts
 - Root cause from the supplied Android screenshot: the active renderer is `js/legacy-world.js`; ground tufts were five-sided `ConeGeometry` instances, and the grass scan stopped after the first target count while traversing one direction, biasing vegetation to one side.
-- Replaced each cone with a three-blade low-poly tuft, changed flower accents to small round buds, reduced instance budgets, and sampled the complete nearby grid with a deterministic spatial hash. Grass instance colours now use the meadow/plains or forest palette instead of one bright plains green everywhere.
+- Replaced each cone with a three-blade low-poly tuft, changed flower accents to small round buds seated just above the terrain, reduced instance budgets, and sampled the complete nearby grid with a deterministic spatial hash. Grass instance colours now use the meadow/plains or forest palette instead of one bright plains green everywhere.
 - `js/fx.js`: added a radial-alpha sprite for point particles so ambient fireflies and gameplay particles render as soft round dots rather than square quads.
 - Updated JavaScript regression guards and bumped the offline shell/local asset cache to v17.
 - Verification boundary: source-contract checks and CI are required; real GPU appearance still needs a browser/Android playtest. No claim of visual-device verification is made.
