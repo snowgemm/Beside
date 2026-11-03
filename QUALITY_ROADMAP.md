@@ -1,7 +1,7 @@
 # Besidevalley — Quality Upgrade Roadmap
 
 Last reviewed: 2026-11-04  
-Baseline: `main` at `1651effc794f493f557ff6899f9732783fd179b3`  
+Baseline: `main` at `a46f2a15230643ab974e2b8b8603ecc6d978cdf3`  
 Runtime: plain JavaScript + Three.js r128, mobile-first controls, static Vercel hosting and offline shell.
 
 ## Quality target
@@ -91,6 +91,14 @@ A cohesive smooth-toon adventure game that is readable, responsive and stable on
 **Acceptance:** each shipped model has provenance, license evidence, budget, fallback and a real-device visual check.
 
 ### P5 — Materials, textures and environment
+
+**Stage 17: overworld vegetation and particle presentation**
+- Replace isolated cone-shaped grass spikes with broad, multi-blade tufts and small round flower buds.
+- Sample vegetation across the full local radius with deterministic distribution; do not stop early during directional traversal.
+- Use biome-specific instance colours and apply the day/night tint once at the shared material.
+- Give point particles a radial alpha sprite so fireflies and transient effects are round rather than square.
+- Keep all geometry procedural and lightweight; no new runtime dependency or external asset.
+
 
 - Keep terrain vertex colours as the lightweight baseline.
 - Add texture maps only where they improve recognition or material readability at normal gameplay distance.
