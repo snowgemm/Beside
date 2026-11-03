@@ -116,7 +116,7 @@
   W.useProvider = function (p) { p = p || W.ow; W.getHeight = p.getHeight; W.getBlock = p.getBlock; W.solid = p.solid; };
   W.hold = function (on) { W.held=!!on; chunks.forEach(function(m){m.visible=!on;}); if(water)water.visible=!on; if(grassMesh)grassMesh.visible=!on; if(flowerMesh)flowerMesh.visible=!on; if(!on)dirty=true; };
   var scene, material, decorMat, water, waterGeom, waterPos, waterCol, waterTime=0, waterAx=1e9, waterAz=1e9, wtex, grain, terrainNormal, surfaceQuality='medium', tr=1,tg=1,tb=1,chunks=new Map(),queue=[],qi=0,lcx=1e9,lcz=1e9,dirty=true;
-  var grassMesh,flowerMesh,grassMaterial,flowerMaterial,grassShader=null,grassTarget=650,flowerTarget=80,grassDirty=true,grassX=1e9,grassZ=1e9,grassDummy,flowerColor,grassColor,grassBaseColor,grassTintColor;
+  var grassMesh,flowerMesh,grassMaterial,flowerMaterial,grassTarget=44,flowerTarget=14,grassDirty=true,grassX=1e9,grassZ=1e9,grassDummy,flowerColor,grassColor,grassBaseColor,grassTintColor;
 
   function mkTex(size, fn, rep, colorTexture) {
     try {
@@ -175,11 +175,41 @@
     mesh.instanceColor = new THREE.InstancedBufferAttribute(data, 3);
     mesh.instanceColor.needsUpdate = true;
   }
-  function grassGeometry(){
-    // Solid low-poly tufts replace thin crossed cards, which rasterize as long black slivers on some mobile GPUs.
-    var g=new THREE.ConeGeometry(.085,.28,5,1);g.translate(0,.14,0);g.computeVertexNormals();return g;
+  function grassGeometry() {
+    // One small tuft is three broad, curved blades; avoid isolated cone-shaped spikes.
+    var positions = [], indices = [];
+    var heights = [.19, .23, .205], widths = [.046, .043, .047];
+    for (var blade = 0; blade < 3; blade++) {
+      var angle = blade * Math.PI * 2 / 3;
+      var dx = Math.cos(angle), dz = Math.sin(angle);
+      var sx = -dz, sz = dx;
+      var base = positions.length / 3;
+      var width = widths[blade], height = heights[blade];
+      var midX = dx * .036, midZ = dz * .036;
+      positions.push(
+        dx * .012 + sx * width, 0, dz * .012 + sz * width,
+        dx * .012 - sx * width, 0, dz * .012 - sz * width,
+        midX + sx * width * .54, height * .58, midZ + sz * width * .54,
+        midX - sx * width * .54, height * .58, midZ - sz * width * .54,
+        dx * (.075 + blade * .006), height, dz * (.075 + blade * .006)
+      );
+      indices.push(base, base + 1, base + 3, base, base + 3, base + 2, base + 2, base + 3, base + 4);
+    }
+    var geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    geometry.setIndex(indices);
+    geometry.computeVertexNormals();
+    return geometry;
   }
-  function setGrassQuality(level){grassTarget=level==='low'?48:level==='high'?120:72;flowerTarget=level==='low'?16:level==='high'?48:28;grassDirty=true;}
+  function flowerGeometry() {
+    // Flowers read as small round buds instead of a second set of tiny spikes.
+    return new THREE.SphereGeometry(.045, 6, 4);
+  }
+  function setGrassQuality(level) {
+    grassTarget = level === 'low' ? 24 : level === 'high' ? 68 : 44;
+    flowerTarget = level === 'low' ? 8 : level === 'high' ? 24 : 14;
+    grassDirty = true;
+  }
   W.setGrassQuality=setGrassQuality;
   W.setSurfaceQuality=function(level){
     surfaceQuality=level==='high'?'high':level==='low'?'low':'medium';
@@ -192,35 +222,44 @@
   };
   function initGrass(){
     if(grassMesh||!scene)return;
-    var p=G.palette||{},r=p.grass&&(p.grass.plains||p.grass.forest),green=Array.isArray(r)?r[2]:0x6eaa48;
-    // Grass blades are thin two-sided cards: unlit material avoids black razor-like wedges under grazing light on mobile GPUs.
-    grassBaseColor=new THREE.Color(green);grassTintColor=new THREE.Color(1,1,1);
-    grassMaterial=new THREE.MeshBasicMaterial({color:green,side:THREE.DoubleSide,toneMapped:false});
+    grassBaseColor=new THREE.Color(0xffffff);grassTintColor=new THREE.Color(1,1,1);
+    grassMaterial=new THREE.MeshBasicMaterial({color:0xffffff,side:THREE.DoubleSide,toneMapped:false});
     flowerMaterial=new THREE.MeshStandardMaterial({color:0xffffff,vertexColors:true,roughness:.9});
-    grassShader=null; // disable custom wind injection here; it could distort thin cards into long black slivers on mobile GPUs.
-    grassMesh=new THREE.InstancedMesh(grassGeometry(),grassMaterial,1050);flowerMesh=new THREE.InstancedMesh(new THREE.ConeGeometry(.065,.16,5),flowerMaterial,135);
+    grassMesh=new THREE.InstancedMesh(grassGeometry(),grassMaterial,1050);flowerMesh=new THREE.InstancedMesh(flowerGeometry(),flowerMaterial,135);
     primeInstanceColors(grassMesh,1050);primeInstanceColors(flowerMesh,135);
     grassMesh.count=flowerMesh.count=0;grassMesh.frustumCulled=flowerMesh.frustumCulled=false;grassMesh.userData.noShadow=flowerMesh.userData.noShadow=true;
     scene.add(grassMesh);scene.add(flowerMesh);grassDummy=new THREE.Object3D();flowerColor=new THREE.Color();grassColor=new THREE.Color();
     setGrassQuality(G.quality?G.quality.value:'medium');
   }
   function rebuildGrass(px,pz){
-    if(!grassMesh)return;var ax=Math.floor(px/4)*4,az=Math.floor(pz/4)*4,gn=0,fn=0,dx,dz,wx,wz,h,sl,bi,n,dist,scale;
+    if(!grassMesh)return;
+    var ax=Math.floor(px/4)*4,az=Math.floor(pz/4)*4,gn=0,fn=0,dx,dz,wx,wz,h,sl,bi,n,dist,scale;
+    var palette=G.palette||{},sampleChance=Math.min(.95,grassTarget/80);
     grassX=ax;grassZ=az;grassDirty=false;
-    for(dz=-25;dz<=25&&gn<grassTarget;dz+=1.15)for(dx=-25;dx<=25&&gn<grassTarget;dx+=1.15){
-      n=hash(Math.floor(ax+dx+4096),Math.floor(az+dz-1703));wx=ax+dx+(n-.5)*.72;wz=az+dz+(hash(Math.floor(ax+dx+17),Math.floor(az+dz+33))-.5)*.72;
+    // Scan the complete local grid and use a stable spatial hash for even coverage.
+    // Never stop after the first N plants: that made vegetation bunch up on one side of the player.
+    for(dz=-16.8;dz<=16.8;dz+=2.8)for(dx=-16.8;dx<=16.8;dx+=2.8){
+      n=hash(Math.floor(ax+dx+4096),Math.floor(az+dz-1703));
+      if(n>sampleChance)continue;
+      wx=ax+dx+(hash(Math.floor(ax+dx+17),Math.floor(az+dz+33))-.5)*1.4;
+      wz=az+dz+(hash(Math.floor(ax+dx+29),Math.floor(az+dz+51))-.5)*1.4;
       dist=(wx-px)*(wx-px)+(wz-pz)*(wz-pz);if(dist>17*17)continue;
       h=getHeight(wx,wz);if(h<=SEA+1||h>=24)continue;
       sl=Math.max(Math.abs(getHeight(wx+1,wz)-getHeight(wx-1,wz)),Math.abs(getHeight(wx,wz+1)-getHeight(wx,wz-1)))*.5;if(sl>1.25)continue;
       bi=biomeW(wx,wz);if(bi===2||bi===3)continue;
-      grassDummy.position.set(wx,h+.015,wz);grassDummy.rotation.set(0,n*6.283,0);scale=.65+hash(Math.floor(wx*3),Math.floor(wz*3))*.7;
-      grassDummy.scale.set(scale*(.82+hash(Math.floor(wx+11),Math.floor(wz-7))*.34),scale*(.55+hash(Math.floor(wx-13),Math.floor(wz+17))*.32),scale*(.82+hash(Math.floor(wx+23),Math.floor(wz+5))*.34));
+      grassDummy.position.set(wx,h+.012,wz);grassDummy.rotation.set(0,n*6.283,0);
+      scale=.82+hash(Math.floor(wx*3),Math.floor(wz*3))*.32;
+      grassDummy.scale.set(scale*(.9+hash(Math.floor(wx+11),Math.floor(wz-7))*.18),scale*(.82+hash(Math.floor(wx-13),Math.floor(wz+17))*.2),scale*(.9+hash(Math.floor(wx+23),Math.floor(wz+5))*.18));
       grassDummy.updateMatrix();grassMesh.setMatrixAt(gn,grassDummy.matrix);
-      var shade=.88+hash(Math.floor(wx*7+13),Math.floor(wz*7-31))*.12;
-      grassColor.setRGB(shade,Math.min(1,shade*1.05),shade*.88);if(grassMesh.setColorAt)grassMesh.setColorAt(gn,grassColor);gn++;
+      var shade=.9+hash(Math.floor(wx*7+13),Math.floor(wz*7-31))*.1;
+      var ramp=palette.grass&&(bi===1?palette.grass.forest:palette.grass.plains);
+      var baseColor=Array.isArray(ramp)?ramp[2]:(bi===1?0x3f8a3a:0x8cc84a);
+      grassColor.setHex(baseColor);grassColor.multiplyScalar(shade);
+      if(grassMesh.setColorAt)grassMesh.setColorAt(gn,grassColor);gn++;
       if(fn<flowerTarget&&hash(Math.floor(wx+121),Math.floor(wz-91))<.09){
         flowerColor.setRGB(.95,.76+hash(Math.floor(wx),Math.floor(wz))*.22,.88);flowerMesh.setColorAt(fn,flowerColor);
-        grassDummy.position.y=h+.025;grassDummy.scale.setScalar(.7+n*.6);grassDummy.updateMatrix();flowerMesh.setMatrixAt(fn++,grassDummy.matrix);
+        grassDummy.position.y=h+.16;grassDummy.scale.setScalar(.7+hash(Math.floor(wx+7),Math.floor(wz-9))*.35);
+        grassDummy.updateMatrix();flowerMesh.setMatrixAt(fn++,grassDummy.matrix);
       }
     }
     grassMesh.count=gn;flowerMesh.count=fn;grassMesh.instanceMatrix.needsUpdate=true;flowerMesh.instanceMatrix.needsUpdate=true;
@@ -264,10 +303,10 @@
   W.tint = function (r, g, b) {
     tr = r; tg = g; tb = b;
     if (material) { material.color.setRGB(r, g, b); decorMat.color.setRGB(r, g, b); }
-    if (grassMaterial && grassBaseColor && grassTintColor) {
-      // Tint the existing grass green rather than replacing it with a near-black/grey sky colour.
+    if (grassMaterial && grassTintColor) {
+      // Instance colours carry biome greens; the shared material carries only the day/night tint.
       grassTintColor.setRGB(0.66+0.34*r,0.66+0.34*g,0.66+0.34*b);
-      grassMaterial.color.copy(grassBaseColor).multiply(grassTintColor);
+      grassMaterial.color.copy(grassTintColor);
     }
   };
   W.setDrawDistance = function (n) {
