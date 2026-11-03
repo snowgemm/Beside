@@ -52,6 +52,9 @@
     else if (A.ctx && A.ctx.state !== 'running') attach();
   });
   window.addEventListener('pagehide', suspendHiddenAudio);
+  window.addEventListener('pageshow', function () {
+    if (A.ctx && A.ctx.state !== 'running') attach();
+  });
   function tone(type, f0, f1, dur, vol) {
     var c = A.ctx, t = c.currentTime, o = c.createOscillator(), g = c.createGain();
     o.type = type; o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(Math.max(1, f1), t + dur);
