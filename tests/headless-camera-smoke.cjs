@@ -153,19 +153,25 @@ const sharedMesh = {
   geometry: { dispose() { sharedGeometryDisposals++; } },
   material: { dispose() { sharedMaterialDisposals++; } }
 };
-const ownedMesh = {
-  isMesh: true,
+const ownedGeometry = { dispose() { ownedGeometryDisposals++; } };
+const ownedMaterialA = { dispose() { ownedMaterialDisposals++; } };
+const ownedMaterialB = { dispose() { ownedMaterialDisposals++; } };
+const ownedMesh = { isMesh: true, userData: {}, geometry: ownedGeometry, material: [ownedMaterialA, ownedMaterialB] };
+const ownedMeshSharingResources = { isMesh: true, userData: {}, geometry: ownedGeometry, material: ownedMaterialA };
+const instance = {
   userData: {},
-  geometry: { dispose() { ownedGeometryDisposals++; } },
-  material: [
-    { dispose() { ownedMaterialDisposals++; } },
-    { dispose() { ownedMaterialDisposals++; } }
-  ]
+  traverse(callback) {
+    callback(this);
+    callback(sharedMesh);
+    callback(ownedMesh);
+    callback(ownedMeshSharingResources);
+  }
 };
-G.assets.disposeInstance({ traverse(callback) { callback(this); callback(sharedMesh); callback(ownedMesh); } });
+G.assets.disposeInstance(instance);
+G.assets.disposeInstance(instance);
 check('disposing an instance preserves borrowed GLB template resources',
   sharedGeometryDisposals === 0 && sharedMaterialDisposals === 0);
-check('disposing an instance releases locally owned geometry and material arrays',
+check('disposing an instance releases each owned geometry/material only once',
   ownedGeometryDisposals === 1 && ownedMaterialDisposals === 2);
 
 function fire(list, event) {
