@@ -331,21 +331,26 @@ check('InstancedMesh colour attributes are fully allocated before count is set t
   terrainSource.includes('for (var i = 0; i < data.length; i++) data[i] = 1;') &&
   terrainSource.indexOf('primeInstanceColors(grassMesh,1050)') < terrainSource.indexOf('grassMesh.count=flowerMesh.count=0;') &&
   terrainSource.indexOf('primeInstanceColors(flowerMesh,135)') < terrainSource.indexOf('grassMesh.count=flowerMesh.count=0;'));
-check('grass sky tint multiplies its palette instead of replacing green with a grey tint',
-  terrainSource.includes('grassMaterial.color.copy(grassBaseColor).multiply(grassTintColor)'));
-check('grass uses stable two-sided cards without injected wind distortion',
-  terrainSource.includes('new THREE.MeshBasicMaterial({color:green,side:THREE.DoubleSide,toneMapped:false})') &&
-  terrainSource.includes('grassShader=null;') &&
+check('grass instance colours use biome palettes and the shared material applies only sky tint',
+  terrainSource.includes('grassColor.setHex(baseColor)') &&
+  terrainSource.includes('grassMaterial.color.copy(grassTintColor)') &&
+  terrainSource.includes('palette.grass.forest:palette.grass.plains'));
+check('grass tufts use a stable two-sided material without wind shader distortion',
+  terrainSource.includes('new THREE.MeshBasicMaterial({color:0xffffff,side:THREE.DoubleSide,toneMapped:false})') &&
   !terrainSource.includes('uWindTime + instanceMatrix'));
-check('grass density is capped for mobile instead of filling the horizon with spikes',
-  terrainSource.includes("grassTarget=level==='low'?48:level==='high'?120:72"));
+check('grass density stays within mobile-friendly low, medium and high budgets',
+  terrainSource.includes("grassTarget = level === 'low' ? 24 : level === 'high' ? 68 : 44") &&
+  terrainSource.includes("flowerTarget = level === 'low' ? 8 : level === 'high' ? 24 : 14"));
 check('decor placement uses the same padded height-grid stride as terrain generation',
   terrainSource.includes('var N = CS + 3, gates = gatesFor(ox, oz)') &&
   !terrainSource.includes('var N = 18, gates = gatesFor(ox, oz)'));
-check('grass is restricted to a closer radius and lower density to avoid subpixel spikes',
+check('grass is distributed across the full local radius with a deterministic spatial sample',
+  terrainSource.includes('for(dz=-16.8;dz<=16.8;dz+=2.8)for(dx=-16.8;dx<=16.8;dx+=2.8)') &&
+  terrainSource.includes('var palette=G.palette||{},sampleChance=Math.min(.95,grassTarget/80)') &&
+  terrainSource.includes('if(n>sampleChance)continue;') &&
   terrainSource.includes('if(dist>17*17)continue;') &&
-  terrainSource.includes("grassTarget=level==='low'?48:level==='high'?120:72") &&
-  terrainSource.includes('var shade=.88+hash('));
+  !terrainSource.includes('dz<=25&&gn<grassTarget') &&
+  !terrainSource.includes('dx<=25&&gn<grassTarget'));
 check('terrain normals are derived from padded heights and stay consistent across streamed chunk seams',
   terrainSource.includes('normals.push(nx*inv,ny*inv,nz*inv)') &&
   terrainSource.includes("setAttribute('normal',new THREE.Float32BufferAttribute(normals,3))") &&
@@ -370,9 +375,15 @@ check('expanded minimap renders cached 16x16 terrain tiles rather than one fillR
 check('expanded minimap shows XYZ and its controls wrap on narrow screens',
   fs.readFileSync(path.join(jsDir, 'minimap.js'), 'utf8').includes("'  Y ' + p.y.toFixed(1)") &&
   fs.readFileSync(path.join(root, 'css', 'style.css'), 'utf8').includes('#map-legend{flex:1 1 260px;min-width:0;white-space:normal'));
-check('grass uses solid low-poly tufts instead of thin crossed cards',
-  terrainSource.includes('new THREE.ConeGeometry(.085,.28,5,1)') &&
-  !terrainSource.includes('-.09,0,0,.09,0,0,0,.48,0'));
+check('grass uses a three-blade tuft instead of isolated cone spikes',
+  terrainSource.includes('function grassGeometry()') &&
+  terrainSource.includes('for (var blade = 0; blade < 3; blade++)') &&
+  terrainSource.includes('new THREE.BufferGeometry()') &&
+  !terrainSource.includes('new THREE.ConeGeometry(.085,.28,5,1)'));
+check('flower accents use round low-poly buds instead of additional cone spikes',
+  terrainSource.includes('function flowerGeometry()') &&
+  terrainSource.includes('new THREE.SphereGeometry(.045, 6, 4)') &&
+  terrainSource.includes('flowerGeometry(),flowerMaterial'));
 check('terrain and sand use separate exposure compression to reduce midday clipping',
   terrainSource.includes('var sr=sand?.87:.90, sg=sand?.83:.88, sb=sand?.78:.90') &&
   terrainSource.includes('r*low*fine*sr') && terrainSource.includes('g*low*fine*sg') && terrainSource.includes('b*low*fine*sb'));
@@ -459,6 +470,14 @@ check('particle quality controls reduce emission and ambient effects',
   fxSource.includes('F.setQuality') &&
   fxSource.includes("particleLevel === 'low' ? 3") &&
   fxSource.includes('ambientLimit = particleLevel'));
+check('ambient and burst particles use circular alpha sprites instead of square quads',
+  fxSource.includes('function particleSpriteTexture()') &&
+  fxSource.includes('createRadialGradient(16, 16, 0, 16, 16, 16)') &&
+  fxSource.includes('new THREE.CanvasTexture(canvas)') &&
+  fxSource.includes('map: sprite') &&
+  fxSource.includes('transparent: true') &&
+  fxSource.includes('alphaTest: 0.02') &&
+  fxSource.includes('depthWrite: false'));
 check('remote GLB cache supports repeat offline sessions with graceful fallback',
   assetSource.includes("indexedDB.open('besidevalley-model-cache'") &&
   assetSource.includes('function getModelBuffer(url)') &&
@@ -492,11 +511,11 @@ check('expanded minimap has interactive wheel and pinch zoom that persist settin
   minimapSource.includes('map-zoom-in') &&
   minimapSource.includes('G.menu.settings.mapZoom=M.zoom'));
 check('offline cache is bumped and versioned local assets prevent stale code from loading',
-  swSource.includes("CACHE_NAME = 'besidevalley-shell-v16'") &&
+  swSource.includes("CACHE_NAME = 'besidevalley-shell-v17'") &&
   swSource.includes("url.searchParams.get('v')") &&
   swSource.includes('function fallbackCacheKey(requestUrl)') &&
   swSource.includes('cache.match(fallbackKey)') &&
-  indexSource.includes('20261104-page-audio-lifecycle-v16'));
+  indexSource.includes('20261104-vegetation-particle-fix-v17'));
 check('player jump input triggers a short takeoff pose independent of refresh rate',
   rigSource.includes("state === 'jump'") && rigSource.includes('this.jumpT = 0.32') &&
   rigSource.includes('var jumpPulse = Math.sin') && playerSource.includes("rig.play('jump'"));
