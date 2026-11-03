@@ -400,6 +400,8 @@ check('hidden-page lifecycle freezes the game loop and resets frame timing on re
   mainSource.includes("window.addEventListener('pageshow'") &&
   mainSource.includes('if (contextLost || pageHidden) { last = now; return; }') &&
   mainSource.includes('adaptiveSlowT = adaptiveFastT = 0'));
+check('audio reattaches its gesture unlock after BFCache pageshow',
+  audioSource.includes("window.addEventListener('pageshow'") && audioSource.includes("if (A.ctx && A.ctx.state !== 'running') attach();"));
 check('audio suspends in background and resumes only after a user gesture',
   audioSource.includes("document.addEventListener('visibilitychange'") &&
   audioSource.includes("A.ctx.suspend()") &&
@@ -419,7 +421,7 @@ check('renderer uses the native animation loop and offers refresh-aware FPS caps
 check('WebGL context loss saves the current state and freezes gameplay simulation',
   mainSource.includes("renderer.domElement.addEventListener('webglcontextlost'") &&
   mainSource.includes('if (G.save && G.save.saveNow) G.save.saveNow();') &&
-  mainSource.includes('if (contextLost) { last = now; return; }') &&
+  mainSource.includes('if (contextLost || pageHidden) { last = now; return; }') &&
   mainSource.includes('showGraphicsRecovery(true)'));
 check('WebGL context restoration resets frame timing and clears the recovery notice',
   mainSource.includes("renderer.domElement.addEventListener('webglcontextrestored'") &&
@@ -489,11 +491,11 @@ check('expanded minimap has interactive wheel and pinch zoom that persist settin
   minimapSource.includes('map-zoom-in') &&
   minimapSource.includes('G.menu.settings.mapZoom=M.zoom'));
 check('offline cache is bumped and versioned local assets prevent stale code from loading',
-  swSource.includes("CACHE_NAME = 'besidevalley-shell-v15'") &&
+  swSource.includes("CACHE_NAME = 'besidevalley-shell-v16'") &&
   swSource.includes("url.searchParams.get('v')") &&
   swSource.includes('function fallbackCacheKey(requestUrl)') &&
   swSource.includes('cache.match(fallbackKey)') &&
-  indexSource.includes('20261104-quality-foundation-v15'));
+  indexSource.includes('20261104-page-audio-lifecycle-v16'));
 check('player jump input triggers a short takeoff pose independent of refresh rate',
   rigSource.includes("state === 'jump'") && rigSource.includes('this.jumpT = 0.32') &&
   rigSource.includes('var jumpPulse = Math.sin') && playerSource.includes("rig.play('jump'"));
