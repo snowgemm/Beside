@@ -124,3 +124,10 @@ Stage 12 (offline asset cache correctness; 2026-11-04):
 - Service worker cache v12 preserves the `?v=` asset version in cache keys. A changed asset version therefore misses the old cache entry and fetches the new file instead of receiving stale JavaScript/CSS under the same path.
 - Successful versioned fetches refresh both the version-specific entry and the canonical unversioned shell entry. If the network is unavailable, the version-specific entry or precached canonical shell remains the offline fallback.
 - `index.html` local assets use `20261104-offline-v12`; bump this token when shipping a new local asset set. CDN Three.js remains pinned to r128; do not jump directly to a modern major release without staged migration and browser/GPU regression coverage.
+
+
+Stage 13 (WebGL context-loss gameplay safety; 2026-11-04):
+- The app now listens for `webglcontextlost` on the renderer canvas. It saves the current game state when possible, shows a blocking recovery notice, and skips gameplay updates while the context is unavailable.
+- On `webglcontextrestored`, Three.js r128 has already rebuilt its renderer internals; the app resets its frame-time accumulators, hides the notice, and resumes the existing game state. It does not create a second renderer or duplicate the scene.
+- The regression suite checks the loss/restore contract and the offline shell cache was bumped to v13 with asset token `20261104-webgl-recovery-v13`.
+- Verified in CI: JavaScript parse checks and the repository's headless camera/input suite. Real GPU loss/restore on Android and desktop remains a manual device/browser check.

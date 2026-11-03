@@ -276,3 +276,8 @@ body.map-expanded #btn-view,body.map-expanded #btn-attack,body.map-expanded #btn
   #map-legend{font-size:9px}
   #map-label button{min-height:30px;padding:5px 8px}
 }
+
+
+/* Keep gameplay feedback visible while the browser restores a lost WebGL context. */
+#graphics-recovery{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;box-sizing:border-box;padding:24px;background:rgba(12,15,18,.94);color:#f5ead6;text-align:center;font-size:18px;font-weight:800;text-shadow:0 2px 3px #000;pointer-events:auto}
+#graphics-recovery.open{display:flex}

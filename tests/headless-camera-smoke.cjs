@@ -327,6 +327,17 @@ check('renderer uses the native animation loop and offers refresh-aware FPS caps
   mainSource.includes('renderer.setAnimationLoop(frame)') &&
   mainSource.includes('G.setFpsCap') &&
   mainSource.includes('144'));
+check('WebGL context loss saves the current state and freezes gameplay simulation',
+  mainSource.includes("renderer.domElement.addEventListener('webglcontextlost'") &&
+  mainSource.includes('if (G.save && G.save.saveNow) G.save.saveNow();') &&
+  mainSource.includes('if (contextLost) { last = now; return; }') &&
+  mainSource.includes('showGraphicsRecovery(true)'));
+check('WebGL context restoration resets frame timing and clears the recovery notice',
+  mainSource.includes("renderer.domElement.addEventListener('webglcontextrestored'") &&
+  mainSource.includes('last = performance.now();') &&
+  mainSource.includes('accT = accN = hudT = 0;') &&
+  mainSource.includes('showGraphicsRecovery(false)') &&
+  fs.readFileSync(path.join(root, 'css', 'style.css'), 'utf8').includes('#graphics-recovery.open{display:flex}'));
 check('live coordinate HUD is present and updated from player position',
   indexSource.includes('id="coords"') &&
   mainSource.includes("coordsHud.textContent = 'X '") &&
@@ -389,11 +400,11 @@ check('expanded minimap has interactive wheel and pinch zoom that persist settin
   minimapSource.includes('map-zoom-in') &&
   minimapSource.includes('G.menu.settings.mapZoom=M.zoom'));
 check('offline cache is bumped and versioned local assets prevent stale code from loading',
-  swSource.includes("CACHE_NAME = 'besidevalley-shell-v12'") &&
+  swSource.includes("CACHE_NAME = 'besidevalley-shell-v13'") &&
   swSource.includes("url.searchParams.get('v')") &&
   swSource.includes('function fallbackCacheKey(requestUrl)') &&
   swSource.includes('cache.match(fallbackKey)') &&
-  indexSource.includes('20261104-offline-v12'));
+  indexSource.includes('20261104-webgl-recovery-v13'));
 check('player jump input triggers a short takeoff pose independent of refresh rate',
   rigSource.includes("state === 'jump'") && rigSource.includes('this.jumpT = 0.32') &&
   rigSource.includes('var jumpPulse = Math.sin') && playerSource.includes("rig.play('jump'"));
