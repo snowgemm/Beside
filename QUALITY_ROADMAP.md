@@ -20,7 +20,7 @@ A cohesive smooth-toon adventure game that is readable, responsive and stable on
 - Lifecycle fixes for held touch/keyboard input on page blur, hidden-tab and pagehide; WebGL context-loss recovery.
 
 **Evidence limits**
-- Main's previous CI run passed 26 JavaScript syntax checks and 62 headless camera/input checks. The new Stage 15 resource and motion changes must pass CI before merge.
+- Stage 15 branch CI passed 26 JavaScript syntax checks and 66 headless camera/input checks, including borrowed-resource cleanup, idempotency, reduced-motion and cache-version regressions.
 - The checked-in `assets/models/` and `assets/sfx/` folders currently contain only `.gitkeep` placeholders.
 - Headless tests do not prove correct GPU rendering, visual quality, sound mix, heat, battery use or real Android touch behavior.
 - The Game Development Studio `game-dev` CLI is not installed in the current environment. No provider generation, Blender normalization, package build or package vendoring has been run.
