@@ -1,24 +1,25 @@
 # Besidevalley: asset sources and license notes
 
-## Integrated models
+## Current integrated sources
 
-The game loads optional environment props over HTTPS from public asset mirrors. If a remote model fails, the procedural fallback remains available.
+The runtime's checked-in `assets/models/` and `assets/sfx/` folders currently contain only `.gitkeep` placeholders. The game can load optional local GLBs/audio files, while selected environment models are fetched from public mirrors and cached in IndexedDB. Procedural scenery and synthesized sound remain fallbacks.
 
-- **Quaternius Stylized Nature MegaKit (CC0):** [official pack and license](https://quaternius.com/packs/stylizednaturemegakit.html). Three broadleaf tree variants and a bush are GLB files mirrored in [skyline-run](https://github.com/anshaneja5/skyline-run), whose [credits file](https://github.com/anshaneja5/skyline-run/blob/main/CREDITS.md) identifies the tree and bush models as Quaternius CC0 assets.
-- **Kenney Nature Kit (CC0):** [official pack](https://kenney.nl/assets/nature-kit) · [Kenney license/support](https://kenney.nl/support) · [public GLB mirror](https://github.com/Hidencod/tge-assets). Used for the pine tree, small rock and mushroom fallback props.
-- A small 3D coin model is used for trinket drops, with a rarity-coloured ring. A potion model is cached for later use; it is not currently shown as a gameplay item.
+- **Kenney Nature Kit / Mini Dungeon:** the repository maps the pine, small rock, mushroom prop, coin and potion models to a public GLB mirror. Kenney's official support page says assets on its asset pages are CC0; verify the exact pack's included license before shipping a copy. [Kenney support](https://kenney.nl/support).
+- **Quaternius Stylized Nature MegaKit:** the mirror's credits file attributes broadleaf tree variants and a bush to Quaternius. Do not label these files CC0 without the original pack's license evidence. Quaternius currently publishes **Quaternius Asset License (QAL) v1.0**, last updated 2026-08-28. It permits incorporation into personal, educational and commercial products, but prohibits redistributing the assets themselves as standalone assets. Check the license that accompanied the exact source download before relying on an older CC0 claim. [Current Quaternius license](https://quaternius.com/license.html).
 
-## Free sources for future assets
+## Sources suitable for future review
 
-- [Kenney assets](https://kenney.nl/assets) — environment props, game UI, icons and audio; Kenney packs are generally CC0.
-- [Quaternius](https://quaternius.com/) — stylized environment and character packs; verify the specific pack license before shipping.
-- [KayKit](https://kaylousberg.com/game-assets) — stylized environments, characters and resources; follow the license on each pack.
+- [Kenney assets](https://kenney.nl/assets) — UI, environment, props and audio packs; official support describes asset-page releases as CC0.
+- [Quaternius](https://quaternius.com/) — stylized models and animations; verify QAL or the exact pack license.
 - [Poly Haven](https://polyhaven.com/) — CC0 models, HDRIs and PBR textures. [License](https://polyhaven.com/license).
-- [ambientCG](https://ambientcg.com/) — CC0 material/texture library.
-- [Poly Pizza](https://poly.pizza/) — low-poly models; individual licenses vary, so preserve attribution where the model requires it.
+- [ambientCG](https://ambientcg.com/) — CC0 PBR materials and scans; verify the current source-page terms for each download.
+- [Poly Pizza](https://poly.pizza/) — individual asset licenses vary; preserve required attribution.
 
-## Integration notes
+## Integration and supply-chain rules
 
-- Runtime uses Three.js r128 and GLTFLoader. Three textured tree silhouettes are used near the player and a merged low-detail tree mesh is used at distance to limit draw calls. Successfully downloaded GLBs are persisted in IndexedDB; offline-first sessions retain procedural fallback scenery. Imported models preserve their texture data and use rough, non-metallic lit materials.
-- Imported scenery props are static. Existing character movement, idle and combat animations stay on the compatible procedural rig; skeletal clips are not applied to an incompatible character rig.
-- No paid assets or proprietary game UI are bundled. Check the source page and license of every added asset before publishing.
+- Runtime uses Three.js r128 and the matching `GLTFLoader`. Keep that version pinned until a dedicated engine migration includes loader, renderer, mobile-GPU and offline-cache tests.
+- Remote models currently use mutable Git branch URLs. Before a release that depends on a remote asset, pin its source to an immutable commit or vendor a verified package with provenance and hashes.
+- Inspect GLB dimensions, orientation, node hierarchy, materials, textures and triangle counts before integration. File extension and mirror credits alone are not verification.
+- Preserve source PBR textures; do not replace them with unlit materials. The runtime currently tunes imported Standard materials toward rough, non-metallic surfaces.
+- Imported environment props are static. Existing character animation remains procedural.
+- Do not add paid or provider-generated assets without a separately approved exact request and spend limit. Do not redistribute an asset pack as a standalone asset collection.
