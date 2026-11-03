@@ -1,56 +1,78 @@
 # Besidevalley: Dungeons — Art Bible
 
-**Direction (decided):** stylized voxels. Flat per-voxel colours from `Game.palette`, no image textures, tiny seeded per-voxel lightness noise (3–6%, `palette.jitter`), soft shading from the existing lighting (rig vertex shading, world `tint`). Cheap on phones, easy to generate by code. Look: Cube World / Veloren.
+## Visual direction
 
-## Units (1 world unit = 1 terrain block)
-| Category | Smallest box | Notes |
-|---|---|---|
-| Terrain, structures | 1.0 | world blocks, dungeon walls |
-| Props (chest, door, gate, portal) | 0.25 snap | large parts may be bigger boxes |
-| Characters and mobs | 0.05 snap, ~0.1 typical | a rig "voxel" = one chunky box part |
-| Held items / weapon parts | 0.05 | |
-| Item icons | 12x12 pixel grid | `Game.icons.GRID` |
+**Current direction:** a hybrid stylized-toon world with chunky, hand-built characters and props. The overworld is a smooth heightmap with biome/height/slope vertex colours, restrained surface detail, stylized water and low-poly vegetation. Characters and several dungeon props retain readable block-built silhouettes. Imported environment GLBs keep their source PBR maps and are tuned toward rough, non-metallic surfaces so they sit closer to the game's soft lighting.
 
-## Character proportions
-Player 1.7 tall. Head ≈ 1/3 of height (30–36%, wider than the torso), torso ≈ 30%, legs ≈ 30%. Chunky limbs: arm/leg thickness 0.12–0.2 (at least 1/8 of height). Eyes are flat unshaded boxes on the face. Forward is -Z. Mob rigs keep the same big-head, short-limb look.
+Do not describe the current world as a pure voxel terrain renderer. The active terrain module is `js/legacy-world.js`; the retired block renderer is not loaded by `index.html`.
 
-## Mob size classes
-| Class | Height | Examples |
-|---|---|---|
-| S | ≤ 1.0 | slime, wolf, bat, spider |
-| M | 1.0–2.0 | mushroom, goblin, archer, skeleton |
-| L | > 2.0 | boss (3.4) |
+**Design goals:** readable silhouettes, calm colour grouping, consistent scale, deliberate animation, low visual noise, and stable performance on Android phones. Add detail only when it improves navigation, feedback or recognition.
 
-## Performance budgets (weak phones)
-One box = 1 voxel = 12 triangles. Rig trim bands (`color2`) count as boxes. `Game.assets.budgets` holds these numbers; the gallery warns when over.
-| Category | Max voxels | Max triangles |
-|---|---|---|
-| character (player + weapon) | 24 | 288 |
-| mob S | 16 | 192 |
-| mob M | 20 | 240 |
-| mob L | 28 | 336 |
-| prop small (≤1.5 high) | 40 | 480 |
-| prop large | 120 | 1440 |
-| item icon | 96 filled cells | 0 |
-| item held 3D | 12 | 144 |
+## World and material rules
 
-Scene guide: ≤ 20 active mobs (≈ 5k tris), creatures + props ≤ 15k tris, whole frame ≤ 60k tris. Share geometry and materials (rig does); no per-frame allocation.
+- Terrain: smooth heightmap, shared edge normals, biome and elevation colour ramps, soft painted variation, gentle shoreline foam and water movement.
+- Lighting: built-in Three.js lighting and toon materials; keep material response stable through the day/night cycle.
+- Environment models: static GLB props may preserve base-colour/normal/roughness texture data. The loader currently raises roughness to at least 0.82, sets metalness to 0 and uses a restrained environment intensity.
+- Vegetation: capped instance batches and distance-aware detail. Avoid thin high-frequency detail that becomes noisy or flickers at phone resolutions.
+- Character rigs: chunky box-part construction with seeded colour variation and shared geometry/material caches. Use a small, consistent palette rather than arbitrary new colours.
+- Textures: do not add high-resolution maps by default. Every map needs a visible purpose, a size budget and a compatible fallback.
 
-## Rarity colours
-common white `#f2f2f2`, uncommon green `#4ccf4c`, rare blue `#4c8dff`, epic purple `#b24cff`, legendary orange `#ff9a1f` (`Game.palette.rarity`). Legacy: the game UI still draws common as grey `#b8b8b8`.
+## Scale and silhouette
 
-## Naming
-- Ids: lowercase English snake_case (`stone_golem`), same id for registry key, GLB file (`assets/models/<id>.glb`) and manifest entry.
-- Items: id = icon kind (`sword`, `plate`, `ring`). Display names stay Vietnamese, in UI only.
-- Rig parts: camelCase with side suffix (`legL`, `armR`, `eyeL`, `wingL2`); animation role = name.
-- Colours: only from `Game.palette`; never raw hex in new assets (use `palette.shade(ramp, step)`).
-- Rarity ids: common, uncommon, rare, epic, legendary.
+1 world unit is one terrain block.
 
-## Adding a new asset (this codebase)
-1. Pick category + budget above; pick colours from `Game.palette` (e.g. `Game.palette.shade(Game.palette.cloth.red, 2)`).
-2. **Mob:** add an entry to `TYPES` in `js/enemies.js` with `spec` built by `Game.rig.part(...)` (format in `js/rig.js`), plus `ai`/`proj` if needed and a `loot.sources` entry in `js/items.js`. Optional GLB override: add a line to `MANIFEST.models` in `js/assets.js`.
-3. **Prop:** add a no-argument factory `name: function () { return THREE.Group }` to `D.visuals` in `js/dungeon.js` (use `G.assets.model(name)` first, then primitives).
-4. **Item:** add a base to `BASES` in `js/items.js`, a pixel grid to `GRID` and its Vietnamese name prefix to `BYNAME` in `js/icons.js`.
-5. **Character:** edit `makeSpec` in `js/player.js`.
-6. Open `gallery.html`: the asset appears automatically (registry reads the code above). Check counts, then the "Kiểm tra" tab (`Game.assets.validate()`) for budget / off-palette / missing-id reports.
-7. Update `STATE.md`.
+| Category | Scale guidance |
+|---|---|
+| Terrain and dungeon structures | Existing world-unit grid and room dimensions |
+| Props | Snap major dimensions to 0.25 units where practical |
+| Characters and creatures | Player height 1.7; large head and short, readable limbs |
+| Collectibles | Readable at the default camera distance; use a simple silhouette and rarity cue |
+| Item icons | Existing 12×12 pixel grid in `Game.icons.GRID` |
+
+Character proportions should remain consistent: head around one-third of player height, torso and legs around 30% each, with thick enough limbs to remain readable on mobile. Forward is -Z for the procedural rigs; imported models are normalized to the manifest's facing convention.
+
+## Performance budgets
+
+One procedural box contributes 12 triangles. Existing runtime budgets are defined in `Game.assets.budgets` and surfaced by `gallery.html`.
+
+| Category | Max boxes | Max triangles |
+|---|---:|---:|
+| Character rig | 24 | 288 |
+| Small creature | 16 | 192 |
+| Medium creature | 20 | 240 |
+| Large creature | 28 | 336 |
+| Small prop | 40 | 480 |
+| Large prop | 120 | 1440 |
+| Item icon | 96 filled cells | — |
+
+Scene guide from the current project: keep active creature and prop counts bounded, share cached geometry/materials, and avoid per-frame object allocation. Re-check budgets after adding models; GLB budgets must include imported triangles and texture memory, not only procedural boxes.
+
+## Colour system
+
+Use `Game.palette` ramps for new procedural assets. Keep rarity colours consistent with `Game.palette.rarity` and the existing icon renderer. Do not silently recolour imported source assets; report off-palette differences in the asset gallery and decide them intentionally.
+
+## Interface direction
+
+- Keep the HUD compact and legible over bright and dark terrain.
+- Preserve safe-area spacing, large touch controls and the existing portrait/landscape layouts.
+- Keep menus short and grouped by task; avoid adding settings that users cannot understand or verify.
+- Prefer solid surfaces and restrained borders over decorative gradients.
+- Motion should communicate state: hit confirmation, pickup, screen transition and important encounter changes. Avoid animation that delays input or competes with combat readability.
+- Respect `prefers-reduced-motion`; gameplay simulation and timing must not depend on CSS animation events.
+
+## Audio direction
+
+- Every sound event needs a clear gameplay purpose and a restrained mix level.
+- Preserve the generated-sound fallback when optional audio files are missing or decoding fails.
+- Load/decode an effect once, reuse its AudioBuffer, and create a new source node for each playback.
+- Unlock audio only from a user gesture, respect the user's volume setting, and pause/suspend appropriately when the page is hidden.
+
+## Adding or changing an asset
+
+1. Identify its gameplay purpose and whether it is actually missing.
+2. Verify source, exact license version, provenance and redistribution constraints before downloading.
+3. Define scale, silhouette, topology, material and texture budgets, plus a fallback.
+4. Inspect and validate the GLB/audio/texture bytes before integration. Do not rely on a filename or a mirror's description as license proof.
+5. Keep imported model resources owned by the asset cache; instances borrow their geometry/material. Use `Game.assets.disposeInstance()` when removing scene-owned objects.
+6. Check the asset in `gallery.html`, run `Game.assets.validate()`, then test its actual in-game appearance on a phone.
+7. Update `ASSETS.md`, `assets/README.md` and `STATE.md` with source and verification evidence.
