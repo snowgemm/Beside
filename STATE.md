@@ -144,6 +144,7 @@ Stage 15 (asset ownership and visual-quality foundation; 2026-11-04):
 - GLB clones mark mesh geometry/material as borrowed from the cached model template.
 - `Game.assets.disposeInstance(root)` skips borrowed GLB resources, disposes only local mesh geometry/material, deduplicates shared local references and is idempotent.
 - Dungeon cleanup and gallery prop previews use the shared-safe disposer.
+- Bumped service-worker shell cache and versioned local assets to v15 after runtime/style changes.
 - UI CSS respects `prefers-reduced-motion` while keeping timed toast/banner feedback visible.
 - Refreshed `ART.md` for the current smooth-toon heightmap world with chunky procedural rigs; corrected stale PBR/material guidance in `assets/README.md`.
 - Corrected the asset source notes: Quaternius publishes QAL v1.0 (updated 2026-08-28); mirror attribution is not sufficient evidence to label the exact assets CC0. Verify the original package license before shipping.
