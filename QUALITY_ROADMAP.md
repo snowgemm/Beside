@@ -48,12 +48,13 @@ A cohesive smooth-toon adventure game that is readable, responsive and stable on
 
 ### P1 — Page lifecycle, save and audio
 
-- On a hidden page, stop unnecessary game simulation/render work, clear transient inputs, save once and suspend audio when appropriate.
-- On return, reset frame clocks; do not simulate a large catch-up step.
-- Resume Web Audio only after a valid user gesture when the browser keeps the context suspended.
-- Preserve old save compatibility and keep WebGL loss/recovery handling independent from ordinary page visibility.
+**Stage 16 completed in code; phone verification remains pending.**
+- Hidden/pagehide states gate the render loop before simulation work; visibility/pageshow resets frame clocks and FPS/adaptive-quality windows.
+- Existing save and input modules handle state persistence and held-input cleanup.
+- Web Audio suspends in the background. A fresh user gesture resumes a suspended/interrupted context after foreground or BFCache restore; it never auto-plays on return.
+- Keep WebGL loss/recovery separate from ordinary visibility lifecycle.
 
-**Acceptance:** switching away and returning does not leave movement/jump stuck, advance the world invisibly or play duplicate sound.
+**Acceptance:** switching away and returning does not leave movement/jump stuck, advance the world invisibly, simulate a catch-up frame or auto-play audio without a gesture.
 
 ### P2 — UI/UX and interface architecture
 

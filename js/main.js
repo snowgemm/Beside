@@ -74,6 +74,25 @@
   var hud = document.getElementById('hud'), coordsHud = document.getElementById('coords');
   var last = performance.now(), accT = 0, accN = 0, hudT = 0, fps = 0, slowT = 0, lowered = 0, adaptiveSlowT = 0, adaptiveFastT = 0;
   var contextLost = false, recoveryNotice = null;
+  var pageHidden = !!document.hidden;
+  function resetFrameClock(now) {
+    last = typeof now === 'number' ? now : performance.now();
+    accT = accN = hudT = 0;
+    fps = slowT = adaptiveSlowT = adaptiveFastT = 0;
+  }
+  // Browsers throttle or stop animation callbacks for hidden pages; keep the simulation clock from catching up later.
+  document.addEventListener('visibilitychange', function () {
+    pageHidden = !!document.hidden;
+    resetFrameClock();
+  });
+  window.addEventListener('pagehide', function () {
+    pageHidden = true;
+    resetFrameClock();
+  });
+  window.addEventListener('pageshow', function () {
+    pageHidden = !!document.hidden;
+    resetFrameClock();
+  });
 
   function showGraphicsRecovery(show) {
     if (!recoveryNotice) {
@@ -107,7 +126,7 @@
   }, false);
 
   function frame(now) {
-    if (contextLost) { last = now; return; }
+    if (contextLost || pageHidden) { last = now; return; }
     var elapsedMs = now - last;
     if (desiredFps > 0 && elapsedMs + 0.05 < 1000 / desiredFps) return;
     var raw = elapsedMs / 1000; last = now;
