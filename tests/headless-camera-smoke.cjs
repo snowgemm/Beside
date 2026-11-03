@@ -171,6 +171,11 @@ check('hidden page clears held controls and one-shot actions',
   G.input.moveX === 0 && G.input.moveZ === 0 && !G.input.jump &&
   !G.input.attackQ && !G.input.dodgeQ && !G.input.invToggle && !G.input.interactQ);
 document.hidden = false;
+fire(listeners['win:keydown'], { code: 'KeyA', repeat: false, preventDefault() {} });
+G.input.poll();
+fire(listeners['win:pagehide'], {});
+G.input.poll();
+check('pagehide also clears held keyboard movement', G.input.moveX === 0 && G.input.moveZ === 0);
 function wheel(deltaY) {
   let prevented = false;
   for (const callback of [...(listeners['doc:wheel'] || []), ...(canvas.listeners.wheel || [])]) {
