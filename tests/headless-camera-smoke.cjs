@@ -388,10 +388,24 @@ const minimapSource = fs.readFileSync(path.join(jsDir, 'minimap.js'), 'utf8');
 const fxSource = fs.readFileSync(path.join(jsDir, 'fx.js'), 'utf8');
 const swSource = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
 const styleSource = fs.readFileSync(path.join(root, 'css', 'style.css'), 'utf8');
+const audioSource = fs.readFileSync(path.join(jsDir, 'combat.js'), 'utf8');
 check('UI honors reduced-motion preferences while keeping timed feedback visible',
   styleSource.includes('@media (prefers-reduced-motion: reduce)') &&
   styleSource.includes('#hp.low, #hp.low #hp-fill') &&
   styleSource.includes('#banner.show { opacity: 1; transform: translateX(-50%); }'));
+
+check('hidden-page lifecycle freezes the game loop and resets frame timing on return',
+  mainSource.includes('var pageHidden = !!document.hidden') &&
+  mainSource.includes("document.addEventListener('visibilitychange'") &&
+  mainSource.includes("window.addEventListener('pageshow'") &&
+  mainSource.includes('if (contextLost || pageHidden) { last = now; return; }') &&
+  mainSource.includes('adaptiveSlowT = adaptiveFastT = 0'));
+check('audio suspends in background and resumes only after a user gesture',
+  audioSource.includes("document.addEventListener('visibilitychange'") &&
+  audioSource.includes("A.ctx.suspend()") &&
+  audioSource.includes('else if (A.ctx && A.ctx.state !== \'running\') attach()') &&
+  audioSource.includes('A.ctx.resume()') &&
+  audioSource.includes('function attach()'));
 
 check('story-driven UI no longer exposes block-build/place controls',
   !/id="btn-(build|break|place)"/.test(indexSource) &&
