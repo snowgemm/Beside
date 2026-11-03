@@ -116,7 +116,7 @@
   W.useProvider = function (p) { p = p || W.ow; W.getHeight = p.getHeight; W.getBlock = p.getBlock; W.solid = p.solid; };
   W.hold = function (on) { W.held=!!on; chunks.forEach(function(m){m.visible=!on;}); if(water)water.visible=!on; if(grassMesh)grassMesh.visible=!on; if(flowerMesh)flowerMesh.visible=!on; if(!on)dirty=true; };
   var scene, material, decorMat, water, waterGeom, waterPos, waterCol, waterTime=0, waterAx=1e9, waterAz=1e9, wtex, grain, terrainNormal, surfaceQuality='medium', tr=1,tg=1,tb=1,chunks=new Map(),queue=[],qi=0,lcx=1e9,lcz=1e9,dirty=true;
-  var grassMesh,flowerMesh,grassMaterial,flowerMaterial,grassTarget=44,flowerTarget=14,grassDirty=true,grassX=1e9,grassZ=1e9,grassDummy,flowerColor,grassColor,grassBaseColor,grassTintColor;
+  var grassMesh,flowerMesh,grassMaterial,flowerMaterial,grassTarget=44,flowerTarget=14,grassDirty=true,grassX=1e9,grassZ=1e9,grassDummy,flowerColor,grassColor,grassTintColor;
 
   function mkTex(size, fn, rep, colorTexture) {
     try {
@@ -222,7 +222,7 @@
   };
   function initGrass(){
     if(grassMesh||!scene)return;
-    grassBaseColor=new THREE.Color(0xffffff);grassTintColor=new THREE.Color(1,1,1);
+    grassTintColor=new THREE.Color(1,1,1);
     grassMaterial=new THREE.MeshBasicMaterial({color:0xffffff,side:THREE.DoubleSide,toneMapped:false});
     flowerMaterial=new THREE.MeshStandardMaterial({color:0xffffff,vertexColors:true,roughness:.9});
     grassMesh=new THREE.InstancedMesh(grassGeometry(),grassMaterial,1050);flowerMesh=new THREE.InstancedMesh(flowerGeometry(),flowerMaterial,135);
@@ -258,7 +258,7 @@
       if(grassMesh.setColorAt)grassMesh.setColorAt(gn,grassColor);gn++;
       if(fn<flowerTarget&&hash(Math.floor(wx+121),Math.floor(wz-91))<.09){
         flowerColor.setRGB(.95,.76+hash(Math.floor(wx),Math.floor(wz))*.22,.88);flowerMesh.setColorAt(fn,flowerColor);
-        grassDummy.position.y=h+.16;grassDummy.scale.setScalar(.7+hash(Math.floor(wx+7),Math.floor(wz-9))*.35);
+        grassDummy.position.y=h+.055;grassDummy.scale.setScalar(.7+hash(Math.floor(wx+7),Math.floor(wz-9))*.35);
         grassDummy.updateMatrix();flowerMesh.setMatrixAt(fn++,grassDummy.matrix);
       }
     }
