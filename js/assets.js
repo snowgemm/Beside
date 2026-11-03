@@ -68,7 +68,24 @@
     if (!t) return null;
     var c = t.clone(true);
     c.userData = {};
+    // Mesh.copy() shares geometry/material with the cached template; mark these refs as borrowed.
+    c.traverse(function (o) {
+      if (o.isMesh) {
+        o.userData = o.userData || {};
+        o.userData.sharedAssetResources = true;
+      }
+    });
     return c;
+  };
+  A.disposeInstance = function (root) {
+    if (!root || typeof root.traverse !== 'function') return;
+    root.traverse(function (o) {
+      if (!o.isMesh || (o.userData && o.userData.sharedAssetResources)) return;
+      if (o.geometry && o.geometry.dispose) o.geometry.dispose();
+      if (Array.isArray(o.material)) {
+        o.material.forEach(function (m) { if (m && m.dispose) m.dispose(); });
+      } else if (o.material && o.material.dispose) o.material.dispose();
+    });
   };
   A.sound = function (name) {
     var b = bufs[name], ctx = G.audio && G.audio.ctx;
@@ -220,7 +237,7 @@
     if (V) Object.keys(V).forEach(function (n) {
       var f = V[n];
       if (typeof f !== 'function' || f.length !== 0) return;
-      out.push({ id: n, cat: 'prop', name: n, make: function () { var o = f(); return { obj: o, rig: null, dispose: function () { o.traverse(function (c) { if (c.geometry) c.geometry.dispose(); }); } }; } });
+      out.push({ id: n, cat: 'prop', name: n, make: function () { var o = f(); return { obj: o, rig: null, dispose: function () { A.disposeInstance(o); } }; } });
     });
     if (B && G.icons) for (slot in B) B[slot].forEach(function (b) {
       var kind = G.icons.kindOf({ name: b.name, slot: slot });
