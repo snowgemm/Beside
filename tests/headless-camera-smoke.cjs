@@ -136,12 +136,46 @@ G.player.init(scene, camera, { x: 0, y: 2, z: 0.5 });
 const canvas = element('canvas');
 canvas.requestPointerLock = () => { document.pointerLockElement = canvas; };
 G.input.init(canvas);
+
 if (G.phys && G.phys.init) G.phys.init();
 
 const results = [];
 function check(name, condition, detail = '') {
   results.push({ name, pass: Boolean(condition), ...(detail ? { detail } : {}) });
 }
+
+function fire(list, event) {
+  for (const callback of [...(list || [])]) callback(event);
+}
+const touchLayer = element('touch');
+fire(listeners['win:keydown'], { code: 'KeyW', repeat: false, preventDefault() {} });
+G.input.poll();
+check('keyboard movement is registered before focus loss', G.input.moveZ === 1);
+fire(touchLayer.listeners.touchstart, { changedTouches: [{ identifier: 7, clientX: 100, clientY: 100 }], preventDefault() {} });
+fire(touchLayer.listeners.touchmove, { changedTouches: [{ identifier: 7, clientX: 156, clientY: 100 }], preventDefault() {} });
+fire(element('btn-jump').listeners.touchstart, { preventDefault() {}, stopPropagation() {} });
+G.input.poll();
+check('touch joystick and jump are registered before focus loss', G.input.moveX > 0.99 && G.input.jump);
+fire(listeners['win:blur'], {});
+G.input.poll();
+check('window blur clears keyboard, joystick and held jump input',
+  G.input.moveX === 0 && G.input.moveZ === 0 && !G.input.jump &&
+  element('joy').style.display === 'none' && element('joy-knob').style.transform === 'translate(0px,0px)');
+fire(listeners['win:keydown'], { code: 'KeyD', repeat: false, preventDefault() {} });
+fire(element('btn-attack').listeners.touchstart, { preventDefault() {}, stopPropagation() {} });
+G.input.poll();
+document.hidden = true;
+fire(listeners['doc:visibilitychange'], {});
+G.input.poll();
+check('hidden page clears held controls and one-shot actions',
+  G.input.moveX === 0 && G.input.moveZ === 0 && !G.input.jump &&
+  !G.input.attackQ && !G.input.dodgeQ && !G.input.invToggle && !G.input.interactQ);
+document.hidden = false;
+fire(listeners['win:keydown'], { code: 'KeyA', repeat: false, preventDefault() {} });
+G.input.poll();
+fire(listeners['win:pagehide'], {});
+G.input.poll();
+check('pagehide also clears held keyboard movement', G.input.moveX === 0 && G.input.moveZ === 0);
 function wheel(deltaY) {
   let prevented = false;
   for (const callback of [...(listeners['doc:wheel'] || []), ...(canvas.listeners.wheel || [])]) {
@@ -400,11 +434,11 @@ check('expanded minimap has interactive wheel and pinch zoom that persist settin
   minimapSource.includes('map-zoom-in') &&
   minimapSource.includes('G.menu.settings.mapZoom=M.zoom'));
 check('offline cache is bumped and versioned local assets prevent stale code from loading',
-  swSource.includes("CACHE_NAME = 'besidevalley-shell-v13'") &&
+  swSource.includes("CACHE_NAME = 'besidevalley-shell-v14'") &&
   swSource.includes("url.searchParams.get('v')") &&
   swSource.includes('function fallbackCacheKey(requestUrl)') &&
   swSource.includes('cache.match(fallbackKey)') &&
-  indexSource.includes('20261104-webgl-recovery-v13'));
+  indexSource.includes('20261104-input-reset-v14'));
 check('player jump input triggers a short takeoff pose independent of refresh rate',
   rigSource.includes("state === 'jump'") && rigSource.includes('this.jumpT = 0.32') &&
   rigSource.includes('var jumpPulse = Math.sin') && playerSource.includes("rig.play('jump'"));

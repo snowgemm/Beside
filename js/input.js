@@ -25,7 +25,8 @@
       else if ((e.code === 'ShiftLeft' || e.code === 'ShiftRight') && !e.repeat) I.dodgeQ = true;
     });
     window.addEventListener('keyup', function (e) { if (map[e.code]) k[map[e.code]] = false; });
-    window.addEventListener('blur', function () { k = {}; });
+    // Reset every held control when the page loses focus; touchend is not guaranteed on app switches.
+
 
     canvas.addEventListener('click', function () {
       if (!isTouch && document.pointerLockElement !== canvas && canvas.requestPointerLock) canvas.requestPointerLock();
@@ -62,6 +63,23 @@
 
     var layer = document.getElementById('touch'), jb = document.getElementById('joy'), kn = document.getElementById('joy-knob');
     var joyId = null, jcx = 0, jcy = 0, lookId = null, lx = 0, ly = 0, R = 56;
+    function resetTransientInput() {
+      k = {};
+      joyId = lookId = null;
+      joy.x = joy.z = 0;
+      jumpT = false;
+      I.moveX = I.moveZ = 0;
+      I.jump = false;
+      I.lookDX = I.lookDY = 0;
+      I.attackQ = I.dodgeQ = I.invToggle = I.interactQ = I.viewToggle = false;
+      jb.style.display = 'none';
+      kn.style.transform = 'translate(0px,0px)';
+    }
+    window.addEventListener('blur', resetTransientInput);
+    window.addEventListener('pagehide', resetTransientInput);
+    document.addEventListener('visibilitychange', function () {
+      if (document.hidden) resetTransientInput();
+    });
     function setJoy(x, y) {
       var dx = x - jcx, dy = y - jcy, l = Math.hypot(dx, dy);
       if (l > R) { dx *= R / l; dy *= R / l; }
