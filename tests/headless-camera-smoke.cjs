@@ -137,12 +137,17 @@ const canvas = element('canvas');
 canvas.requestPointerLock = () => { document.pointerLockElement = canvas; };
 G.input.init(canvas);
 
+if (G.phys && G.phys.init) G.phys.init();
+
+const results = [];
+function check(name, condition, detail = '') {
+  results.push({ name, pass: Boolean(condition), ...(detail ? { detail } : {}) });
+}
+
 function fire(list, event) {
   for (const callback of [...(list || [])]) callback(event);
 }
 const touchLayer = element('touch');
-const joystick = element('joy');
-const joystickKnob = element('joy-knob');
 fire(listeners['win:keydown'], { code: 'KeyW', repeat: false, preventDefault() {} });
 G.input.poll();
 check('keyboard movement is registered before focus loss', G.input.moveZ === 1);
@@ -166,12 +171,6 @@ check('hidden page clears held controls and one-shot actions',
   G.input.moveX === 0 && G.input.moveZ === 0 && !G.input.jump &&
   !G.input.attackQ && !G.input.dodgeQ && !G.input.invToggle && !G.input.interactQ);
 document.hidden = false;
-if (G.phys && G.phys.init) G.phys.init();
-
-const results = [];
-function check(name, condition, detail = '') {
-  results.push({ name, pass: Boolean(condition), ...(detail ? { detail } : {}) });
-}
 function wheel(deltaY) {
   let prevented = false;
   for (const callback of [...(listeners['doc:wheel'] || []), ...(canvas.listeners.wheel || [])]) {
