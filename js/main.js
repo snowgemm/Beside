@@ -73,7 +73,41 @@
 
   var hud = document.getElementById('hud'), coordsHud = document.getElementById('coords');
   var last = performance.now(), accT = 0, accN = 0, hudT = 0, fps = 0, slowT = 0, lowered = 0, adaptiveSlowT = 0, adaptiveFastT = 0;
+  var contextLost = false, recoveryNotice = null;
+
+  function showGraphicsRecovery(show) {
+    if (!recoveryNotice) {
+      recoveryNotice = document.createElement('div');
+      recoveryNotice.id = 'graphics-recovery';
+      recoveryNotice.setAttribute('role', 'status');
+      recoveryNotice.setAttribute('aria-live', 'polite');
+      recoveryNotice.textContent = 'Đang khôi phục đồ họa… Vui lòng giữ trang mở.';
+      document.body.appendChild(recoveryNotice);
+    }
+    if (show) recoveryNotice.classList.add('open');
+    else recoveryNotice.classList.remove('open');
+  }
+
+  // Three.js r128 rebuilds its WebGL internals on restore; stop gameplay while no frame can be drawn.
+  renderer.domElement.addEventListener('webglcontextlost', function (event) {
+    event.preventDefault();
+    if (contextLost) return;
+    contextLost = true;
+    if (G.save && G.save.saveNow) G.save.saveNow();
+    showGraphicsRecovery(true);
+  }, false);
+
+  renderer.domElement.addEventListener('webglcontextrestored', function () {
+    if (!contextLost) return;
+    contextLost = false;
+    last = performance.now();
+    accT = accN = hudT = 0;
+    showGraphicsRecovery(false);
+    if (G.toast) G.toast('Đồ họa đã khôi phục', '#8affb0');
+  }, false);
+
   function frame(now) {
+    if (contextLost) { last = now; return; }
     var elapsedMs = now - last;
     if (desiredFps > 0 && elapsedMs + 0.05 < 1000 / desiredFps) return;
     var raw = elapsedMs / 1000; last = now;
