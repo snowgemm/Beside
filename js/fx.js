@@ -7,6 +7,23 @@
   var bx = new Float32Array(AMB), by = new Float32Array(AMB), bz = new Float32Array(AMB), ph = new Float32Array(AMB), sp = new Float32Array(AMB);
   function rnd(a, b) { return a + Math.random() * (b - a); }
 
+  function particleSpriteTexture() {
+    var canvas = document.createElement('canvas');
+    canvas.width = canvas.height = 32;
+    var ctx = canvas.getContext('2d');
+    var gradient = ctx.createRadialGradient(16, 16, 0, 16, 16, 16);
+    gradient.addColorStop(0, 'rgba(255,255,255,1)');
+    gradient.addColorStop(0.72, 'rgba(255,255,255,0.95)');
+    gradient.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, 32, 32);
+    var texture = new THREE.CanvasTexture(canvas);
+    texture.magFilter = THREE.LinearFilter;
+    texture.minFilter = THREE.LinearFilter;
+    texture.generateMipmaps = false;
+    return texture;
+  }
+
   F.setQuality = function (level) {
     particleLevel = level === 'low' || level === 'high' ? level : 'medium';
     emitEvery = particleLevel === 'low' ? 3 : particleLevel === 'medium' ? 2 : 1;
@@ -21,7 +38,12 @@
     for (i = 0; i < AMB; i++) { bx[i] = 1e9; bz[i] = 1e9; ph[i] = Math.random() * 6.283; sp[i] = rnd(0.6, 1.4); }
     pa = new THREE.BufferAttribute(P, 3); ca = new THREE.BufferAttribute(C, 3);
     geo.setAttribute('position', pa); geo.setAttribute('color', ca);
-    pts = new THREE.Points(geo, new THREE.PointsMaterial({ size: 0.26, sizeAttenuation: true, vertexColors: true, fog: true }));
+    var sprite = particleSpriteTexture();
+    pts = new THREE.Points(geo, new THREE.PointsMaterial({
+      size: 0.26, sizeAttenuation: true, map: sprite,
+      vertexColors: true, fog: true, transparent: true,
+      alphaTest: 0.02, depthWrite: false
+    }));
     pts.frustumCulled = false;
     scene.add(pts);
     chM = new THREE.InstancedMesh(new THREE.BoxGeometry(0.16, 0.16, 0.16), new THREE.MeshBasicMaterial({ color: 0xffffff }), CH);
