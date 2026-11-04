@@ -174,3 +174,13 @@ Stage 16 (hidden-page simulation and audio lifecycle; 2026-11-04):
 - Added an integration-style headless regression: instantiate the real boss module with a small Three.js test double, trigger a slam telegraph, and assert one geometry disposal plus one disposal for each unique material; repeat cleanup to verify idempotency.
 - Updated offline shell and versioned local asset URLs to v18.
 - GPU rendering and the Vercel deployment remain separate validation gates; this fix changes teardown only.
+
+
+## Stage 19: mobile map layout and control hit areas
+- Fixed the touch minimap cascade: the previous touch-specific top offset was declared after the expanded-map centering rule and overrode `top:50%`. Expanded map positioning now wins after compact portrait/landscape placement.
+- Consolidated touch minimap placement: portrait retains the HUD offset; short landscape moves it below the top action row and uses a smaller footprint. The expanded map uses dynamic viewport units where supported, with `vh` fallback.
+- Increased map zoom/close controls and menu close/action buttons to at least 44x44 CSS px; increased short-landscape map controls and settings slider hit height. Existing primary gameplay touch controls were already 48px or larger and remain unchanged.
+- Added visible keyboard focus styles for buttons, the focusable minimap, and settings selects.
+- Added regression checks for expanded-map cascade order, responsive landscape placement, dynamic viewport sizing, and interactive hit-area/focus contracts.
+- Updated the offline shell and local asset tokens to v19.
+- Hardware validation remains required for actual portrait/landscape overlap, browser chrome movement and one-handed comfort.
