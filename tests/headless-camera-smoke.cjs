@@ -517,6 +517,7 @@ check('remote model assets pin reviewed upstream commits and exact Git blob iden
 check('legacy IndexedDB model cache migrates only after Git blob SHA-1 verification',
   assetSource.includes('function verifyGitBlob(buffer, expectedSha)') &&
   assetSource.includes("subtle.digest('SHA-1', bytes)") &&
+  assetSource.includes('String.fromCharCode(0)') &&
   assetSource.includes('verifyGitBlob(legacy, def.blobSha)') &&
   assetSource.includes('writeModelBuffer(def.url, legacy)'));
 check('unused potion GLB is omitted from the runtime model manifest',
@@ -531,8 +532,8 @@ check('terrain grain texture uses periodic multi-scale noise and color texture e
   terrainSource.includes('mkTex(size, function (x,y)') &&
   terrainSource.includes('t.encoding = THREE.sRGBEncoding'));
 check('three distinct close-range tree models use merged procedural trees at distance',
-  assetSource.includes("tree2: { url: 'https://raw.githubusercontent.com/anshaneja5/skyline-run/main/public/assets/models/tree2.glb'") &&
-  assetSource.includes("tree3: { url: 'https://raw.githubusercontent.com/anshaneja5/skyline-run/main/public/assets/models/tree3.glb'") &&
+  assetSource.includes("tree2: { url: QUATERNIUS_MODEL_BASE + 'tree2.glb'") &&
+  assetSource.includes("tree3: { url: QUATERNIUS_MODEL_BASE + 'tree3.glb'") &&
   terrainSource.includes('42*42') && terrainSource.includes("r2<.34?'tree':r2<.67?'tree2':'tree3'"));
 check('adaptive GPU scaling also reduces and restores vegetation density',
   mainSource.includes("G.world.setGrassQuality(next<.82?'low':next<.93?'medium':base.grass)") &&
