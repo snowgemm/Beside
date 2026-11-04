@@ -172,8 +172,8 @@
   function verifyGitBlob(buffer, expectedSha) {
     var subtle = window.crypto && window.crypto.subtle;
     if (!(buffer instanceof ArrayBuffer) || !expectedSha || !subtle || !subtle.digest) return Promise.resolve(false);
-    // Git hashes bytes with the "blob <size>\\0" header before SHA-1.
-    var header = 'blob ' + buffer.byteLength + '\\0', bytes = new Uint8Array(header.length + buffer.byteLength), i;
+    // Git hashes bytes with the "blob <size>" header followed by one NUL byte.
+    var header = 'blob ' + buffer.byteLength + String.fromCharCode(0), bytes = new Uint8Array(header.length + buffer.byteLength), i;
     for (i = 0; i < header.length; i++) bytes[i] = header.charCodeAt(i);
     bytes.set(new Uint8Array(buffer), header.length);
     return subtle.digest('SHA-1', bytes).then(function (digest) {
