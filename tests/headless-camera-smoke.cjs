@@ -507,8 +507,21 @@ check('ambient and burst particles use circular alpha sprites instead of square 
   fxSource.includes('depthWrite: false'));
 check('remote GLB cache supports repeat offline sessions with graceful fallback',
   assetSource.includes("indexedDB.open('besidevalley-model-cache'") &&
-  assetSource.includes('function getModelBuffer(url)') &&
+  assetSource.includes('function getModelBuffer(def)') &&
   assetSource.includes('function fallbackLoad()'));
+check('remote model assets pin reviewed upstream commits and exact Git blob identities',
+  assetSource.includes("var QUATERNIUS_REV = '0c41526d8d4130c37c15e219c2c3737fa8cb4ad8'") &&
+  assetSource.includes("var KENNEY_MIRROR_REV = 'ea2f2aa1ca8da0898330c97df8a5489976b051d0'") &&
+  assetSource.includes("blobSha: '80bd662cc51f983986f4e201463dc3a729a6cd4a'") &&
+  assetSource.includes("blobSha: '5d0ff9df2d53956151b1adefc0d0a99ce549fdd6'"));
+check('legacy IndexedDB model cache migrates only after Git blob SHA-1 verification',
+  assetSource.includes('function verifyGitBlob(buffer, expectedSha)') &&
+  assetSource.includes("subtle.digest('SHA-1', bytes)") &&
+  assetSource.includes('verifyGitBlob(legacy, def.blobSha)') &&
+  assetSource.includes('writeModelBuffer(def.url, legacy)'));
+check('unused potion GLB is omitted from the runtime model manifest',
+  !/^\s*potion:\s*\{\s*url:/m.test(assetSource) &&
+  !assetSource.includes('mini-dungeon/potion.glb'));
 check('offline service worker caches the app shell and external renderer scripts after first load',
   indexSource.includes("navigator.serviceWorker.register('./sw.js')") &&
   swSource.includes('const SHELL = [') &&
