@@ -46,7 +46,7 @@ The three broadleaf tree GLBs contain the same three embedded WebP images byte-f
 
 The three images are repeated in all three tree variants. Bush and coin each use one additional unique image. Across all models this is 11 embedded image records but only 5 distinct byte payloads. Total encoded image payload is 91,800 bytes; unique payload bytes are 47,884 (43,916 duplicate bytes).
 
-Because each model key is parsed into its own GLTF template, these identical tree textures are not currently shared between the `tree`, `tree2` and `tree3` templates. A future shared-texture pool could reduce the estimated tree texture allocation by about 2 MiB. That change must preserve color space, sampler settings, alpha behavior and texture ownership; it is not included in this audit PR.
+Stage 23 adds a template-level pool for these three tree textures. Sharing requires the same audited SHA-256, glTF texture definition, sampler, embedded image MIME/name and material slot. Only the `THREE.Texture` object is shared; the material and geometry objects remain independent. Superseded duplicate Texture objects are disposed once only if no material in the loaded root still references them. The 2.000 MiB reduction remains an RGBA8+mipmap estimate, not a live GPU measurement.
 
 ## Compatibility notes
 
