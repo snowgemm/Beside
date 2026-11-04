@@ -529,12 +529,26 @@ check('expanded minimap has interactive wheel and pinch zoom that persist settin
   minimapSource.includes("cv.addEventListener('touchmove'") &&
   minimapSource.includes('map-zoom-in') &&
   minimapSource.includes('G.menu.settings.mapZoom=M.zoom'));
+const touchMapRule = styleSource.lastIndexOf('body.touch #minimap{top:calc(env(safe-area-inset-top,0px) + 152px)');
+const expandedMapRule = styleSource.lastIndexOf('body.map-expanded #minimap{z-index:21;left:50%;top:50%');
+check('expanded minimap overrides compact touch placement and remains centered on phones',
+  touchMapRule >= 0 && expandedMapRule > touchMapRule &&
+  styleSource.includes('top:calc(env(safe-area-inset-top,0px) + 68px)') &&
+  styleSource.includes('height:min(92vw,78dvh)'));
+check('map, menu and landscape settings controls keep touch-friendly hit areas',
+  styleSource.includes('min-width:44px;min-height:44px') &&
+  styleSource.includes('#menu .menu-head button{flex:0 0 44px') &&
+  styleSource.includes('#menu .menu-btns button{min-height:44px') &&
+  styleSource.includes('#map-label button{min-height:44px'));
+check('keyboard focus is visible on map and button controls',
+  styleSource.includes('button:focus-visible,#minimap:focus-visible{outline:2px solid var(--hi)') &&
+  styleSource.includes('.menu-row select:focus-visible'));
 check('offline cache is bumped and versioned local assets prevent stale code from loading',
-  swSource.includes("CACHE_NAME = 'besidevalley-shell-v18'") &&
+  swSource.includes("CACHE_NAME = 'besidevalley-shell-v19'") &&
   swSource.includes("url.searchParams.get('v')") &&
   swSource.includes('function fallbackCacheKey(requestUrl)') &&
   swSource.includes('cache.match(fallbackKey)') &&
-  indexSource.includes('20261104-boss-telegraph-cleanup-v18'));
+  indexSource.includes('20261104-mobile-ui-layout-v19'));
 check('player jump input triggers a short takeoff pose independent of refresh rate',
   rigSource.includes("state === 'jump'") && rigSource.includes('this.jumpT = 0.32') &&
   rigSource.includes('var jumpPulse = Math.sin') && playerSource.includes("rig.play('jump'"));
