@@ -419,10 +419,18 @@ const fxSource = fs.readFileSync(path.join(jsDir, 'fx.js'), 'utf8');
 const swSource = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
 const styleSource = fs.readFileSync(path.join(root, 'css', 'style.css'), 'utf8');
 const audioSource = fs.readFileSync(path.join(jsDir, 'combat.js'), 'utf8');
+const combatSource = audioSource;
 check('UI honors reduced-motion preferences while keeping timed feedback visible',
   styleSource.includes('@media (prefers-reduced-motion: reduce)') &&
   styleSource.includes('#hp.low, #hp.low #hp-fill') &&
   styleSource.includes('#banner.show { opacity: 1; transform: translateX(-50%); }'));
+check('reduced-motion mode clears transition delays as well as durations',
+  styleSource.includes('transition-duration: 0.01ms !important;') &&
+  styleSource.includes('transition-delay: 0s !important;'));
+check('delayed health damage trail animates transform rather than layout width',
+  styleSource.includes('transform-origin:left center;transition:transform .55s ease-out .3s') &&
+  combatSource.includes("hpGhost.style.transform = 'scaleX(' + (pc / 100) + ')'") &&
+  !combatSource.includes("hpGhost.style.width = pc + '%'"));
 
 check('hidden-page lifecycle freezes the game loop and resets frame timing on return',
   mainSource.includes('var pageHidden = !!document.hidden') &&
@@ -544,11 +552,11 @@ check('keyboard focus is visible on map and button controls',
   styleSource.includes('button:focus-visible,#minimap:focus-visible{outline:2px solid var(--hi)') &&
   styleSource.includes('.menu-row select:focus-visible'));
 check('offline cache is bumped and versioned local assets prevent stale code from loading',
-  swSource.includes("CACHE_NAME = 'besidevalley-shell-v19'") &&
+  swSource.includes("CACHE_NAME = 'besidevalley-shell-v20'") &&
   swSource.includes("url.searchParams.get('v')") &&
   swSource.includes('function fallbackCacheKey(requestUrl)') &&
   swSource.includes('cache.match(fallbackKey)') &&
-  indexSource.includes('20261104-mobile-ui-layout-v19'));
+  indexSource.includes('20261104-motion-performance-v20'));
 check('player jump input triggers a short takeoff pose independent of refresh rate',
   rigSource.includes("state === 'jump'") && rigSource.includes('this.jumpT = 0.32') &&
   rigSource.includes('var jumpPulse = Math.sin') && playerSource.includes("rig.play('jump'"));

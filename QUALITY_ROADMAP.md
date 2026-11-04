@@ -82,6 +82,10 @@ A cohesive smooth-toon adventure game that is readable, responsive and stable on
 
 ### P3 — Animation and game feel
 
+**Stage 20: health feedback and reduced-motion timing**
+- Animate the delayed health-bar trail with `transform:scaleX()` rather than layout `width`, preserving the deliberate damage-trail delay.
+- Clear `transition-delay` under `prefers-reduced-motion` as well as reducing duration, preventing overlays from remaining visible after their content has become transparent.
+
 - Audit every CSS keyframe, transition and procedural rig state by purpose, frequency, timing, easing, interruption, performance and accessibility.
 - Use motion to communicate state: hit confirmation, pickup, landing, encounter start/clear and navigation.
 - Prefer opacity/transform for DOM transitions; use JavaScript only where motion is driven by live game state.

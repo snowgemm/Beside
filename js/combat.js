@@ -197,7 +197,9 @@
     if (P.health !== lastHp || P.maxHealth !== lastMax) {
       lastHp = P.health; lastMax = P.maxHealth;
       var pc = Math.max(0, P.health / P.maxHealth * 100);
-      hpFill.style.width = pc + '%'; hpGhost.style.width = pc + '%';
+      hpFill.style.width = pc + '%';
+      // The delayed damage trail scales on the compositor instead of animating layout width.
+      hpGhost.style.transform = 'scaleX(' + (pc / 100) + ')';
       hpText.textContent = Math.ceil(P.health) + '/' + P.maxHealth;
       hpBox.classList.toggle('low', pc < 30 && P.health > 0);
     }
