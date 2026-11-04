@@ -46,3 +46,8 @@ A previous IndexedDB entry stored under a mutable `main` URL is reused only afte
 ## Binary audit
 
 See [ASSET_AUDIT.md](ASSET_AUDIT.md) for measured GLB topology, embedded texture dimensions, exact duplicate image payloads, RGBA8+mipmap estimates and the runtime verification boundary.
+
+
+## Shared broadleaf textures
+
+Stage 23 pools the three SHA-256-verified 256×256 WebP texture payloads across the `tree`, `tree2` and `tree3` GLTF templates. The pool requires matching texture JSON, sampler, image MIME/name and material slot. Materials and geometry are not shared by this feature. A replaced duplicate Texture is disposed once only after a scan confirms it is no longer referenced by any material in the parsed root. See `ASSET_AUDIT.md` for the source hashes and memory estimate.
