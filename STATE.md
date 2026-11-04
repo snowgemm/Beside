@@ -212,3 +212,13 @@ Stage 16 (hidden-page simulation and audio lifecycle; 2026-11-04):
 - Confirmed the runtime limits imported tree models to a 42-world-unit radius and keeps far trees in merged procedural chunk geometry; decor caps remain 40 items / 18 trees per chunk.
 - Added an automated audit script with PNG/WebP source parsing, SHA-256 image fingerprints, GLB integrity checks, and a JSON Actions artifact.
 - No binary assets were rewritten. Texture pooling/LOD authoring remains a separate optimization requiring Android visual and ownership tests.
+
+
+## Stage 23: share audited broadleaf tree textures
+- The three Quaternius broadleaf GLBs were verified to have identical glTF material, texture and image JSON; all three embedded WebP image payloads also match byte-for-byte by SHA-256.
+- Added a narrow runtime texture pool for the `tree`, `tree2` and `tree3` model templates. Sharing requires the same explicit group, texture-index SHA-256, full texture definition, resolved sampler, image MIME/name and material slot.
+- Only `THREE.Texture` references are shared. Materials and geometries remain independent per template; texture color-space/alpha behavior remains tied to each original material slot.
+- Replaced duplicate texture objects are disposed once, and only when no material in the just-loaded root still references them. Canonical textures stay owned by their templates and remain borrowed by all cloned instances; `disposeInstance` must not dispose them.
+- Added integration tests for successful sharing, retained material/geometry independence, exact-once disposal, sampler mismatch and hash mismatch. Workflow runs the new test before the GLB audit.
+- Updated offline shell and local asset tokens to v23.
+- Estimated texture saving: three shared 256x256 WebP images are retained once across the three templates, about 2 MiB RGBA8+mipmap estimate. This is an estimate; live GPU memory is not measured.
