@@ -514,6 +514,13 @@ check('remote model assets pin reviewed upstream commits and exact Git blob iden
   assetSource.includes("var KENNEY_MIRROR_REV = 'ea2f2aa1ca8da0898330c97df8a5489976b051d0'") &&
   assetSource.includes("blobSha: '80bd662cc51f983986f4e201463dc3a729a6cd4a'") &&
   assetSource.includes("blobSha: '5d0ff9df2d53956151b1adefc0d0a99ce549fdd6'"));
+check('broadleaf templates opt into hash-verified shared WebP textures without sharing geometry/materials',
+  assetSource.includes("textureShareGroup: 'quaternius-broadleaf-v1'") &&
+  (assetSource.match(/textureShareSha256: \['d306b69/g) || []).length === 3 &&
+  assetSource.includes('function shareModelTextures(gltf, def, root)') &&
+  assetSource.includes('cached.signature !== signature') &&
+  assetSource.includes('material[slot] = cached.texture') &&
+  assetSource.includes('texture.dispose()'));
 check('legacy IndexedDB model cache migrates only after Git blob SHA-1 verification',
   assetSource.includes('function verifyGitBlob(buffer, expectedSha)') &&
   assetSource.includes("subtle.digest('SHA-1', bytes)") &&
@@ -566,11 +573,11 @@ check('keyboard focus is visible on map and button controls',
   styleSource.includes('button:focus-visible,#minimap:focus-visible{outline:2px solid var(--hi)') &&
   styleSource.includes('.menu-row select:focus-visible'));
 check('offline cache is bumped and versioned local assets prevent stale code from loading',
-  swSource.includes("CACHE_NAME = 'besidevalley-shell-v22'") &&
+  swSource.includes("CACHE_NAME = 'besidevalley-shell-v23'") &&
   swSource.includes("url.searchParams.get('v')") &&
   swSource.includes('function fallbackCacheKey(requestUrl)') &&
   swSource.includes('cache.match(fallbackKey)') &&
-  indexSource.includes('20261104-glb-audit-v22'));
+  indexSource.includes('20261104-tree-texture-sharing-v23'));
 check('player jump input triggers a short takeoff pose independent of refresh rate',
   rigSource.includes("state === 'jump'") && rigSource.includes('this.jumpT = 0.32') &&
   rigSource.includes('var jumpPulse = Math.sin') && playerSource.includes("rig.play('jump'"));

@@ -97,6 +97,12 @@ A cohesive smooth-toon adventure game that is readable, responsive and stable on
 
 ### P4 — Models and character presentation
 
+**Stage 23: share byte-identical broadleaf tree textures**
+- Share only the three verified Quaternius tree WebP Texture objects between `tree`, `tree2` and `tree3` templates.
+- Require matching SHA-256, glTF texture definition, sampler, embedded image identity and material slot; do not merge materials or geometry.
+- Dispose superseded texture objects exactly once only after confirming no material in the loaded root still references them.
+- Protect the behavior with integration tests for valid sharing, sampler mismatch, hash mismatch, independent geometry/materials, and clone cleanup.
+
 **Stage 21: pin remote model sources**
 - Replace mutable branch URLs with immutable upstream Git commit revisions.
 - Record each runtime model's source path, Git blob ID, transfer size and exact pack license evidence.
@@ -204,3 +210,7 @@ A cohesive smooth-toon adventure game that is readable, responsive and stable on
 - Eight pinned GLB files: 1,453,332 transfer bytes, 17,241 triangles, 26,202 vertices, 14 primitives and 14 materials.
 - Eleven image records reduce to five exact byte-unique image payloads; the three broadleaf tree variants share three identical WebP payloads. Estimated RGBA8+mipmap storage is 4.667 MiB as loaded separately or 2.667 MiB if cross-template texture sharing is implemented.
 - Texture memory remains a static estimate. Live draw calls, overdraw, actual VRAM, and device frame-time still require profiling.
+
+## Stage 23 verification boundary
+- The static image payloads are exact matches; template-level texture pooling is code/test covered.
+- The estimated reduction is about 2 MiB RGBA8+mipmap storage across tree templates. Actual GPU allocation reuse and visual appearance still need a browser/Android profile.

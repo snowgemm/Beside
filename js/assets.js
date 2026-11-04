@@ -26,9 +26,11 @@
       wolf: { file: 'wolf.glb', height: 1, rotY: Math.PI }, skeleton: { file: 'skeleton.glb', height: 1.7, rotY: Math.PI }, bat: { file: 'bat.glb', height: 0.9, rotY: Math.PI },
       spider: { file: 'spider.glb', height: 0.8, rotY: Math.PI }, mushroom: { file: 'mushroom.glb', height: 1.3, rotY: Math.PI },
       // Quaternius Stylized Nature MegaKit (CC0 1.0); source blobs are recorded in ASSETS.md.
-      tree: { url: QUATERNIUS_MODEL_BASE + 'tree1.glb', legacyUrl: QUATERNIUS_LEGACY_BASE + 'tree1.glb', blobSha: '80bd662cc51f983986f4e201463dc3a729a6cd4a', blobBytes: 516044, height: 4.8 },
-      tree2: { url: QUATERNIUS_MODEL_BASE + 'tree2.glb', legacyUrl: QUATERNIUS_LEGACY_BASE + 'tree2.glb', blobSha: '0197de65879eb650247c8d56ac52da34489938cb', blobBytes: 446732, height: 4.55 },
-      tree3: { url: QUATERNIUS_MODEL_BASE + 'tree3.glb', legacyUrl: QUATERNIUS_LEGACY_BASE + 'tree3.glb', blobSha: '828786b4bdb5224a8b3672f5e5d6cebe1c65bd93', blobBytes: 332440, height: 4.7 },
+      // All three broadleaf variants use byte-identical WebP payloads with matching texture/material JSON.
+      // Hashes are indexed by glTF texture index, not image index.
+      tree: { url: QUATERNIUS_MODEL_BASE + 'tree1.glb', legacyUrl: QUATERNIUS_LEGACY_BASE + 'tree1.glb', blobSha: '80bd662cc51f983986f4e201463dc3a729a6cd4a', blobBytes: 516044, textureShareGroup: 'quaternius-broadleaf-v1', textureShareSha256: ['d306b69fcf72198270e6d6d57af6e77533003d515748db7deae3cf719b88eeb6', '5f5a3b076667c254b44ea49a183c768da0f0b2b39b5f203b5e584b2321952c94', 'b84891a51b70278ac9c2345736d18aa22f124bdeac1a6c76b413a3b29e4bea29'], height: 4.8 },
+      tree2: { url: QUATERNIUS_MODEL_BASE + 'tree2.glb', legacyUrl: QUATERNIUS_LEGACY_BASE + 'tree2.glb', blobSha: '0197de65879eb650247c8d56ac52da34489938cb', blobBytes: 446732, textureShareGroup: 'quaternius-broadleaf-v1', textureShareSha256: ['d306b69fcf72198270e6d6d57af6e77533003d515748db7deae3cf719b88eeb6', '5f5a3b076667c254b44ea49a183c768da0f0b2b39b5f203b5e584b2321952c94', 'b84891a51b70278ac9c2345736d18aa22f124bdeac1a6c76b413a3b29e4bea29'], height: 4.55 },
+      tree3: { url: QUATERNIUS_MODEL_BASE + 'tree3.glb', legacyUrl: QUATERNIUS_LEGACY_BASE + 'tree3.glb', blobSha: '828786b4bdb5224a8b3672f5e5d6cebe1c65bd93', blobBytes: 332440, textureShareGroup: 'quaternius-broadleaf-v1', textureShareSha256: ['d306b69fcf72198270e6d6d57af6e77533003d515748db7deae3cf719b88eeb6', '5f5a3b076667c254b44ea49a183c768da0f0b2b39b5f203b5e584b2321952c94', 'b84891a51b70278ac9c2345736d18aa22f124bdeac1a6c76b413a3b29e4bea29'], height: 4.7 },
       bush: { url: QUATERNIUS_MODEL_BASE + 'bush.glb', legacyUrl: QUATERNIUS_LEGACY_BASE + 'bush.glb', blobSha: '84b4153c17e988a658e56d4093b0028d1b034c3f', blobBytes: 108520, height: 0.95 },
       // Kenney Nature Kit / Mini Dungeon models (CC0 1.0).
       pine: { url: KENNEY_PACK_BASE + 'nature-kit/tree-pinetalla.glb', legacyUrl: KENNEY_LEGACY_BASE + 'nature-kit/tree-pinetalla.glb', blobSha: 'b064580b04a93cea7cbb76f83dd880a55f530fed', blobBytes: 7200, height: 4.9 },
@@ -69,6 +71,79 @@
     inner.scale.setScalar(s); inner.position.set(-c.x * s, -box.min.y * s, -c.z * s);
     wrap.add(inner); wrap.rotation.y = def.rotY || 0;
     return wrap;
+  }
+
+  // Share only audited GLB texture payloads whose glTF definition, sampler and material slot match.
+  // Geometry and Material objects remain per-template; only THREE.Texture references are pooled.
+  var sharedModelTextures = Object.create(null);
+  function shareModelTextures(gltf, def, root) {
+    var parser = gltf && gltf.parser, json = parser && parser.json, associations = parser && parser.associations;
+    if (!def || !def.textureShareGroup || !Array.isArray(def.textureShareSha256) ||
+        !json || !associations || typeof associations.get !== 'function') return 0;
+    var oldTextures = [], replaced = 0;
+    function visitMaterial(material) {
+      if (!material || typeof material !== 'object') return;
+      Object.keys(material).forEach(function (slot) {
+        var texture = material[slot], association, index, expected, textureDef, imageIndex, imageDef, samplerDef, signature, key, cached;
+        if (!texture || !texture.isTexture) return;
+        association = associations.get(texture);
+        if (!association || association.type !== 'textures') return;
+        index = association.index;
+        expected = def.textureShareSha256[index];
+        if (typeof expected !== 'string' || !/^[0-9a-f]{64}$/i.test(expected)) return;
+        textureDef = json.textures && json.textures[index];
+        if (!textureDef) return;
+        imageIndex = textureDef.source;
+        if (textureDef.extensions && textureDef.extensions.EXT_texture_webp) imageIndex = textureDef.extensions.EXT_texture_webp.source;
+        if (textureDef.extensions && textureDef.extensions.KHR_texture_basisu) imageIndex = textureDef.extensions.KHR_texture_basisu.source;
+        imageDef = json.images && json.images[imageIndex];
+        if (imageIndex === undefined || !imageDef || !imageDef.mimeType) return;
+        samplerDef = textureDef.sampler === undefined ? {} : ((json.samplers || [])[textureDef.sampler] || {});
+        signature = JSON.stringify({
+          sha256: expected.toLowerCase(),
+          texture: textureDef,
+          sampler: samplerDef,
+          image: { mimeType: imageDef.mimeType, name: imageDef.name || '' },
+          slot: slot
+        });
+        key = def.textureShareGroup + ':' + index + ':' + slot;
+        cached = sharedModelTextures[key];
+        if (!cached) {
+          sharedModelTextures[key] = { signature: signature, texture: texture };
+          return;
+        }
+        if (cached.signature !== signature || cached.texture === texture || cached.disposed) return;
+        material[slot] = cached.texture;
+        oldTextures.push(texture);
+        replaced++;
+      });
+    }
+    root.traverse(function (object) {
+      if (!object.isMesh || !object.material) return;
+      if (Array.isArray(object.material)) object.material.forEach(visitMaterial);
+      else visitMaterial(object.material);
+    });
+    if (!oldTextures.length) return replaced;
+    var liveTextures = [];
+    function markLive(material) {
+      if (!material || typeof material !== 'object') return;
+      Object.keys(material).forEach(function (slot) {
+        var texture = material[slot];
+        if (texture && texture.isTexture && liveTextures.indexOf(texture) < 0) liveTextures.push(texture);
+      });
+    }
+    root.traverse(function (object) {
+      if (!object.isMesh || !object.material) return;
+      if (Array.isArray(object.material)) object.material.forEach(markLive);
+      else markLive(object.material);
+    });
+    oldTextures.forEach(function (texture) {
+      if (liveTextures.indexOf(texture) >= 0 || texture.userData && texture.userData.assetTextureDisposed) return;
+      texture.userData = texture.userData || {};
+      texture.userData.assetTextureDisposed = true;
+      if (texture.dispose) texture.dispose();
+    });
+    return replaced;
   }
   A.has = function (name) { return !!tpl[name]; };
   A.model = function (name) {
@@ -210,7 +285,10 @@
       var finished = false;
       function finish() { if (finished) return; finished = true; done(); }
       function loaded(g) {
-        try { tpl[name] = fit(g.scene, def); } catch (e) {}
+        try {
+          tpl[name] = fit(g.scene, def);
+          shareModelTextures(g, def, tpl[name]);
+        } catch (e) {}
         if (!envRefreshed && A.has('tree') && A.has('tree2') && A.has('tree3') && A.has('pine') && A.has('bush') && A.has('rock') && A.has('mushroomProp') && G.world && G.world.refreshDecor) {
           envRefreshed = true; G.world.refreshDecor();
         }

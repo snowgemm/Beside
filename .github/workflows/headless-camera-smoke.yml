@@ -19,6 +19,8 @@ jobs:
         run: node tests/headless-camera-smoke.cjs
       - name: Verify immutable model cache migration
         run: node tests/model-cache-migration.cjs
+      - name: Verify audited model texture sharing
+        run: node tests/model-texture-sharing.cjs
       - name: Audit pinned GLB topology and texture budgets
         run: node tests/glb-asset-audit.cjs
       - name: Upload GLB audit report
