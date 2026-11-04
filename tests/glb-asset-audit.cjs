@@ -178,8 +178,9 @@ function analyze(gltf, bin, name, byteLength) {
     }
   }
   const bounds = [];
-  for (const accessor of accessors) {
-    if (accessor.min && accessor.max && accessor.type === 'VEC3') {
+  for (const accessorIndex of uniquePositionAccessors) {
+    const accessor = accessors[accessorIndex];
+    if (accessor && accessor.min && accessor.max && accessor.type === 'VEC3') {
       const min = accessor.min, max = accessor.max;
       bounds.push([max[0]-min[0], max[1]-min[1], max[2]-min[2]]);
     }
@@ -188,8 +189,9 @@ function analyze(gltf, bin, name, byteLength) {
   const sceneNodes = (gltf.scenes || []).reduce((n, s) => n + (s.nodes || []).length, 0);
   const usedExtensions = gltf.extensionsUsed || [];
   const requiredExtensions = gltf.extensionsRequired || [];
-  const unsupportedCandidates = requiredExtensions.filter(x =>
-    ['KHR_draco_mesh_compression','KHR_texture_basisu','EXT_texture_webp','EXT_texture_avif','EXT_meshopt_compression','KHR_meshopt_compression'].includes(x)
+  // This project creates GLTFLoader r128 directly without attaching DRACO, KTX2 or Meshopt decoders.
+  const runtimeRequiredRisks = requiredExtensions.filter(x =>
+    ['KHR_draco_mesh_compression','KHR_texture_basisu','EXT_meshopt_compression'].includes(x)
   );
   const estimateMipBytes = Math.ceil(rgba8BaseBytes * 4 / 3);
   const texturesByFormat = {};
@@ -206,7 +208,7 @@ function analyze(gltf, bin, name, byteLength) {
     meshes: meshes.length, primitives: primitiveCount, uniqueMaterials: primitiveMaterials.size,
     materials: materials.length, vertices: vertices, triangles, lines, points,
     maxPrimitiveTriangles, skins: skins.length, animations: animations.length, morphTargets,
-    attributeAccessors: uniquePositionAccessors.size,
+    uniquePositionAccessors: uniquePositionAccessors.size,
     maxAccessorExtent: maxExtent.map(n => Number(n.toFixed(3))),
     images: images.length, textures: textures.length, imageInfo, texturesByFormat,
     textureRefs, unresolvedImages,
@@ -216,7 +218,7 @@ function analyze(gltf, bin, name, byteLength) {
     largestTexturePixels: largestTexturePx,
     alphaMaterials, doubleSidedMaterials,
     extensionsUsed: usedExtensions, extensionsRequired: requiredExtensions,
-    compressedExtensionReviewRequired: unsupportedCandidates
+    runtimeRequiredRisks
   };
 }
 
@@ -252,12 +254,12 @@ async function main() {
       materials: rows.reduce((s, x) => s + x.materials, 0)
     }
   };
+  const runtimeRisks = rows.filter(x => x.runtimeRequiredRisks.length);
+  if (runtimeRisks.length) throw new Error('Required GLTFLoader r128 decoder is not configured for: ' + runtimeRisks.map(x => x.name + '=' + x.runtimeRequiredRisks.join(',')).join('; '));
   console.log('GLB audit summary (JSON follows)');
   console.log(JSON.stringify(summary, null, 2));
   console.log('Binary integrity: ' + rows.length + '/' + rows.length + ' pinned Git blobs and sizes verified');
-  if (rows.some(x => x.compressedExtensionReviewRequired.length)) {
-    console.log('NOTE: one or more required compression extensions need a Three.js r128 compatibility check.');
-  }
+
 }
 main().catch(error => {
   console.error(error);
