@@ -1,6 +1,6 @@
 /* Besidevalley offline shell cache. Remote GLB models are cached separately in IndexedDB. */
 'use strict';
-const CACHE_NAME = 'besidevalley-shell-v21';
+const CACHE_NAME = 'besidevalley-shell-v22';
 const EXTERNAL_SCRIPTS = [
   'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js',
   'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js'

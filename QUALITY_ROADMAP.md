@@ -198,3 +198,9 @@ A cohesive smooth-toon adventure game that is readable, responsive and stable on
 ## Stage 21 verification boundary
 - Remote source commits, exact Git blob identities, pack-specific license references and source file sizes were inspected and pinned.
 - GLB triangle topology, embedded texture dimensions, decoded GPU memory, material appearance and real-device silhouettes have not been measured in this stage. Do not treat file transfer size as a VRAM budget.
+
+
+## Stage 22 verification notes
+- Eight pinned GLB files: 1,453,332 transfer bytes, 17,241 triangles, 26,202 vertices, 14 primitives and 14 materials.
+- Eleven image records reduce to five exact byte-unique image payloads; the three broadleaf tree variants share three identical WebP payloads. Estimated RGBA8+mipmap storage is 4.667 MiB as loaded separately or 2.667 MiB if cross-template texture sharing is implemented.
+- Texture memory remains a static estimate. Live draw calls, overdraw, actual VRAM, and device frame-time still require profiling.

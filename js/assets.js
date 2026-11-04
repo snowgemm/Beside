@@ -26,15 +26,15 @@
       wolf: { file: 'wolf.glb', height: 1, rotY: Math.PI }, skeleton: { file: 'skeleton.glb', height: 1.7, rotY: Math.PI }, bat: { file: 'bat.glb', height: 0.9, rotY: Math.PI },
       spider: { file: 'spider.glb', height: 0.8, rotY: Math.PI }, mushroom: { file: 'mushroom.glb', height: 1.3, rotY: Math.PI },
       // Quaternius Stylized Nature MegaKit (CC0 1.0); source blobs are recorded in ASSETS.md.
-      tree: { url: QUATERNIUS_MODEL_BASE + 'tree1.glb', legacyUrl: QUATERNIUS_LEGACY_BASE + 'tree1.glb', blobSha: '80bd662cc51f983986f4e201463dc3a729a6cd4a', height: 4.8 },
-      tree2: { url: QUATERNIUS_MODEL_BASE + 'tree2.glb', legacyUrl: QUATERNIUS_LEGACY_BASE + 'tree2.glb', blobSha: '0197de65879eb650247c8d56ac52da34489938cb', height: 4.55 },
-      tree3: { url: QUATERNIUS_MODEL_BASE + 'tree3.glb', legacyUrl: QUATERNIUS_LEGACY_BASE + 'tree3.glb', blobSha: '828786b4bdb5224a8b3672f5e5d6cebe1c65bd93', height: 4.7 },
-      bush: { url: QUATERNIUS_MODEL_BASE + 'bush.glb', legacyUrl: QUATERNIUS_LEGACY_BASE + 'bush.glb', blobSha: '84b4153c17e988a658e56d4093b0028d1b034c3f', height: 0.95 },
+      tree: { url: QUATERNIUS_MODEL_BASE + 'tree1.glb', legacyUrl: QUATERNIUS_LEGACY_BASE + 'tree1.glb', blobSha: '80bd662cc51f983986f4e201463dc3a729a6cd4a', blobBytes: 516044, height: 4.8 },
+      tree2: { url: QUATERNIUS_MODEL_BASE + 'tree2.glb', legacyUrl: QUATERNIUS_LEGACY_BASE + 'tree2.glb', blobSha: '0197de65879eb650247c8d56ac52da34489938cb', blobBytes: 446732, height: 4.55 },
+      tree3: { url: QUATERNIUS_MODEL_BASE + 'tree3.glb', legacyUrl: QUATERNIUS_LEGACY_BASE + 'tree3.glb', blobSha: '828786b4bdb5224a8b3672f5e5d6cebe1c65bd93', blobBytes: 332440, height: 4.7 },
+      bush: { url: QUATERNIUS_MODEL_BASE + 'bush.glb', legacyUrl: QUATERNIUS_LEGACY_BASE + 'bush.glb', blobSha: '84b4153c17e988a658e56d4093b0028d1b034c3f', blobBytes: 108520, height: 0.95 },
       // Kenney Nature Kit / Mini Dungeon models (CC0 1.0).
-      pine: { url: KENNEY_PACK_BASE + 'nature-kit/tree-pinetalla.glb', legacyUrl: KENNEY_LEGACY_BASE + 'nature-kit/tree-pinetalla.glb', blobSha: 'b064580b04a93cea7cbb76f83dd880a55f530fed', height: 4.9 },
-      rock: { url: KENNEY_PACK_BASE + 'nature-kit/rock-smalla.glb', legacyUrl: KENNEY_LEGACY_BASE + 'nature-kit/rock-smalla.glb', blobSha: 'b23471253cfafcca5916ffddb79853eca7433195', height: 0.8 },
-      mushroomProp: { url: KENNEY_PACK_BASE + 'nature-kit/mushroom-red.glb', legacyUrl: KENNEY_LEGACY_BASE + 'nature-kit/mushroom-red.glb', blobSha: '3420847cd67ed2403a40c78fcacf8b57f8e6c20c', height: 0.65 },
-      coin: { url: KENNEY_PACK_BASE + 'mini-dungeon/coin.glb', legacyUrl: KENNEY_LEGACY_BASE + 'mini-dungeon/coin.glb', blobSha: '5d0ff9df2d53956151b1adefc0d0a99ce549fdd6', height: 0.42 }
+      pine: { url: KENNEY_PACK_BASE + 'nature-kit/tree-pinetalla.glb', legacyUrl: KENNEY_LEGACY_BASE + 'nature-kit/tree-pinetalla.glb', blobSha: 'b064580b04a93cea7cbb76f83dd880a55f530fed', blobBytes: 7200, height: 4.9 },
+      rock: { url: KENNEY_PACK_BASE + 'nature-kit/rock-smalla.glb', legacyUrl: KENNEY_LEGACY_BASE + 'nature-kit/rock-smalla.glb', blobSha: 'b23471253cfafcca5916ffddb79853eca7433195', blobBytes: 3044, height: 0.8 },
+      mushroomProp: { url: KENNEY_PACK_BASE + 'nature-kit/mushroom-red.glb', legacyUrl: KENNEY_LEGACY_BASE + 'nature-kit/mushroom-red.glb', blobSha: '3420847cd67ed2403a40c78fcacf8b57f8e6c20c', blobBytes: 6364, height: 0.65 },
+      coin: { url: KENNEY_PACK_BASE + 'mini-dungeon/coin.glb', legacyUrl: KENNEY_LEGACY_BASE + 'mini-dungeon/coin.glb', blobSha: '5d0ff9df2d53956151b1adefc0d0a99ce549fdd6', blobBytes: 32988, height: 0.42 }
     },
     sounds: {
       door: ['door.ogg', 'door.mp3', 'door.wav'], chest: ['chest.ogg', 'chest.mp3', 'chest.wav'],

@@ -41,3 +41,8 @@ The runtime's checked-in `assets/models/` and `assets/sfx/` folders currently co
 The pinned GLB set is 1,453,332 bytes (about 1.39 MiB) before decoding textures or renderer allocations. This is transfer size, not GPU memory. The previously declared potion model had no runtime call site and has been removed from the manifest (23,720 bytes no longer requested).
 
 A previous IndexedDB entry stored under a mutable `main` URL is reused only after Web Crypto verifies its exact Git blob SHA-1, including Git's `blob <size>\\0` header. A mismatch is ignored; the loader fetches the immutable URL or keeps the procedural fallback.
+
+
+## Binary audit
+
+See [ASSET_AUDIT.md](ASSET_AUDIT.md) for measured GLB topology, embedded texture dimensions, exact duplicate image payloads, RGBA8+mipmap estimates and the runtime verification boundary.

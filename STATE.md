@@ -202,3 +202,13 @@ Stage 16 (hidden-page simulation and audio lifecycle; 2026-11-04):
 - Preserve the current PBR path and procedural fallback. Previous IndexedDB entries keyed by mutable `main` URLs migrate only when Web Crypto verifies the expected Git blob SHA-1 before writing under the pinned URL.
 - Bump local asset tokens and offline shell cache to v21.
 - Limitation: this is source pinning and cache integrity, not a binary topology/triangle/texture-VRAM or GPU visual audit. Git blob sizes are download bytes, not VRAM; Android appearance checks remain pending.
+
+
+## Stage 22: binary GLB and texture budget audit
+- Audited all eight pinned GLB v2 binaries and verified Git blob IDs plus exact download byte sizes.
+- Measured 17,241 triangles, 26,202 vertices, 14 primitives/materials, and 11 embedded image/texture records across the catalog.
+- Calculated an estimated 4.667 MiB RGBA8 texture payload with a full mip chain; this is a model-level estimate, not measured VRAM.
+- Byte-for-byte image comparison found 5 unique payloads among 11 embedded image records. The three broadleaf trees repeat the same three WebP maps, yielding a theoretical 2.0 MiB texture sharing opportunity across templates.
+- Confirmed the runtime limits imported tree models to a 42-world-unit radius and keeps far trees in merged procedural chunk geometry; decor caps remain 40 items / 18 trees per chunk.
+- Added an automated audit script with PNG/WebP source parsing, SHA-256 image fingerprints, GLB integrity checks, and a JSON Actions artifact.
+- No binary assets were rewritten. Texture pooling/LOD authoring remains a separate optimization requiring Android visual and ownership tests.
