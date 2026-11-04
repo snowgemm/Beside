@@ -35,6 +35,9 @@ function readImageInfo(bytes, mimeType) {
     if (kind === 'VP8X' && b.length >= 30) {
       return { format: 'WebP', width: 1 + b.readUIntLE(24, 3), height: 1 + b.readUIntLE(27, 3) };
     }
+    if (kind === 'VP8 ' && b.length >= 30 && b[23] === 0x9d && b[24] === 0x01 && b[25] === 0x2a) {
+      return { format: 'WebP', width: b.readUInt16LE(26) & 0x3fff, height: b.readUInt16LE(28) & 0x3fff };
+    }
     if (kind === 'VP8L' && b.length >= 25 && b[20] === 0x2f) {
       const w = 1 + (b[21] | ((b[22] & 0x3f) << 8));
       const h = 1 + (((b[22] & 0xc0) >> 6) | (b[23] << 2) | ((b[24] & 0x0f) << 10));
@@ -137,6 +140,7 @@ function analyze(gltf, bin, name, byteLength) {
   for (const texture of textures) {
     let source = texture.source;
     if (texture.extensions && texture.extensions.KHR_texture_basisu) source = texture.extensions.KHR_texture_basisu.source;
+    if (texture.extensions && texture.extensions.EXT_texture_webp) source = texture.extensions.EXT_texture_webp.source;
     if (source === undefined || !imageInfo[source]) { unresolvedImages++; continue; }
     const image = imageInfo[source];
     if (!image.width || !image.height) { unresolvedImages++; continue; }
@@ -198,6 +202,7 @@ function analyze(gltf, bin, name, byteLength) {
   for (const tex of textures) {
     let source = tex.source;
     if (tex.extensions && tex.extensions.KHR_texture_basisu) source = tex.extensions.KHR_texture_basisu.source;
+    if (tex.extensions && tex.extensions.EXT_texture_webp) source = tex.extensions.EXT_texture_webp.source;
     const img = imageInfo[source];
     const fmt = img ? img.format : 'unresolved';
     texturesByFormat[fmt] = (texturesByFormat[fmt] || 0) + 1;
