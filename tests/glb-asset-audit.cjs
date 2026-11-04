@@ -134,7 +134,7 @@ function analyze(gltf, bin, name, byteLength) {
   const imageInfo = images.map((img, i) => {
     const bytes = getImageBytes(img, gltf, bin);
     const info = readImageInfo(bytes, img.mimeType || 'unknown');
-    return { index: i, bytes: bytes.length, ...info };
+    return { index: i, bytes: bytes.length, sha256: crypto.createHash('sha256').update(bytes).digest('hex'), ...info };
   });
   let rgba8BaseBytes = 0, unresolvedImages = 0, largestTexturePx = 0;
   for (const texture of textures) {
@@ -245,6 +245,16 @@ async function main() {
   const totalBytes = rows.reduce((s, x) => s + x.bytes, 0);
   const totalTriangles = rows.reduce((s, x) => s + x.triangles, 0);
   const totalTextureBytes = rows.reduce((s, x) => s + x.textureRGBA8MipEstimateBytes, 0);
+  const uniqueImages = new Map();
+  for (const asset of rows) {
+    for (const image of asset.imageInfo) {
+      if (!image.width || !image.height || !image.sha256) continue;
+      if (!uniqueImages.has(image.sha256)) uniqueImages.set(image.sha256, image);
+    }
+  }
+  const uniqueImageList = Array.from(uniqueImages.values());
+  const uniqueTextureBaseBytes = uniqueImageList.reduce((sum, image) => sum + image.width * image.height * 4, 0);
+  const uniqueTextureMipBytes = Math.ceil(uniqueTextureBaseBytes * 4 / 3);
   const summary = {
     schema: 'beside.glb-audit.v1',
     auditedAt: new Date().toISOString(),
@@ -256,11 +266,19 @@ async function main() {
       textureRGBA8MipEstimateBytes: totalTextureBytes,
       textureRGBA8MipEstimateMiB: Number((totalTextureBytes / 1048576).toFixed(3)),
       primitives: rows.reduce((s, x) => s + x.primitives, 0),
-      materials: rows.reduce((s, x) => s + x.materials, 0)
+      materials: rows.reduce((s, x) => s + x.materials, 0),
+      encodedImageCount: rows.reduce((s, x) => s + x.images, 0),
+      uniqueImagePayloads: uniqueImages.size,
+      uniqueImageTransferBytes: uniqueImageList.reduce((sum, image) => sum + image.bytes, 0),
+      uniqueTextureRGBA8BaseBytes: uniqueTextureBaseBytes,
+      uniqueTextureRGBA8MipEstimateBytes: uniqueTextureMipBytes,
+      uniqueTextureRGBA8MipEstimateMiB: Number((uniqueTextureMipBytes / 1048576).toFixed(3)),
+      potentialDuplicateTextureMipSavingsBytes: Math.max(0, totalTextureBytes - uniqueTextureMipBytes)
     }
   };
   const runtimeRisks = rows.filter(x => x.runtimeRequiredRisks.length);
   if (runtimeRisks.length) throw new Error('Required GLTFLoader r128 decoder is not configured for: ' + runtimeRisks.map(x => x.name + '=' + x.runtimeRequiredRisks.join(',')).join('; '));
+  fs.writeFileSync(path.join(root, 'asset-audit-report.json'), JSON.stringify(summary, null, 2) + '\n');
   console.log('GLB audit summary (JSON follows)');
   console.log(JSON.stringify(summary, null, 2));
   console.log('Binary integrity: ' + rows.length + '/' + rows.length + ' pinned Git blobs and sizes verified');
