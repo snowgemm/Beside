@@ -1,7 +1,7 @@
 # Besidevalley — Quality Upgrade Roadmap
 
 Last reviewed: 2026-11-04  
-Baseline: `main` at `ebc280b37268c4e9971b88634549a9ef84f4283`  
+Baseline: `main` at `6d62f27e63403fb300c8ad17bc3a201a2087c410`  
 Runtime: plain JavaScript + Three.js r128, mobile-first controls, static Vercel hosting and offline shell.
 
 ## Quality target
@@ -97,6 +97,13 @@ A cohesive smooth-toon adventure game that is readable, responsive and stable on
 
 ### P4 — Models and character presentation
 
+**Stage 21: pin remote model sources**
+- Replace mutable branch URLs with immutable upstream Git commit revisions.
+- Record each runtime model's source path, Git blob ID, transfer size and exact pack license evidence.
+- Migrate a pre-pin IndexedDB entry only when its bytes match the expected Git blob SHA-1; otherwise fetch the pinned URL or use the procedural fallback.
+- Remove the unused potion model from the runtime manifest.
+- Preserve current PBR/texture handling unless a model-specific visual inspection identifies a defect.
+
 - Keep procedural rigs as the reliable fallback and current animation source.
 - Before importing a GLB, verify source, exact license version, immutable source revision, node hierarchy, scale, facing, bounds, triangle count, material count and texture memory.
 - Prefer models that match the smooth-toon environment and chunky character proportions; avoid mixing unrelated art styles.
@@ -187,3 +194,7 @@ A cohesive smooth-toon adventure game that is readable, responsive and stable on
 4. Preserve procedural/offline/audio fallbacks.
 5. Read changed files again, run the relevant tests, inspect CI logs and verify the deployed commit before reporting completion.
 6. Mark GPU, visual, sound-mix and phone checks as manual until they have been performed on a real device.
+
+## Stage 21 verification boundary
+- Remote source commits, exact Git blob identities, pack-specific license references and source file sizes were inspected and pinned.
+- GLB triangle topology, embedded texture dimensions, decoded GPU memory, material appearance and real-device silhouettes have not been measured in this stage. Do not treat file transfer size as a VRAM budget.
