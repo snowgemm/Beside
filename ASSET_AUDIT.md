@@ -17,7 +17,7 @@
 | Distinct embedded image byte payloads | 5 |
 | RGBA8 texture memory, including full mip chain | 4.667 MiB |
 | RGBA8 estimate if identical images were shared across model templates | 2.667 MiB |
-| Potential cross-template texture saving | 2.000 MiB |
+| Potential cross-template texture saving | 2,097,153 bytes (about 2.000 MiB) |
 
 The total triangle count is an asset catalog total, not a frame draw count. The runtime loads model templates separately, then clones each template for instances. Distant trees are replaced by merged procedural chunk geometry; imported tree models are used only within a 42-world-unit radius. Chunk decor is capped at 40 items and 18 trees per chunk.
 
