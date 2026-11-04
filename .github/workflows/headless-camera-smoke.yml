@@ -21,3 +21,10 @@ jobs:
         run: node tests/model-cache-migration.cjs
       - name: Audit pinned GLB topology and texture budgets
         run: node tests/glb-asset-audit.cjs
+      - name: Upload GLB audit report
+        uses: actions/upload-artifact@v4
+        with:
+          name: beside-glb-audit
+          path: asset-audit-report.json
+          if-no-files-found: error
+          retention-days: 30
