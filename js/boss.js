@@ -17,7 +17,22 @@
   function killTele() {
     if (!tele) return;
     scene.remove(tele);
-    tele.traverse(function (c) { if (c.geometry) c.geometry.dispose(); if (c.material) c.material.dispose(); });
+    // A slam telegraph has two meshes that deliberately share one CircleGeometry.
+    // Dispose each owned resource once, even when several children reference it.
+    var geometries = [], materials = [];
+    tele.traverse(function (c) {
+      var geometry = c.geometry;
+      if (geometry && geometries.indexOf(geometry) < 0) {
+        geometries.push(geometry);
+        if (geometry.dispose) geometry.dispose();
+      }
+      var list = Array.isArray(c.material) ? c.material : [c.material];
+      list.forEach(function (material) {
+        if (!material || materials.indexOf(material) >= 0) return;
+        materials.push(material);
+        if (material.dispose) material.dispose();
+      });
+    });
     tele = null;
   }
   function mkTele(geo, op) {

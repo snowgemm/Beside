@@ -166,3 +166,11 @@ Stage 16 (hidden-page simulation and audio lifecycle; 2026-11-04):
 - `js/fx.js`: added a radial-alpha sprite for point particles so ambient fireflies and gameplay particles render as soft round dots rather than square quads.
 - Updated JavaScript regression guards and bumped the offline shell/local asset cache to v17.
 - Verification boundary: source-contract checks and CI are required; real GPU appearance still needs a browser/Android playtest. No claim of visual-device verification is made.
+
+
+## Stage 18: deduplicate boss telegraph resource cleanup
+- Resource audit found that a slam telegraph creates two child meshes which intentionally share one `CircleGeometry`; the old cleanup traversed both meshes and called `geometry.dispose()` twice on the same object.
+- `js/boss.js` now tracks geometry and material identities while cleaning a telegraph, disposing each owned resource exactly once. Cleanup remains safe when called repeatedly.
+- Added an integration-style headless regression: instantiate the real boss module with a small Three.js test double, trigger a slam telegraph, and assert one geometry disposal plus one disposal for each unique material; repeat cleanup to verify idempotency.
+- Updated offline shell and versioned local asset URLs to v18.
+- GPU rendering and the Vercel deployment remain separate validation gates; this fix changes teardown only.

@@ -1,7 +1,7 @@
 # Besidevalley — Quality Upgrade Roadmap
 
 Last reviewed: 2026-11-04  
-Baseline: `main` at `a46f2a15230643ab974e2b8b8603ecc6d978cdf3`  
+Baseline: `main` at `ebc280b37268c4e9971b88634549a9ef84f4283`  
 Runtime: plain JavaScript + Three.js r128, mobile-first controls, static Vercel hosting and offline shell.
 
 ## Quality target
@@ -36,8 +36,12 @@ A cohesive smooth-toon adventure game that is readable, responsive and stable on
 - Use the same cleanup path for dungeon objects and gallery previews.
 - Respect reduced-motion preferences for DOM feedback while keeping timed game feedback visible.
 
+**Stage 18: deduplicate shared boss telegraph resources**
+- A slam telegraph uses two meshes over one shared `CircleGeometry`. Track geometry/material identity in `killTele()` and dispose each resource once.
+- Verify with a headless integration regression that the shared geometry is disposed once, both unique materials are disposed once, and repeated cleanup is idempotent.
+
 **Next resource audit**
-- Inspect every create/remove path for geometry, material, texture, render target, object URL, AudioBuffer, timer and event listener ownership.
+- Continue inspecting every create/remove path for geometry, material, texture, render target, object URL, AudioBuffer, timer and event listener ownership.
 - Use `renderer.info.memory.geometries` and `textures` around repeated identical dungeon/streaming cycles after warm-up. Interpret trends, not a single absolute count: renderer internals and intentionally cached assets can remain allocated.
 - Do not dispose a resource merely because one mesh using it is removed. Establish ownership or reference counting first.
 
