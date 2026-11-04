@@ -184,3 +184,11 @@ Stage 16 (hidden-page simulation and audio lifecycle; 2026-11-04):
 - Added regression checks for expanded-map cascade order, responsive landscape placement, dynamic viewport sizing, and interactive hit-area/focus contracts.
 - Updated the offline shell and local asset tokens to v19.
 - Hardware validation remains required for actual portrait/landscape overlap, browser chrome movement and one-handed comfort.
+
+
+## Stage 20: lower-cost health feedback and reduced-motion timing
+- The delayed damage trail on `#hp-ghost` previously animated `width`, causing a layout recalculation throughout its 550ms transition. It now animates `transform:scaleX()` from the left edge; the 300ms lag and 550ms trail are retained for normal play.
+- The reduced-motion media query previously removed transition duration but left transition delays intact. It now clears delays too, so hidden overlays do not remain visible/interactive for the old 220ms/500ms delay after the opacity transition has been reduced.
+- Added regression assertions for transform-only health-trail updates and zero transition delay under reduced motion.
+- Bumped versioned local asset tokens and offline shell cache to v20.
+- GPU compositing and subjective motion still need a real Android/browser playtest; code-level checks do not establish perceived smoothness.
