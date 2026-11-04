@@ -24,3 +24,10 @@ Current optional event names are: `door`, `chest`, `boss`, `hit`, `swing`, `deat
 `Game.assets.model(name)` returns a scene instance that borrows geometry/material from the cached GLB template. Do not dispose those borrowed resources when removing an instance. Use `Game.assets.disposeInstance(root)`; it skips borrowed GLB mesh resources and disposes local mesh geometry/material owned by the removed object.
 
 Textures referenced by shared GLB materials remain owned by the asset cache. Do not dispose them from a scene instance.
+
+
+## Remote environment model sources
+
+The runtime references optional remote environment GLBs by immutable source commit URLs. Exact source revisions, pack-specific CC0 evidence, Git blob IDs and transfer sizes are recorded in `ASSETS.md`. If an earlier IndexedDB entry uses a mutable branch URL, it is migrated only after its bytes pass the expected Git blob SHA-1 check. If network loading or validation fails, the procedural environment remains available.
+
+The unused `potion` model has been removed from the runtime manifest because no current code path requests it.

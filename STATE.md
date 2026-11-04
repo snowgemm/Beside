@@ -192,3 +192,13 @@ Stage 16 (hidden-page simulation and audio lifecycle; 2026-11-04):
 - Added regression assertions for transform-only health-trail updates and zero transition delay under reduced motion.
 - Bumped versioned local asset tokens and offline shell cache to v20.
 - GPU compositing and subjective motion still need a real Android/browser playtest; code-level checks do not establish perceived smoothness.
+
+
+## Stage 21: pin remote model provenance
+- Pin remote GLBs to immutable upstream Git commits: Quaternius `0c41526d8d4130c37c15e219c2c3737fa8cb4ad8` and the Kenney asset mirror `ea2f2aa1ca8da0898330c97df8a5489976b051d0`.
+- Record each runtime model's source path, exact Git blob ID, transfer size and pack-specific CC0 evidence in `ASSETS.md`.
+- The mirror's `LICENSE-quaternius.txt` is for Downtown City MegaKit, not Stylized Nature; the exact official Stylized Nature pack page is the license evidence for these tree/bush files.
+- Remove the unused `potion` model (no runtime caller), avoiding an unnecessary 23,720-byte fetch.
+- Preserve the current PBR path and procedural fallback. Previous IndexedDB entries keyed by mutable `main` URLs migrate only when Web Crypto verifies the expected Git blob SHA-1 before writing under the pinned URL.
+- Bump local asset tokens and offline shell cache to v21.
+- Limitation: this is source pinning and cache integrity, not a binary topology/triangle/texture-VRAM or GPU visual audit. Git blob sizes are download bytes, not VRAM; Android appearance checks remain pending.

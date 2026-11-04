@@ -17,3 +17,5 @@ jobs:
           node-version: 20
       - name: Run JavaScript syntax and headless camera checks
         run: node tests/headless-camera-smoke.cjs
+      - name: Verify immutable model cache migration
+        run: node tests/model-cache-migration.cjs

@@ -1,5 +1,14 @@
 (function () {
   var G = window.Game = window.Game || {};
+  // Immutable upstream commits for remote GLB mirrors. legacyUrl is used only to
+  // migrate an old IndexedDB entry after its bytes pass Git blob SHA-1 verification.
+  var QUATERNIUS_REV = '0c41526d8d4130c37c15e219c2c3737fa8cb4ad8';
+  var KENNEY_MIRROR_REV = 'ea2f2aa1ca8da0898330c97df8a5489976b051d0';
+  var QUATERNIUS_MODEL_BASE = 'https://raw.githubusercontent.com/anshaneja5/skyline-run/' + QUATERNIUS_REV + '/public/assets/models/';
+  var KENNEY_PACK_BASE = 'https://raw.githubusercontent.com/Hidencod/tge-assets/' + KENNEY_MIRROR_REV + '/packs/';
+  var QUATERNIUS_LEGACY_BASE = 'https://raw.githubusercontent.com/anshaneja5/skyline-run/main/public/assets/models/';
+  var KENNEY_LEGACY_BASE = 'https://raw.githubusercontent.com/Hidencod/tge-assets/main/packs/';
+
   /* ---------- MANIFEST: drop files at these paths, no code changes needed ----------
      models: file under assets/models/, height = target height in world units (auto-fit: centred x/z, feet y=0),
              rotY = extra yaw in radians (glTF models face +Z, game "forward" is -Z, so characters use Math.PI).
@@ -16,17 +25,16 @@
       archer: { file: 'archer.glb', height: 1.6, rotY: Math.PI },
       wolf: { file: 'wolf.glb', height: 1, rotY: Math.PI }, skeleton: { file: 'skeleton.glb', height: 1.7, rotY: Math.PI }, bat: { file: 'bat.glb', height: 0.9, rotY: Math.PI },
       spider: { file: 'spider.glb', height: 0.8, rotY: Math.PI }, mushroom: { file: 'mushroom.glb', height: 1.3, rotY: Math.PI },
-      // Quaternius Stylized Nature MegaKit is CC0; IndexedDB stores each GLB after the first successful online download.
-      tree: { url: 'https://raw.githubusercontent.com/anshaneja5/skyline-run/main/public/assets/models/tree1.glb', height: 4.8 },
-      tree2: { url: 'https://raw.githubusercontent.com/anshaneja5/skyline-run/main/public/assets/models/tree2.glb', height: 4.55 },
-      tree3: { url: 'https://raw.githubusercontent.com/anshaneja5/skyline-run/main/public/assets/models/tree3.glb', height: 4.7 },
-      pine: { url: 'https://raw.githubusercontent.com/Hidencod/tge-assets/main/packs/nature-kit/tree-pinetalla.glb', height: 4.9 },
-      bush: { url: 'https://raw.githubusercontent.com/anshaneja5/skyline-run/main/public/assets/models/bush.glb', height: 0.95 },
-      rock: { url: 'https://raw.githubusercontent.com/Hidencod/tge-assets/main/packs/nature-kit/rock-smalla.glb', height: 0.8 },
-      mushroomProp: { url: 'https://raw.githubusercontent.com/Hidencod/tge-assets/main/packs/nature-kit/mushroom-red.glb', height: 0.65 },
-      // Small stylized collectible props from Kenney Mini Dungeon (CC0).
-      coin: { url: 'https://raw.githubusercontent.com/Hidencod/tge-assets/main/packs/mini-dungeon/coin.glb', height: 0.42 },
-      potion: { url: 'https://raw.githubusercontent.com/Hidencod/tge-assets/main/packs/mini-dungeon/potion.glb', height: 0.46 }
+      // Quaternius Stylized Nature MegaKit (CC0 1.0); source blobs are recorded in ASSETS.md.
+      tree: { url: QUATERNIUS_MODEL_BASE + 'tree1.glb', legacyUrl: QUATERNIUS_LEGACY_BASE + 'tree1.glb', blobSha: '80bd662cc51f983986f4e201463dc3a729a6cd4a', height: 4.8 },
+      tree2: { url: QUATERNIUS_MODEL_BASE + 'tree2.glb', legacyUrl: QUATERNIUS_LEGACY_BASE + 'tree2.glb', blobSha: '0197de65879eb650247c8d56ac52da34489938cb', height: 4.55 },
+      tree3: { url: QUATERNIUS_MODEL_BASE + 'tree3.glb', legacyUrl: QUATERNIUS_LEGACY_BASE + 'tree3.glb', blobSha: '828786b4bdb5224a8b3672f5e5d6cebe1c65bd93', height: 4.7 },
+      bush: { url: QUATERNIUS_MODEL_BASE + 'bush.glb', legacyUrl: QUATERNIUS_LEGACY_BASE + 'bush.glb', blobSha: '84b4153c17e988a658e56d4093b0028d1b034c3f', height: 0.95 },
+      // Kenney Nature Kit / Mini Dungeon models (CC0 1.0).
+      pine: { url: KENNEY_PACK_BASE + 'nature-kit/tree-pinetalla.glb', legacyUrl: KENNEY_LEGACY_BASE + 'nature-kit/tree-pinetalla.glb', blobSha: 'b064580b04a93cea7cbb76f83dd880a55f530fed', height: 4.9 },
+      rock: { url: KENNEY_PACK_BASE + 'nature-kit/rock-smalla.glb', legacyUrl: KENNEY_LEGACY_BASE + 'nature-kit/rock-smalla.glb', blobSha: 'b23471253cfafcca5916ffddb79853eca7433195', height: 0.8 },
+      mushroomProp: { url: KENNEY_PACK_BASE + 'nature-kit/mushroom-red.glb', legacyUrl: KENNEY_LEGACY_BASE + 'nature-kit/mushroom-red.glb', blobSha: '3420847cd67ed2403a40c78fcacf8b57f8e6c20c', height: 0.65 },
+      coin: { url: KENNEY_PACK_BASE + 'mini-dungeon/coin.glb', legacyUrl: KENNEY_LEGACY_BASE + 'mini-dungeon/coin.glb', blobSha: '5d0ff9df2d53956151b1adefc0d0a99ce549fdd6', height: 0.42 }
     },
     sounds: {
       door: ['door.ogg', 'door.mp3', 'door.wav'], chest: ['chest.ogg', 'chest.mp3', 'chest.wav'],
@@ -161,17 +169,41 @@
       });
     });
   }
-  function getModelBuffer(url) {
-    return readModelBuffer(url).then(function (cached) {
+  function verifyGitBlob(buffer, expectedSha) {
+    var subtle = window.crypto && window.crypto.subtle;
+    if (!(buffer instanceof ArrayBuffer) || !expectedSha || !subtle || !subtle.digest) return Promise.resolve(false);
+    // Git hashes bytes with the "blob <size>" header followed by one NUL byte.
+    var header = 'blob ' + buffer.byteLength + String.fromCharCode(0), bytes = new Uint8Array(header.length + buffer.byteLength), i;
+    for (i = 0; i < header.length; i++) bytes[i] = header.charCodeAt(i);
+    bytes.set(new Uint8Array(buffer), header.length);
+    return subtle.digest('SHA-1', bytes).then(function (digest) {
+      var view = new Uint8Array(digest), hex = '';
+      for (i = 0; i < view.length; i++) { var part = view[i].toString(16); hex += part.length === 1 ? '0' + part : part; }
+      return hex === expectedSha;
+    }).catch(function () { return false; });
+  }
+  function getModelBuffer(def) {
+    return readModelBuffer(def.url).then(function (cached) {
+      if (cached) return cached;
+      // Reuse a pre-pin IndexedDB entry only when its exact bytes match the pinned Git blob.
+      if (!def.legacyUrl || !def.blobSha) return null;
+      return readModelBuffer(def.legacyUrl).then(function (legacy) {
+        if (!legacy) return null;
+        return verifyGitBlob(legacy, def.blobSha).then(function (valid) {
+          if (!valid) return null;
+          return writeModelBuffer(def.url, legacy).then(function () { return legacy; });
+        });
+      });
+    }).then(function (cached) {
       if (cached) return cached;
       if (!window.fetch) return null;
-      return fetch(url, { mode: 'cors', cache: 'force-cache' }).then(function (response) {
+      return fetch(def.url, { mode: 'cors', cache: 'force-cache' }).then(function (response) {
         if (!response.ok) throw new Error('GLB request failed: ' + response.status);
         return response.arrayBuffer();
       }).then(function (buffer) {
-        return writeModelBuffer(url, buffer).then(function () { return buffer; });
-      }).catch(function () { return null; });
-    });
+        return writeModelBuffer(def.url, buffer).then(function () { return buffer; });
+      });
+    }).catch(function () { return null; });
   }
   function loadModel(name, def) {
     return new Promise(function (done) {
@@ -192,7 +224,7 @@
       if (!def.url || !window.fetch || !THREE.GLTFLoader || !THREE.GLTFLoader.prototype.parse) {
         fallbackLoad(); return;
       }
-      getModelBuffer(def.url).then(function (buffer) {
+      getModelBuffer(def).then(function (buffer) {
         if (!buffer) { fallbackLoad(); return; }
         try {
           new THREE.GLTFLoader().parse(buffer, '', loaded, function () { fallbackLoad(); });

@@ -507,8 +507,22 @@ check('ambient and burst particles use circular alpha sprites instead of square 
   fxSource.includes('depthWrite: false'));
 check('remote GLB cache supports repeat offline sessions with graceful fallback',
   assetSource.includes("indexedDB.open('besidevalley-model-cache'") &&
-  assetSource.includes('function getModelBuffer(url)') &&
+  assetSource.includes('function getModelBuffer(def)') &&
   assetSource.includes('function fallbackLoad()'));
+check('remote model assets pin reviewed upstream commits and exact Git blob identities',
+  assetSource.includes("var QUATERNIUS_REV = '0c41526d8d4130c37c15e219c2c3737fa8cb4ad8'") &&
+  assetSource.includes("var KENNEY_MIRROR_REV = 'ea2f2aa1ca8da0898330c97df8a5489976b051d0'") &&
+  assetSource.includes("blobSha: '80bd662cc51f983986f4e201463dc3a729a6cd4a'") &&
+  assetSource.includes("blobSha: '5d0ff9df2d53956151b1adefc0d0a99ce549fdd6'"));
+check('legacy IndexedDB model cache migrates only after Git blob SHA-1 verification',
+  assetSource.includes('function verifyGitBlob(buffer, expectedSha)') &&
+  assetSource.includes("subtle.digest('SHA-1', bytes)") &&
+  assetSource.includes('String.fromCharCode(0)') &&
+  assetSource.includes('verifyGitBlob(legacy, def.blobSha)') &&
+  assetSource.includes('writeModelBuffer(def.url, legacy)'));
+check('unused potion GLB is omitted from the runtime model manifest',
+  !/^\s*potion:\s*\{\s*url:/m.test(assetSource) &&
+  !assetSource.includes('mini-dungeon/potion.glb'));
 check('offline service worker caches the app shell and external renderer scripts after first load',
   indexSource.includes("navigator.serviceWorker.register('./sw.js')") &&
   swSource.includes('const SHELL = [') &&
@@ -518,8 +532,8 @@ check('terrain grain texture uses periodic multi-scale noise and color texture e
   terrainSource.includes('mkTex(size, function (x,y)') &&
   terrainSource.includes('t.encoding = THREE.sRGBEncoding'));
 check('three distinct close-range tree models use merged procedural trees at distance',
-  assetSource.includes("tree2: { url: 'https://raw.githubusercontent.com/anshaneja5/skyline-run/main/public/assets/models/tree2.glb'") &&
-  assetSource.includes("tree3: { url: 'https://raw.githubusercontent.com/anshaneja5/skyline-run/main/public/assets/models/tree3.glb'") &&
+  assetSource.includes("tree2: { url: QUATERNIUS_MODEL_BASE + 'tree2.glb'") &&
+  assetSource.includes("tree3: { url: QUATERNIUS_MODEL_BASE + 'tree3.glb'") &&
   terrainSource.includes('42*42') && terrainSource.includes("r2<.34?'tree':r2<.67?'tree2':'tree3'"));
 check('adaptive GPU scaling also reduces and restores vegetation density',
   mainSource.includes("G.world.setGrassQuality(next<.82?'low':next<.93?'medium':base.grass)") &&
@@ -552,11 +566,11 @@ check('keyboard focus is visible on map and button controls',
   styleSource.includes('button:focus-visible,#minimap:focus-visible{outline:2px solid var(--hi)') &&
   styleSource.includes('.menu-row select:focus-visible'));
 check('offline cache is bumped and versioned local assets prevent stale code from loading',
-  swSource.includes("CACHE_NAME = 'besidevalley-shell-v20'") &&
+  swSource.includes("CACHE_NAME = 'besidevalley-shell-v21'") &&
   swSource.includes("url.searchParams.get('v')") &&
   swSource.includes('function fallbackCacheKey(requestUrl)') &&
   swSource.includes('cache.match(fallbackKey)') &&
-  indexSource.includes('20261104-motion-performance-v20'));
+  indexSource.includes('20261104-model-source-pins-v21'));
 check('player jump input triggers a short takeoff pose independent of refresh rate',
   rigSource.includes("state === 'jump'") && rigSource.includes('this.jumpT = 0.32') &&
   rigSource.includes('var jumpPulse = Math.sin') && playerSource.includes("rig.play('jump'"));
