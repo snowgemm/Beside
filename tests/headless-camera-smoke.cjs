@@ -77,16 +77,31 @@ class Object3D {
   }
   add(...objects) { for (const object of objects) { object.parent = this; this.children.push(object); } }
   remove(object) { this.children = this.children.filter((child) => child !== object); object.parent = null; }
+  traverse(callback) {
+    callback(this);
+    for (const child of this.children) child.traverse(callback);
+  }
 }
 
+const createdMaterials = [];
+const createdCircleGeometries = [];
 class Geometry {
   constructor() {
+    this.disposeCount = 0;
     this.attributes = { normal: { count: 6, getY(i) { return i === 0 ? 1 : i === 1 ? -1 : 0; }, getX(i) { return i === 2 ? 1 : 0; } } };
   }
   setAttribute(name, value) { this.attributes[name] = value; }
+  rotateX() { return this; }
+  dispose() { this.disposeCount++; }
+}
+class CircleGeometry extends Geometry {
+  constructor(...args) { super(); this.args = args; createdCircleGeometries.push(this); }
 }
 class BufferAttribute { constructor(array, itemSize) { this.array = array; this.itemSize = itemSize; } }
-class Material { constructor(options = {}) { Object.assign(this, options); } }
+class Material {
+  constructor(options = {}) { Object.assign(this, options); this.disposeCount = 0; createdMaterials.push(this); }
+  dispose() { this.disposeCount++; }
+}
 class Mesh extends Object3D {
   constructor(geometry, material) {
     super();
@@ -99,6 +114,7 @@ const THREE = {
   Group: Object3D,
   Mesh,
   BoxGeometry: Geometry,
+  CircleGeometry,
   BufferAttribute,
   MeshBasicMaterial: Material,
   MeshStandardMaterial: Material
@@ -514,11 +530,11 @@ check('expanded minimap has interactive wheel and pinch zoom that persist settin
   minimapSource.includes('map-zoom-in') &&
   minimapSource.includes('G.menu.settings.mapZoom=M.zoom'));
 check('offline cache is bumped and versioned local assets prevent stale code from loading',
-  swSource.includes("CACHE_NAME = 'besidevalley-shell-v17'") &&
+  swSource.includes("CACHE_NAME = 'besidevalley-shell-v18'") &&
   swSource.includes("url.searchParams.get('v')") &&
   swSource.includes('function fallbackCacheKey(requestUrl)') &&
   swSource.includes('cache.match(fallbackKey)') &&
-  indexSource.includes('20261104-vegetation-particle-fix-v17'));
+  indexSource.includes('20261104-boss-telegraph-cleanup-v18'));
 check('player jump input triggers a short takeoff pose independent of refresh rate',
   rigSource.includes("state === 'jump'") && rigSource.includes('this.jumpT = 0.32') &&
   rigSource.includes('var jumpPulse = Math.sin') && playerSource.includes("rig.play('jump'"));
@@ -546,6 +562,33 @@ check('distant idle mob animation is throttled while AI and physics remain full-
 check('camera hit feedback only fires after a valid combat target is hit',
   fs.readFileSync(path.join(jsDir, 'combat.js'), 'utf8').includes('P.shake = Math.max(P.shake || 0, crit ? 0.11 : 0.045)') &&
   fs.readFileSync(path.join(jsDir, 'combat.js'), 'utf8').indexOf('P.shake = Math.max(P.shake || 0, crit ? 0.11 : 0.045)') > fs.readFileSync(path.join(jsDir, 'combat.js'), 'utf8').indexOf('C.attack = function ()'));
+
+// Boss slam telegraphs use two child meshes that share one CircleGeometry.
+const previousEnemies = G.enemies;
+const previousAudio = G.audio;
+let spawnedBoss = null;
+G.audio = { play() {} };
+G.enemies = {
+  spawn(name, x, y, z, def) {
+    spawnedBoss = { type: name, x, y, z, hp: def.hp, def, group: new Object3D(), rig: null };
+    return spawnedBoss;
+  }
+};
+load('boss.js');
+G.boss.init(scene);
+G.boss.spawn(0, 0, 0, 1);
+spawnedBoss.update(spawnedBoss, 2.1, 0, 5, 5, 5, 0, 0);
+const slamGeometry = createdCircleGeometries[createdCircleGeometries.length - 1];
+const slamMaterials = createdMaterials.slice(-2);
+G.boss.cleanup();
+check('boss slam telegraph disposes its shared CircleGeometry once and both owned materials once',
+  slamGeometry && slamGeometry.disposeCount === 1 &&
+  slamMaterials.length === 2 && slamMaterials.every((material) => material.disposeCount === 1));
+G.boss.cleanup();
+check('repeated boss telegraph cleanup is idempotent',
+  slamGeometry.disposeCount === 1 && slamMaterials.every((material) => material.disposeCount === 1));
+G.enemies = previousEnemies;
+G.audio = previousAudio;
 const failures = results.filter((result) => !result.pass);
 console.log('JavaScript syntax: ' + jsFiles.length + ' files passed');
 console.log('Headless camera/input checks: ' + (results.length - failures.length) + '/' + results.length + ' passed');
