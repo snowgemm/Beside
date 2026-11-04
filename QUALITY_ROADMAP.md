@@ -70,6 +70,14 @@ A cohesive smooth-toon adventure game that is readable, responsive and stable on
 - Verify menu open/close, pause/resume, inventory and map transitions can be interrupted without leaving stale pause/input state.
 - Maintain readable contrast over bright snow, sand, water and dark dungeon backgrounds.
 
+**Stage 19: mobile map layout and control targets**
+- Ensure the expanded minimap's centered layout overrides compact touch-HUD placement; use the dynamic viewport height when supported and keep a safe fallback.
+- Use a single clear compact minimap placement for portrait and short landscape layouts.
+- Keep map zoom/close and menu action controls at 44x44 CSS px or larger; preserve the existing larger gameplay controls.
+- Expose a visible keyboard focus ring on buttons, map, and settings selects without adding focus decoration to pointer-only interaction.
+
+**Acceptance:** expanded map stays centered on touch devices, no essential control overlaps in portrait or landscape, and interactive settings/map controls remain comfortably targetable. Real-device validation is still required.
+
 **Acceptance:** no overlap of essential controls, menu state is consistent, important HUD values remain legible, and layouts work in portrait and landscape.
 
 ### P3 — Animation and game feel
