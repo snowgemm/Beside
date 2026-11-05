@@ -236,3 +236,10 @@ Stage 16 (hidden-page simulation and audio lifecycle; 2026-11-04):
 - Moved the staging array into each `decorMesh()` build and passed it into the tree helper. Once a chunk owns its children, no global staging reference remains.
 - Cached GLB geometry/material/texture resources remain borrowed from the persistent asset templates; chunk cleanup must not dispose those shared resources. Terrain and merged decor geometries remain chunk-owned and are disposed on unload/rebuild.
 - Added a CI source-contract regression for the per-chunk staging scope. No GPU-memory or Android performance improvement is claimed; hardware sampling remains pending.
+
+## Stage 26: chunk geometry staging cleanup
+- The chunk builder now clears the temporary `dp/dc/di` numeric arrays after `Float32BufferAttribute` and `BufferGeometry.setIndex()` have copied their contents into the owned BufferGeometry.
+- The collision blocker staging array `dbl` is cleared immediately after a separate copy is stored in the chunk blocker map.
+- Empty decor builds also release their unused staging arrays.
+- This removes an extra module-level CPU-side copy for the last chunk; it does not change geometry, collision results or GPU resource ownership.
+- Added a CI source-contract regression. No GPU-memory, frame-time or device performance gain is claimed without runtime profiling.
