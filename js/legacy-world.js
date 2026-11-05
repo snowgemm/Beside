@@ -443,7 +443,7 @@
   var AUT = [[.9, .5, .12], [.8, .28, .12], [.92, .72, .16]];
   var FLW = [[.95, .25, .25], [.98, .85, .2], [.98, .98, .95], [.95, .5, .75], [.4, .5, .95]];
   var DMAX = 40, TMAX = 18;
-  var dp, dc, di, modelDecor = [];
+  var dp, dc, di;
   function dv(x, y, z, r, g, b) { dp.push(x, y, z); dc.push(r, g, b); }
   function dbox(cx, y0, cz, sx, sy, sz, r, g, b) { // 5 faces (no bottom)
     var x0 = cx - sx / 2, x1 = cx + sx / 2, z0 = cz - sz / 2, z1 = cz + sz / 2, y1 = y0 + sy, base = dp.length / 3, k, q, s, sb;
@@ -461,7 +461,7 @@
   function leafCol(bi, r) {
     return bi === 4 ? AUT[(r * 3) | 0] : bi === 1 ? [.15, .44, .2] : bi === 3 ? [.13, .36, .27] : bi === 2 ? [.3, .5, .2] : [.3, .64, .24];
   }
-  function tree(bi, cx, h, cz, r2, j, ox, oz) {
+  function tree(bi, cx, h, cz, r2, j, ox, oz, modelDecor) {
     var th, L, tk = [.4 * j, .26 * j, .14 * j], k, ext = null;
     // Textured GLBs near the player; distant trees stay merged into chunk geometry to cap mobile draw calls.
     if (bi !== 2 && G.assets && G.assets.model) {
@@ -521,8 +521,8 @@
   // tree trunks (r .32, 2.5 high) and rocks (r .5, .55 high) as short cylinders: Float32Array stride 5 = x, z, r, y0, y1; null when none
   function decorBlockers(cx, cz) { return bmap.get(bk(cx, cz)) || null; }
   function decorMesh(ox, oz, H, BIO) {
-    var N = CS + 3, gates = gatesFor(ox, oz), sp = G.player && G.player.spawnPos, n = 0, trees = 0, lx, lz, g, gl = gates ? gates.length : 0;
-    dp = []; dc = []; di = []; dbl = []; modelDecor = [];
+    var N = CS + 3, gates = gatesFor(ox, oz), sp = G.player && G.player.spawnPos, n = 0, trees = 0, lx, lz, g, gl = gates ? gates.length : 0, modelDecor = [];
+    dp = []; dc = []; di = []; dbl = [];
     outer:
     for (lz = 0; lz < CS; lz++) for (lx = 0; lx < CS; lx++) {
       if (n >= DMAX) break outer;
@@ -540,7 +540,7 @@
       for (g = 0; g < gl; g++) { var dx = wx + .5 - gates[g].x, dz = wz + .5 - gates[g].z; if (dx * dx + dz * dz < 64) { near = true; break; } }
       if (near) continue;
       var cx = lx + .5 + (hash(wx + 1, wz + 2) - .5) * .5, cz = lz + .5 + (hash(wx + 2, wz + 1) - .5) * .5, j = .9 + .2 * hash(wx + 5, wz + 9), r2 = hash(wx + 3, wz + 4), L, c;
-      if (kind === 1) { tree(bi, cx, h, cz, r2, j, ox, oz); trees++; dbl.push(ox + cx, oz + cz, bi===2?0.34:0.42, h, h + (bi===2?3.7:5.4)); }
+      if (kind === 1) { tree(bi, cx, h, cz, r2, j, ox, oz, modelDecor); trees++; dbl.push(ox + cx, oz + cz, bi===2?0.34:0.42, h, h + (bi===2?3.7:5.4)); }
       else if (kind === 2) {
         L = leafCol(bi, r2);
         var bushModel = G.assets && G.assets.model ? G.assets.model('bush') : null;

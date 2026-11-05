@@ -51,6 +51,12 @@ A cohesive smooth-toon adventure game that is readable, responsive and stable on
 - Compare warm-up, repeated identical chunk refreshes and dungeon enter/leave cycles on the same device/browser, quality preset, camera/view, world seed and build SHA.
 - Treat geometry/texture values as object counts, not bytes or authoritative VRAM; use repeated-cycle trends rather than a single absolute value.
 
+**Stage 25: chunk decor reference lifecycle**
+- Keep temporary model-clone staging collections scoped to the chunk being built; after attaching GLB clones to their owner chunk, do not retain a second global reference.
+- Treat asset-manager clones as borrowed: they share template geometry/material/texture and must not dispose those resources when a chunk unloads.
+- Keep terrain and merged procedural decor geometry chunk-owned and dispose each on rebuild/unload.
+- Continue with repeatable browser measurements around warm-up and chunk/dungeon cycles. The local `game-dev` CLI and adapter are not present in this environment, so no sealed GPU run or hardware timing is available.
+
 **Acceptance**
 - Removing one GLB clone cannot invalidate another clone or the cached template.
 - Repeated identical dungeon enter/leave and chunk refresh cycles do not show unbounded resource growth.
@@ -223,3 +229,7 @@ A cohesive smooth-toon adventure game that is readable, responsive and stable on
 ## Stage 24 verification boundary
 - Renderer snapshot API and source-level regression checks are added; real-browser sampling, repeated dungeon/chunk-cycle trends and Android GPU profiling remain pending.
 - No FPS, GPU-time, VRAM-byte, thermal or battery improvement is claimed from this instrumentation-only change.
+
+## Stage 25 verification boundary
+- Static ownership audit and a focused CI regression cover chunk-clone reference scope. The exact source path is corrected.
+- Actual renderer memory trends, GPU completion, Android behavior, thermal state and 144 FPS remain unmeasured; use Stage 24 snapshots on a controlled device/run before further optimization.

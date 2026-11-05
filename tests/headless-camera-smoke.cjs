@@ -552,6 +552,12 @@ check('terrain grain texture uses periodic multi-scale noise and color texture e
   terrainSource.includes('function tileNoise(x, y, size, cells, seed)') &&
   terrainSource.includes('mkTex(size, function (x,y)') &&
   terrainSource.includes('t.encoding = THREE.sRGBEncoding'));
+check('streamed GLB decor staging references are scoped to each chunk build',
+  terrainSource.includes('var dp, dc, di;') &&
+  !terrainSource.includes('var dp, dc, di, modelDecor = [];') &&
+  terrainSource.includes('function tree(bi, cx, h, cz, r2, j, ox, oz, modelDecor)') &&
+  terrainSource.includes('gl = gates ? gates.length : 0, modelDecor = [];') &&
+  terrainSource.includes('tree(bi, cx, h, cz, r2, j, ox, oz, modelDecor);'));
 check('three distinct close-range tree models use merged procedural trees at distance',
   assetSource.includes("tree2: { url: QUATERNIUS_MODEL_BASE + 'tree2.glb'") &&
   assetSource.includes("tree3: { url: QUATERNIUS_MODEL_BASE + 'tree3.glb'") &&
@@ -587,11 +593,11 @@ check('keyboard focus is visible on map and button controls',
   styleSource.includes('button:focus-visible,#minimap:focus-visible{outline:2px solid var(--hi)') &&
   styleSource.includes('.menu-row select:focus-visible'));
 check('offline cache is bumped and versioned local assets prevent stale code from loading',
-  swSource.includes("CACHE_NAME = 'besidevalley-shell-v24'") &&
+  swSource.includes("CACHE_NAME = 'besidevalley-shell-v25'") &&
   swSource.includes("url.searchParams.get('v')") &&
   swSource.includes('function fallbackCacheKey(requestUrl)') &&
   swSource.includes('cache.match(fallbackKey)') &&
-  indexSource.includes('20261105-renderer-diagnostics-v24'));
+  indexSource.includes('20261105-chunk-decor-lifecycle-v25'));
 check('player jump input triggers a short takeoff pose independent of refresh rate',
   rigSource.includes("state === 'jump'") && rigSource.includes('this.jumpT = 0.32') &&
   rigSource.includes('var jumpPulse = Math.sin') && playerSource.includes("rig.play('jump'"));
