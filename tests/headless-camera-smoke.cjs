@@ -558,6 +558,10 @@ check('streamed GLB decor staging references are scoped to each chunk build',
   terrainSource.includes('function tree(bi, cx, h, cz, r2, j, ox, oz, modelDecor)') &&
   terrainSource.includes('gl = gates ? gates.length : 0, modelDecor = [];') &&
   terrainSource.includes('tree(bi, cx, h, cz, r2, j, ox, oz, modelDecor);'));
+check('chunk geometry and collision staging arrays are released after their data is copied',
+  terrainSource.includes('geo.setIndex(di); dp = dc = di = null; geo.computeVertexNormals();') &&
+  terrainSource.includes('if (!n) { dp = dc = di = null; return null; }') &&
+  terrainSource.includes('bmap.set(bk(cx,cz),dbl.length?dbl.slice():null); dbl = [];'));
 check('three distinct close-range tree models use merged procedural trees at distance',
   assetSource.includes("tree2: { url: QUATERNIUS_MODEL_BASE + 'tree2.glb'") &&
   assetSource.includes("tree3: { url: QUATERNIUS_MODEL_BASE + 'tree3.glb'") &&
