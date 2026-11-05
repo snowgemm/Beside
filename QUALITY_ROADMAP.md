@@ -1,7 +1,7 @@
 # Besidevalley — Quality Upgrade Roadmap
 
-Last reviewed: 2026-11-04  
-Baseline: `main` at `6d62f27e63403fb300c8ad17bc3a201a2087c410`  
+Last reviewed: 2026-11-05  
+Baseline: `main` at `4bf159e62ea8153f29b9ed11808af39d677bd18f`  
 Runtime: plain JavaScript + Three.js r128, mobile-first controls, static Vercel hosting and offline shell.
 
 ## Quality target
@@ -44,6 +44,12 @@ A cohesive smooth-toon adventure game that is readable, responsive and stable on
 - Continue inspecting every create/remove path for geometry, material, texture, render target, object URL, AudioBuffer, timer and event listener ownership.
 - Use `renderer.info.memory.geometries` and `textures` around repeated identical dungeon/streaming cycles after warm-up. Interpret trends, not a single absolute count: renderer internals and intentionally cached assets can remain allocated.
 - Do not dispose a resource merely because one mesh using it is removed. Establish ownership or reference counting first.
+
+**Stage 24: renderer diagnostics baseline**
+- Expose manual `Game.debug` snapshots for per-render draw counters and renderer-tracked geometry/texture counts, plus FPS, pixel ratio, graphics quality, chunks and dungeon state.
+- Keep the history opt-in and capped at 120 entries. Do not add a permanent HUD, polling interval or runtime dependency.
+- Compare warm-up, repeated identical chunk refreshes and dungeon enter/leave cycles on the same device/browser, quality preset, camera/view, world seed and build SHA.
+- Treat geometry/texture values as object counts, not bytes or authoritative VRAM; use repeated-cycle trends rather than a single absolute value.
 
 **Acceptance**
 - Removing one GLB clone cannot invalidate another clone or the cached template.
@@ -214,3 +220,6 @@ A cohesive smooth-toon adventure game that is readable, responsive and stable on
 ## Stage 23 verification boundary
 - The static image payloads are exact matches; template-level texture pooling is code/test covered.
 - The estimated reduction is about 2 MiB RGBA8+mipmap storage across tree templates. Actual GPU allocation reuse and visual appearance still need a browser/Android profile.
+## Stage 24 verification boundary
+- Renderer snapshot API and source-level regression checks are added; real-browser sampling, repeated dungeon/chunk-cycle trends and Android GPU profiling remain pending.
+- No FPS, GPU-time, VRAM-byte, thermal or battery improvement is claimed from this instrumentation-only change.
