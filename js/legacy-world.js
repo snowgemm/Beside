@@ -434,7 +434,7 @@
     mesh.receiveShadow=false;
     var dm=decorMesh(ox,oz,H,BIO);if(dm){dm.matrixAutoUpdate=false;dm.updateMatrix();mesh.add(dm);mesh.decor=dm;}
     // The original code generated tree/rock blocker data but discarded it, so scenery had no physical collision.
-    bmap.set(bk(cx,cz),dbl.length?dbl.slice():null);scene.add(mesh);chunks.set(cx+','+cz,mesh);if(W.onChunkLoad)W.onChunkLoad(cx,cz);
+    bmap.set(bk(cx,cz),dbl.length?dbl.slice():null); dbl = []; scene.add(mesh);chunks.set(cx+','+cz,mesh);if(W.onChunkLoad)W.onChunkLoad(cx,cz);
   }
 
   /* ---------- decor: one merged mesh per chunk, deterministic, visual only ---------- */
@@ -569,11 +569,11 @@
       }
       n++;
     }
-    if (!n) return null;
+    if (!n) { dp = dc = di = null; return null; }
     var geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.Float32BufferAttribute(dp, 3));
     geo.setAttribute('color', new THREE.Float32BufferAttribute(dc, 3));
-    geo.setIndex(di); geo.computeVertexNormals();
+    geo.setIndex(di); dp = dc = di = null; geo.computeVertexNormals();
     var m = new THREE.Mesh(geo, decorMat);
     for (var mi = 0; mi < modelDecor.length; mi++) m.add(modelDecor[mi]);
     m.userData = { items: n, noShadow: true };
