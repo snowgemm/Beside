@@ -522,7 +522,7 @@
   function decorBlockers(cx, cz) { return bmap.get(bk(cx, cz)) || null; }
   function decorMesh(ox, oz, H, BIO) {
     var N = CS + 3, gates = gatesFor(ox, oz), sp = G.player && G.player.spawnPos, n = 0, trees = 0, lx, lz, g, gl = gates ? gates.length : 0, modelDecor = [];
-    dp = []; dc = []; di = []; dbl = []; modelDecor = [];
+    dp = []; dc = []; di = []; dbl = [];
     outer:
     for (lz = 0; lz < CS; lz++) for (lx = 0; lx < CS; lx++) {
       if (n >= DMAX) break outer;
