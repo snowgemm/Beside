@@ -73,6 +73,49 @@
 
   var hud = document.getElementById('hud'), coordsHud = document.getElementById('coords');
   var last = performance.now(), accT = 0, accN = 0, hudT = 0, fps = 0, slowT = 0, lowered = 0, adaptiveSlowT = 0, adaptiveFastT = 0;
+  // Manual, bounded diagnostics: no HUD, polling timer, or per-frame history allocation.
+  var rendererHistory = [], RENDERER_HISTORY_LIMIT = 120;
+  G.debug = G.debug || {};
+  G.debug.rendererSnapshot = function (label) {
+    var info = renderer.info || {}, render = info.render || {}, memory = info.memory || {};
+    return {
+      label: label == null ? '' : String(label),
+      timeMs: Math.round(performance.now()),
+      fps: fps,
+      pixelRatio: renderer.getPixelRatio ? renderer.getPixelRatio() : null,
+      quality: G.quality ? G.quality.value : null,
+      adaptiveScale: adaptiveScale,
+      drawDistance: G.world && G.world.drawDistance != null ? G.world.drawDistance : null,
+      chunks: G.world && typeof G.world.chunkCount === 'function' ? G.world.chunkCount() : null,
+      dungeonActive: !!(G.dungeon && G.dungeon.active),
+      render: {
+        frame: render.frame == null ? null : render.frame,
+        calls: render.calls || 0,
+        triangles: render.triangles || 0,
+        points: render.points || 0,
+        lines: render.lines || 0
+      },
+      memory: {
+        geometries: memory.geometries || 0,
+        textures: memory.textures || 0
+      },
+      programs: info.programs ? info.programs.length : 0
+    };
+  };
+  G.debug.captureRendererSnapshot = function (label) {
+    var snapshot = G.debug.rendererSnapshot(label);
+    // Snapshots contain primitives only; JSON cloning prevents callers mutating stored history.
+    rendererHistory.push(JSON.parse(JSON.stringify(snapshot)));
+    if (rendererHistory.length > RENDERER_HISTORY_LIMIT) rendererHistory.splice(0, rendererHistory.length - RENDERER_HISTORY_LIMIT);
+    return JSON.parse(JSON.stringify(snapshot));
+  };
+  G.debug.getRendererHistory = function () {
+    return JSON.parse(JSON.stringify(rendererHistory));
+  };
+  G.debug.clearRendererHistory = function () {
+    rendererHistory.length = 0;
+    return true;
+  };
   var contextLost = false, recoveryNotice = null;
   var pageHidden = !!document.hidden;
   function resetFrameClock(now) {

@@ -222,3 +222,10 @@ Stage 16 (hidden-page simulation and audio lifecycle; 2026-11-04):
 - Added integration tests for successful sharing, retained material/geometry independence, exact-once disposal, sampler mismatch and hash mismatch. Workflow runs the new test before the GLB audit.
 - Updated offline shell and local asset tokens to v23.
 - Estimated texture saving: three shared 256x256 WebP images are retained once across the three templates, about 2 MiB RGBA8+mipmap estimate. This is an estimate; live GPU memory is not measured.
+
+## Stage 24: renderer diagnostics baseline
+- Added manual developer APIs: `Game.debug.rendererSnapshot(label)`, `captureRendererSnapshot(label)`, `getRendererHistory()` and `clearRendererHistory()`.
+- Snapshots include rolling FPS, pixel ratio, quality/adaptive scale, draw distance, loaded chunk count, dungeon state, WebGL draw calls/triangles/points/lines, renderer-tracked geometry/texture counts and program count.
+- History is opt-in, in-memory and capped at 120 entries. No background timer, HUD control or new runtime dependency was added.
+- `renderer.info.memory.geometries/textures` are resource counts, not byte totals or authoritative VRAM. Render counters are per-render statistics; use matching scenes and the same device/build when comparing.
+- This stage adds measurement capability only. No Android GPU, heat, battery or 144 FPS result is claimed.
