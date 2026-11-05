@@ -243,3 +243,13 @@ Stage 16 (hidden-page simulation and audio lifecycle; 2026-11-04):
 - Empty decor builds also release their unused staging arrays.
 - This removes an extra module-level CPU-side copy for the last chunk; it does not change geometry, collision results or GPU resource ownership.
 - Added a CI source-contract regression. No GPU-memory, frame-time or device performance gain is claimed without runtime profiling.
+
+
+## Stage 27: opt-in Android runtime profile capture
+- Added a compact diagnostic panel that is hidden during normal play and appears only when the page is opened with `?profile=1`.
+- The panel captures a renderer snapshot only after an explicit tap, reports the in-memory sample count, and can export or clear the bounded snapshot history. No polling loop, permanent HUD, external dependency or automatic upload was added.
+- Snapshot records now include the player's world position rounded to 0.1 units, allowing two runs to be compared at the same scene anchor.
+- Exported JSON includes build ID, viewport/screen dimensions, device pixel ratio, touch capability, metric interpretation notes and all manually captured snapshots. The file is downloaded locally; the game does not send it to a server.
+- User-supplied Android landscape screenshot (2026-11-05 18:16): HUD shows 47 FPS, draw distance 7 and 185 loaded chunks at X 54.3 / Y 11.4 / Z -11.0; battery display 49%. The HUD's “Vùng” value is confirmed by `js/main.js` to be `G.world.chunkCount()`.
+- This is a single observational sample, not a stable-session average. The FPS HUD reflects main-loop frame cadence, not isolated GPU execution time. Device model, browser version, refresh-rate cap, quality preset and sustained thermal state were not captured.
+- No automatic capture, FPS improvement, GPU-time result, VRAM-byte figure or battery/thermal improvement is claimed.
