@@ -88,6 +88,11 @@
       drawDistance: G.world && G.world.drawDistance != null ? G.world.drawDistance : null,
       chunks: G.world && typeof G.world.chunkCount === 'function' ? G.world.chunkCount() : null,
       dungeonActive: !!(G.dungeon && G.dungeon.active),
+      player: G.player && G.player.pos ? {
+        x: Math.round(G.player.pos.x * 10) / 10,
+        y: Math.round(G.player.pos.y * 10) / 10,
+        z: Math.round(G.player.pos.z * 10) / 10
+      } : null,
       render: {
         frame: render.frame == null ? null : render.frame,
         calls: render.calls || 0,
@@ -116,6 +121,67 @@
     rendererHistory.length = 0;
     return true;
   };
+
+  // The on-device capture panel is opt-in and has no frame-loop work.
+  var profileTools = document.getElementById('profile-tools');
+  if (profileTools && new URLSearchParams(window.location.search).get('profile') === '1') {
+    var profileCapture = document.getElementById('profile-capture');
+    var profileExport = document.getElementById('profile-export');
+    var profileClear = document.getElementById('profile-clear');
+    var profileStatus = document.getElementById('profile-status');
+    profileTools.hidden = false;
+
+    function updateProfileStatus(message) {
+      if (profileStatus) profileStatus.textContent = message;
+    }
+    function profileCount() {
+      return G.debug.getRendererHistory().length;
+    }
+    if (profileCapture) profileCapture.addEventListener('click', function () {
+      var next = profileCount() + 1;
+      G.debug.captureRendererSnapshot('manual-' + String(next).padStart(2, '0'));
+      updateProfileStatus('Đã lưu ' + next + ' mẫu');
+    });
+    if (profileClear) profileClear.addEventListener('click', function () {
+      G.debug.clearRendererHistory();
+      updateProfileStatus('Đã xóa mẫu');
+    });
+    if (profileExport) profileExport.addEventListener('click', function () {
+      var snapshots = G.debug.getRendererHistory();
+      if (!snapshots.length) {
+        updateProfileStatus('Chưa có mẫu');
+        return;
+      }
+      var payload = {
+        schemaVersion: 1,
+        build: '20261105-android-profile-capture-v27',
+        exportedAt: new Date().toISOString(),
+        environment: {
+          viewport: { width: window.innerWidth, height: window.innerHeight },
+          screen: { width: screen.width, height: screen.height },
+          devicePixelRatio: window.devicePixelRatio || 1,
+          touch: !!(navigator.maxTouchPoints > 0)
+        },
+        interpretation: {
+          fps: 'Observed main-loop frame cadence; not isolated GPU render time.',
+          rendererMemory: 'Three.js geometry and texture object counts, not byte totals or authoritative VRAM.'
+        },
+        snapshots: snapshots
+      };
+      var blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      var objectUrl = URL.createObjectURL(blob);
+      var link = document.createElement('a');
+      link.href = objectUrl;
+      link.download = 'besidevalley-profile-' + new Date().toISOString().replace(/[:.]/g, '-') + '.json';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(function () { URL.revokeObjectURL(objectUrl); }, 1000);
+      updateProfileStatus('Đã xuất ' + snapshots.length + ' mẫu');
+    });
+    updateProfileStatus('0 mẫu');
+  }
+
   var contextLost = false, recoveryNotice = null;
   var pageHidden = !!document.hidden;
   function resetFrameClock(now) {
