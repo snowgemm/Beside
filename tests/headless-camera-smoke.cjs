@@ -597,11 +597,11 @@ check('keyboard focus is visible on map and button controls',
   styleSource.includes('button:focus-visible,#minimap:focus-visible{outline:2px solid var(--hi)') &&
   styleSource.includes('.menu-row select:focus-visible'));
 check('offline cache is bumped and versioned local assets prevent stale code from loading',
-  swSource.includes("CACHE_NAME = 'besidevalley-shell-v26'") &&
+  swSource.includes("CACHE_NAME = 'besidevalley-shell-v27'") &&
   swSource.includes("url.searchParams.get('v')") &&
   swSource.includes('function fallbackCacheKey(requestUrl)') &&
   swSource.includes('cache.match(fallbackKey)') &&
-  indexSource.includes('20261105-chunk-geometry-staging-v26'));
+  indexSource.includes('20261105-android-profile-capture-v27'));
 check('player jump input triggers a short takeoff pose independent of refresh rate',
   rigSource.includes("state === 'jump'") && rigSource.includes('this.jumpT = 0.32') &&
   rigSource.includes('var jumpPulse = Math.sin') && playerSource.includes("rig.play('jump'"));
@@ -656,6 +656,24 @@ check('repeated boss telegraph cleanup is idempotent',
   slamGeometry.disposeCount === 1 && slamMaterials.every((material) => material.disposeCount === 1));
 G.enemies = previousEnemies;
 G.audio = previousAudio;
+check('renderer snapshots include rounded player coordinates for repeatable scene matching',
+  mainSource.includes('player: G.player && G.player.pos ?') &&
+  mainSource.includes('Math.round(G.player.pos.x * 10) / 10') &&
+  mainSource.includes('Math.round(G.player.pos.z * 10) / 10'));
+check('Android profiling controls are hidden unless explicitly enabled with profile=1',
+  indexSource.includes('<div id="profile-tools" hidden') &&
+  mainSource.includes("new URLSearchParams(window.location.search).get('profile') === '1'") &&
+  mainSource.includes("profileTools.hidden = false"));
+check('Android profiling captures only on tap and exports a local JSON file',
+  mainSource.includes("profileCapture.addEventListener('click'") &&
+  mainSource.includes("profileExport.addEventListener('click'") &&
+  mainSource.includes("type: 'application/json'") &&
+  mainSource.includes("link.download = 'besidevalley-profile-'") &&
+  mainSource.includes('G.debug.getRendererHistory()'));
+check('opt-in profile controls keep a solid compact surface and touch-sized buttons',
+  styleSource.includes('#profile-tools[hidden]{display:none!important}') &&
+  styleSource.includes('#profile-tools button{min-height:44px') &&
+  styleSource.includes('background:rgba(15,20,25,.94)'));
 const failures = results.filter((result) => !result.pass);
 console.log('JavaScript syntax: ' + jsFiles.length + ' files passed');
 console.log('Headless camera/input checks: ' + (results.length - failures.length) + '/' + results.length + ' passed');
