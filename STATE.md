@@ -229,3 +229,10 @@ Stage 16 (hidden-page simulation and audio lifecycle; 2026-11-04):
 - History is opt-in, in-memory and capped at 120 entries. No background timer, HUD control or new runtime dependency was added.
 - `renderer.info.memory.geometries/textures` are resource counts, not byte totals or authoritative VRAM. Render counters are per-render statistics; use matching scenes and the same device/build when comparing.
 - This stage adds measurement capability only. No Android GPU, heat, battery or 144 FPS result is claimed.
+
+## Stage 25: chunk decor reference lifecycle
+- Static ownership audit covered streamed terrain/decor meshes, cached GLB templates, chunk clones, dungeon objects, enemy rigs/projectiles, loot drops, minimap caches, particles and sky resources.
+- Found that `modelDecor` was a global staging array. After clone objects were attached as children of a chunk decor mesh, that global array retained another reference to the most recently built chunk's GLB clones. This could keep detached clone wrappers reachable until another chunk was built.
+- Moved the staging array into each `decorMesh()` build and passed it into the tree helper. Once a chunk owns its children, no global staging reference remains.
+- Cached GLB geometry/material/texture resources remain borrowed from the persistent asset templates; chunk cleanup must not dispose those shared resources. Terrain and merged decor geometries remain chunk-owned and are disposed on unload/rebuild.
+- Added a CI source-contract regression for the per-chunk staging scope. No GPU-memory or Android performance improvement is claimed; hardware sampling remains pending.
