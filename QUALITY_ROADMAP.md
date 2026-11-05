@@ -57,6 +57,11 @@ A cohesive smooth-toon adventure game that is readable, responsive and stable on
 - Keep terrain and merged procedural decor geometry chunk-owned and dispose each on rebuild/unload.
 - Continue with repeatable browser measurements around warm-up and chunk/dungeon cycles. The local `game-dev` CLI and adapter are not present in this environment, so no sealed GPU run or hardware timing is available.
 
+**Stage 26: chunk geometry staging cleanup**
+- Release plain JavaScript position/color/index arrays immediately after Three.js r128 copies them into the chunk-owned BufferGeometry.
+- Release the temporary collision blocker array after a separate copy is stored in the blocker map.
+- Keep this cleanup limited to staging references; do not dispose the resulting geometry, shared decor material or borrowed GLB resources.
+
 **Acceptance**
 - Removing one GLB clone cannot invalidate another clone or the cached template.
 - Repeated identical dungeon enter/leave and chunk refresh cycles do not show unbounded resource growth.
@@ -233,3 +238,7 @@ A cohesive smooth-toon adventure game that is readable, responsive and stable on
 ## Stage 25 verification boundary
 - Static ownership audit and a focused CI regression cover chunk-clone reference scope. The exact source path is corrected.
 - Actual renderer memory trends, GPU completion, Android behavior, thermal state and 144 FPS remain unmeasured; use Stage 24 snapshots on a controlled device/run before further optimization.
+
+## Stage 26 verification boundary
+- Source-level regression checks cover staging-array release after BufferGeometry/index and blocker-map copies. Real CPU heap snapshots and repeatable GPU measurements remain pending.
+- No VRAM or frame-time improvement is claimed; the change targets duplicate JavaScript-side staging references only.
