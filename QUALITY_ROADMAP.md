@@ -1,7 +1,7 @@
 # Besidevalley — Quality Upgrade Roadmap
 
 Last reviewed: 2026-11-05  
-Baseline: `main` at `4bf159e62ea8153f29b9ed11808af39d677bd18f`  
+Baseline: `main` at `128b8d93d2f179944abe2783fdac593d7e0198a2`  
 Runtime: plain JavaScript + Three.js r128, mobile-first controls, static Vercel hosting and offline shell.
 
 ## Quality target
@@ -61,6 +61,13 @@ A cohesive smooth-toon adventure game that is readable, responsive and stable on
 - Release plain JavaScript position/color/index arrays immediately after Three.js r128 copies them into the chunk-owned BufferGeometry.
 - Release the temporary collision blocker array after a separate copy is stored in the blocker map.
 - Keep this cleanup limited to staging references; do not dispose the resulting geometry, shared decor material or borrowed GLB resources.
+
+**Stage 27: opt-in Android runtime profile capture**
+- Add a query-parameter-only `?profile=1` panel so a phone can collect renderer snapshots without desktop DevTools. Normal gameplay keeps the panel hidden.
+- Capture only on explicit tap; export the bounded in-memory history as a local JSON download. Do not poll, upload or add a permanent HUD.
+- Include player world coordinates in each snapshot so the same scene anchor can be reproduced.
+- Record the supplied 2026-11-05 Android landscape observation: 47 FPS, draw distance 7, 185 loaded chunks, position (54.3, 11.4, -11.0). Treat it as one sample only, not a sustained benchmark.
+- Require multiple captures after warm-up and across repeatable overworld/dungeon scenarios before selecting another optimization target.
 
 **Acceptance**
 - Removing one GLB clone cannot invalidate another clone or the cached template.
@@ -242,3 +249,9 @@ A cohesive smooth-toon adventure game that is readable, responsive and stable on
 ## Stage 26 verification boundary
 - Source-level regression checks cover staging-array release after BufferGeometry/index and blocker-map copies. Real CPU heap snapshots and repeatable GPU measurements remain pending.
 - No VRAM or frame-time improvement is claimed; the change targets duplicate JavaScript-side staging references only.
+
+
+## Stage 27 verification boundary
+- CI verifies the opt-in query gate, local manual capture/export wiring, hidden-by-default markup, touch target size and versioned cache token.
+- No live Android run or JSON profile has been collected by the assistant. The supplied screenshot is a single user-side observation; it does not identify a CPU/GPU bottleneck.
+- The capture panel performs no automatic sampling and does not upload data. Review the downloaded JSON before sharing it.
