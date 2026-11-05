@@ -552,6 +552,12 @@ check('terrain grain texture uses periodic multi-scale noise and color texture e
   terrainSource.includes('function tileNoise(x, y, size, cells, seed)') &&
   terrainSource.includes('mkTex(size, function (x,y)') &&
   terrainSource.includes('t.encoding = THREE.sRGBEncoding'));
+check('streamed GLB decor staging references are scoped to each chunk build',
+  terrainSource.includes('var dp, dc, di;') &&
+  !terrainSource.includes('var dp, dc, di, modelDecor = [];') &&
+  terrainSource.includes('function tree(bi, cx, h, cz, r2, j, ox, oz, modelDecor)') &&
+  terrainSource.includes('gl = gates ? gates.length : 0, modelDecor = [];') &&
+  terrainSource.includes('tree(bi, cx, h, cz, r2, j, ox, oz, modelDecor);'));
 check('three distinct close-range tree models use merged procedural trees at distance',
   assetSource.includes("tree2: { url: QUATERNIUS_MODEL_BASE + 'tree2.glb'") &&
   assetSource.includes("tree3: { url: QUATERNIUS_MODEL_BASE + 'tree3.glb'") &&
