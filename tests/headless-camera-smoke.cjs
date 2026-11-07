@@ -597,11 +597,11 @@ check('keyboard focus is visible on map and button controls',
   styleSource.includes('button:focus-visible,#minimap:focus-visible{outline:2px solid var(--hi)') &&
   styleSource.includes('.menu-row select:focus-visible'));
 check('offline cache is bumped and versioned local assets prevent stale code from loading',
-  swSource.includes("CACHE_NAME = 'besidevalley-shell-v27'") &&
+  swSource.includes("CACHE_NAME = 'besidevalley-shell-v28'") &&
   swSource.includes("url.searchParams.get('v')") &&
   swSource.includes('function fallbackCacheKey(requestUrl)') &&
   swSource.includes('cache.match(fallbackKey)') &&
-  indexSource.includes('20261105-android-profile-capture-v27'));
+  indexSource.includes('20261107-first-run-dungeon-access-v28'));
 check('player jump input triggers a short takeoff pose independent of refresh rate',
   rigSource.includes("state === 'jump'") && rigSource.includes('this.jumpT = 0.32') &&
   rigSource.includes('var jumpPulse = Math.sin') && playerSource.includes("rig.play('jump'"));
@@ -674,6 +674,47 @@ check('opt-in profile controls keep a solid compact surface and touch-sized butt
   styleSource.includes('#profile-tools[hidden]{display:none!important}') &&
   styleSource.includes('#profile-tools button{min-height:44px') &&
   styleSource.includes('background:rgba(15,20,25,.94)'));
+// Exercise the production terrain and dungeon generators together without a renderer.
+function firstGateDistance(seed) {
+  const gameWindow = {
+    Game: { seed, save: { register() {} } },
+    console: { error() {} }
+  };
+  const gameDocument = {
+    getElementById(id) {
+      return {
+        id,
+        style: {},
+        textContent: '',
+        classList: { add() {}, remove() {} }
+      };
+    }
+  };
+  const gateContext = vm.createContext({ window: gameWindow, document: gameDocument, console });
+  vm.runInContext(fs.readFileSync(path.join(jsDir, 'legacy-world.js'), 'utf8'), gateContext, { filename: 'legacy-world.js' });
+  const game = gameWindow.Game;
+  const spawn = game.world.findSpawn();
+  game.player = { spawnPos: spawn };
+  game.events = { on() {} };
+  game.audio = { play() {} };
+  game.enemies = {};
+  game.loot = { drops: [], levelAt() { return 1; } };
+  game.save = { register() {} };
+  vm.runInContext(fs.readFileSync(path.join(jsDir, 'dungeon.js'), 'utf8'), gateContext, { filename: 'dungeon.js' });
+  game.dungeon.init({});
+  const gates = game.dungeon.gatesNear(spawn.x, spawn.z, spawn.x, spawn.z);
+  if (!gates.length) return Infinity;
+  return Math.hypot(gates[0].x - spawn.x, gates[0].z - spawn.z);
+}
+
+const starterGateSeeds = [1, 42, 1337, 123456789, 987654321, 2147483646];
+const starterGateDistances = starterGateSeeds.map(firstGateDistance);
+check('first dungeon entrance is generated within expanded-map range for representative seeds',
+  starterGateDistances.every((distance) => Number.isFinite(distance) && distance <= 45),
+  'distances=' + starterGateDistances.map((distance) => Number.isFinite(distance) ? distance.toFixed(1) : 'missing').join(','));
+check('title screen explains the first dungeon objective',
+  uiSource.includes('Mục tiêu đầu tiên: tìm cổng xanh ◆ trên bản đồ và nhấn E / Tương tác'));
+
 const failures = results.filter((result) => !result.pass);
 console.log('JavaScript syntax: ' + jsFiles.length + ' files passed');
 console.log('Headless camera/input checks: ' + (results.length - failures.length) + '/' + results.length + ' passed');
