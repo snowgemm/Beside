@@ -1,7 +1,7 @@
 (function () {
   var G = window.Game = window.Game || {};
   var D = G.dungeon = { active: false };
-  var REG = 256, MINSP = 44, FLOOR = 20, WH = 5, CORR = 4, GATE_R = 3.4, CHEST_R = 1.45;
+  var REG = 256, MINSP = 44, FIRST_GATE_MIN = 24, FIRST_GATE_MAX = 42, FIRST_GATE_TRIES = 64, FLOOR = 20, WH = 5, CORR = 4, GATE_R = 3.4, CHEST_R = 1.45;
   var W, E, L, scene, ents = {}, gates = {}, gateItems = [], gateT = 0, near = null, busy = false, run = null;
   var runs = {}, cleared = {}, insideKey = null, origLevel, btn, roomHud, bossBar, fadeEl, hudTxt = '';
 
@@ -99,19 +99,44 @@
   };
 
   /* ---------- Entrances ---------- */
+  function validEntranceSite(x, z) {
+    var h = W.baseHeight(x, z);
+    if (h < W.SEA + 2 || h > 26) return null;
+    for (var a = 0; a < 12; a++) {
+      var h2 = W.baseHeight(x + Math.cos(a * 0.5236) * 4, z + Math.sin(a * 0.5236) * 4);
+      if (h2 < W.SEA + 1 || Math.abs(h2 - h) > 2) return null;
+    }
+    return { x: x + 0.5, y: h, z: z + 0.5 };
+  }
+
   function entrance(rx, rz) {
     var key = rx + ',' + rz;
     if (key in ents) return ents[key];
     var r = mul(h32(W.seed, rx * 7919 + 13, rz * 104729 + 17)), sp = G.player.spawnPos || { x: 0, z: 0 }, ow = W.ow, res = null;
-    for (var t = 0; t < 40 && !res; t++) {
-      var x = rx * REG + 24 + Math.floor(r() * (REG - 48)), z = rz * REG + 24 + Math.floor(r() * (REG - 48));
-      if (Math.sqrt((x - sp.x) * (x - sp.x) + (z - sp.z) * (z - sp.z)) < MINSP) continue;
-      var h = W.baseHeight(x, z), ok = h >= W.SEA + 2 && h <= 26;
-      for (var a = 0; a < 12 && ok; a++) {
-        var h2 = W.baseHeight(x + Math.cos(a * 0.5236) * 4, z + Math.sin(a * 0.5236) * 4);
-        if (h2 < W.SEA + 1 || Math.abs(h2 - h) > 2) ok = false;
+    var spawnRx = Math.floor(sp.x / REG), spawnRz = Math.floor(sp.z / REG);
+
+    // Keep the first objective inside the default expanded-map radius; other regions retain the original spacing.
+    if (rx === spawnRx && rz === spawnRz) {
+      var minX = rx * REG + 24, maxX = (rx + 1) * REG - 24;
+      var minZ = rz * REG + 24, maxZ = (rz + 1) * REG - 24;
+      for (var t = 0; t < FIRST_GATE_TRIES && !res; t++) {
+        var angle = r() * Math.PI * 2;
+        var radius = FIRST_GATE_MIN + r() * (FIRST_GATE_MAX - FIRST_GATE_MIN);
+        var x = Math.floor(sp.x + Math.cos(angle) * radius);
+        var z = Math.floor(sp.z + Math.sin(angle) * radius);
+        if (x < minX || x >= maxX || z < minZ || z >= maxZ) continue;
+        var site = validEntranceSite(x, z);
+        if (site) res = { key: key, rx: rx, rz: rz, x: site.x, y: site.y, z: site.z };
       }
-      if (ok) res = { key: key, rx: rx, rz: rz, x: x + 0.5, z: z + 0.5, y: h };
+    }
+
+    // Preserve the previous deterministic placement as a fallback for unusual terrain or region-edge spawns.
+    for (var t = 0; t < 40 && !res; t++) {
+      var x = rx * REG + 24 + Math.floor(r() * (REG - 48));
+      var z = rz * REG + 24 + Math.floor(r() * (REG - 48));
+      if (Math.sqrt((x - sp.x) * (x - sp.x) + (z - sp.z) * (z - sp.z)) < MINSP) continue;
+      var site = validEntranceSite(x, z);
+      if (site) res = { key: key, rx: rx, rz: rz, x: site.x, y: site.y, z: site.z };
     }
     if (res) {
       res.level = origLevel(res.x, res.z);
