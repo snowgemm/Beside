@@ -253,3 +253,11 @@ Stage 16 (hidden-page simulation and audio lifecycle; 2026-11-04):
 - User-supplied Android landscape screenshot (2026-11-05 18:16): HUD shows 47 FPS, draw distance 7 and 185 loaded chunks at X 54.3 / Y 11.4 / Z -11.0; battery display 49%. The HUD's “Vùng” value is confirmed by `js/main.js` to be `G.world.chunkCount()`.
 - This is a single observational sample, not a stable-session average. The FPS HUD reflects main-loop frame cadence, not isolated GPU execution time. Device model, browser version, refresh-rate cap, quality preset and sustained thermal state were not captured.
 - No automatic capture, FPS improvement, GPU-time result, VRAM-byte figure or battery/thermal improvement is claimed.
+
+## Stage 28: first-run dungeon access
+- The first dungeon entrance is now generated deterministically within 24–42 world units of the spawn point in the spawn region, using the existing terrain-height and slope suitability checks.
+- Other world regions retain the original entrance spacing and placement. The original sampler remains as a fallback when the nearby terrain candidates are unsuitable.
+- The title screen now tells the player to find the blue gate marker and interact with it.
+- Added an integration check that loads the production overworld and dungeon generators together for representative fixed world seeds and checks the first gate distance.
+- Rotated the Service Worker shell cache and all versioned asset query strings to v28 so returning clients do not keep the previous JavaScript/CSS shell after this update.
+- Browser/WebGL end-to-end testing and sustained Android device testing remain outstanding. A successful source/headless test is not treated as proof of full gameplay or performance.
