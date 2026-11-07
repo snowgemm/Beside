@@ -258,6 +258,6 @@ Stage 16 (hidden-page simulation and audio lifecycle; 2026-11-04):
 - The first dungeon entrance is now generated deterministically within 24–42 world units of the spawn point in the spawn region, using the existing terrain-height and slope suitability checks.
 - Other world regions retain the original entrance spacing and placement. The original sampler remains as a fallback when the nearby terrain candidates are unsuitable.
 - The title screen now tells the player to find the blue gate marker and interact with it.
-- Added an integration check that loads the production overworld and dungeon generators together for representative fixed world seeds and checks the first gate distance.
+- Added an integration check that loads the production overworld and dungeon generators together for six fixed world seeds. GitHub Actions passed 93/93 headless camera/input checks, 26 JavaScript syntax checks, and all three asset/cache audit steps; observed first-gate distances were 28.4–39.6 blocks.
 - Rotated the Service Worker shell cache and all versioned asset query strings to v28 so returning clients do not keep the previous JavaScript/CSS shell after this update.
 - Browser/WebGL end-to-end testing and sustained Android device testing remain outstanding. A successful source/headless test is not treated as proof of full gameplay or performance.
