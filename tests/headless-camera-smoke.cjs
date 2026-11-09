@@ -354,7 +354,7 @@ check('overworld height samples stay fractional for smooth hills',
   terrainSource.includes('var N=CS+3,H=new Float32Array(N*N)'));
 check('ground detail texture does not repeat once per terrain block',
   terrainSource.includes('uvs.push((ox+x)*.16,(oz+z)*.16)') &&
-  fs.readFileSync(path.join(jsDir, 'terrain-worker.js'), 'utf8').includes('uvs[ui]=(ox+x)*.16'));
+  fs.readFileSync(path.join(jsDir, 'terrain-worker.js'), 'utf8').includes('uvs.push((ox+x)*.16,(oz+z)*.16)'));
 check('character rigs use rough lit materials instead of unlit plastic shading',
   fs.readFileSync(path.join(jsDir, 'rig.js'), 'utf8').includes('new THREE.MeshStandardMaterial({ color: c, vertexColors: true, roughness: 0.96, metalness: 0'));
 check('environment asset loader preserves lit PBR materials and uses licensed textured nature variants',
