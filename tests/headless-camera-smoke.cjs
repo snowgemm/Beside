@@ -422,9 +422,9 @@ check('initial terrain preload schedules nearby chunks without a synchronous ful
   !terrainSource.includes('process(1e9)') &&
   terrainSource.includes('dirty=true;lcx=1e9;lcz=1e9;'));
 check('terrain worker is included in the versioned offline shell cache',
-  swSource.includes("const CACHE_NAME = 'besidevalley-shell-v28'") &&
-  swSource.includes("'./js/terrain-worker.js'") &&
-  indexSource.includes('v20261109-terrain-worker-v28'));
+  fs.readFileSync(path.join(root, 'sw.js'), 'utf8').includes("const CACHE_NAME = 'besidevalley-shell-v28'") &&
+  fs.readFileSync(path.join(root, 'sw.js'), 'utf8').includes("'./js/terrain-worker.js'") &&
+  fs.readFileSync(path.join(root, 'index.html'), 'utf8').includes('v20261109-terrain-worker-v28'));
 check('expanded minimap renders cached 16x16 terrain tiles rather than one fillRect per world cell',
   fs.readFileSync(path.join(jsDir, 'minimap.js'), 'utf8').includes('function terrainTile(cx, cz)') &&
   fs.readFileSync(path.join(jsDir, 'minimap.js'), 'utf8').includes('c.drawImage(tile, px, pz, 16 * s, 16 * s)') &&
