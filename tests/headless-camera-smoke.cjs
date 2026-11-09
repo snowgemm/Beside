@@ -548,6 +548,18 @@ check('remote GLB cache supports repeat offline sessions with graceful fallback'
   assetSource.includes("indexedDB.open('besidevalley-model-cache'") &&
   assetSource.includes('function getModelBuffer(def)') &&
   assetSource.includes('function fallbackLoad()'));
+check('GLB and sound files are requested on demand with bounded loading queues',
+  assetSource.includes('MAX_MODEL_LOADS = 2') &&
+  assetSource.includes('function requestModel(name)') &&
+  assetSource.includes('function pumpModelQueue()') &&
+  assetSource.includes('function requestSound(name)') &&
+  assetSource.includes('function pumpSoundQueue()') &&
+  assetSource.includes('decorRefreshTimer') &&
+  assetSource.includes('if (!t) { requestModel(name); return null; }') &&
+  assetSource.includes('if (!b) { requestSound(name); return false; }') &&
+  assetSource.includes('Startup installs request hooks only. Models and sounds enter bounded queues when first used.') &&
+  !assetSource.includes('for (k in MANIFEST.models) jobs.push(loadModel') &&
+  !assetSource.includes('for (k in MANIFEST.sounds) jobs.push(loadSound'));
 check('remote model assets pin reviewed upstream commits and exact Git blob identities',
   assetSource.includes("var QUATERNIUS_REV = '0c41526d8d4130c37c15e219c2c3737fa8cb4ad8'") &&
   assetSource.includes("var KENNEY_MIRROR_REV = 'ea2f2aa1ca8da0898330c97df8a5489976b051d0'") &&
