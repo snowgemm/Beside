@@ -114,10 +114,13 @@ function generateChunk(message) {
       addVertex(0,edge);addVertex(CS,edge);
     }
     for(var zc=0;zc<CS;zc+=2)for(var xc=0;xc<CS;xc+=2){
-      var ring=[[xc,zc],[xc,zc+2],[xc+2,zc+2],[xc+2,zc]];
-      if(xc===0)ring.splice(1,0,[xc,zc+1]);
-      if(zc+2===CS)ring.splice(ring.length-1,0,[xc+1,zc+2]);
-      if(xc+2===CS)ring.splice(ring.length-1,0,[xc+2,zc+1]);
+      var ring=[[xc,zc]];
+      if(xc===0)ring.push([xc,zc+1]);
+      ring.push([xc,zc+2]);
+      if(zc+2===CS)ring.push([xc+1,zc+2]);
+      ring.push([xc+2,zc+2]);
+      if(xc+2===CS)ring.push([xc+2,zc+1]);
+      ring.push([xc+2,zc]);
       if(zc===0)ring.push([xc+1,zc]);
       var centre=addVertex(xc+1,zc+1);
       for(var ri=0;ri<ring.length;ri++){
