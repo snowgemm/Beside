@@ -9,7 +9,7 @@ var BSA = [[.52,.52,.55],[.44,.46,.44],[.74,.52,.34],[.52,.56,.64],[.52,.46,.42]
 var BSB = [[.43,.43,.47],[.37,.39,.38],[.62,.42,.28],[.43,.47,.56],[.43,.38,.36]];
 var SNOWC = [.95,.97,1], SANDC = [.88,.8,.5];
 var CT = [0,0,0], CSd = [0,0,0], CA = [0,0,0], CB = [0,0,0];
-var BW = new Float64Array(5);
+var BW = new Float32Array(5);
 
 function hash(x, z, seed) {
   var h = (Math.imul(x, 374761393) + Math.imul(z, 668265263) + Math.imul(seed, 1442695041)) | 0;
