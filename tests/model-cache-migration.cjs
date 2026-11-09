@@ -96,7 +96,14 @@ async function runCacheCase(legacyBytes, expectedSha) {
     probe: { url: pinnedUrl, legacyUrl, blobSha: expectedSha, height: 1 }
   };
   await assets.load();
-  return { records: indexedDB.records, calls };
+  assert.equal(assets.modelStatus('probe'), 'idle',
+    'startup installs hooks but does not eagerly load optional models');
+  assert.equal(assets.model('probe'), null,
+    'first access should keep the procedural fallback while the requested model loads');
+  for (let attempt = 0; attempt < 40 && ['queued', 'loading'].includes(assets.modelStatus('probe')); attempt++) {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  }
+  return { records: indexedDB.records, calls, status: assets.modelStatus('probe') };
 }
 
 async function main() {
