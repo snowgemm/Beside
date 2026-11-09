@@ -352,7 +352,7 @@ check('newly streamed terrain chunks never receive shadow-map shadows',
   terrainSource.includes('mesh.receiveShadow=false') &&
   !terrainSource.includes("mesh.receiveShadow=!!(G.quality&&G.quality.value==='high')"));
 check('overworld height samples stay fractional for smooth hills',
-  terrainSource.includes('var baseHeight = terrainCore.baseHeight') &&
+  terrainSource.includes('baseHeight = terrainCore.baseHeight') &&
   terrainCoreSource.includes('return Math.max(3,Math.min(maxHeight-3,h))') &&
   terrainSource.includes('var N=CS+3,H=new Float32Array(N*N)'));
 check('ground detail texture does not repeat once per terrain block',
@@ -681,7 +681,7 @@ check('keyboard focus is visible on map and button controls',
   styleSource.includes('button:focus-visible,#minimap:focus-visible{outline:2px solid var(--hi)') &&
   styleSource.includes('.menu-row select:focus-visible'));
 check('offline cache is bumped and versioned local assets prevent stale code from loading',
-  swSource.includes("CACHE_NAME = 'besidevalley-shell-v28'") &&
+  swSource.includes("CACHE_NAME = 'besidevalley-shell-v29'") &&
   swSource.includes("'./js/terrain-worker.js'") &&
   swSource.includes("url.searchParams.get('v')") &&
   swSource.includes('function fallbackCacheKey(requestUrl)') &&
