@@ -520,10 +520,12 @@ check('minimap opens as a terrain-aware world map and keeps its close button int
   minimapSource.includes('drawTerrain(p, s)') &&
   minimapSource.includes("e.code === 'KeyM'") &&
   minimapSource.includes('if (M.expanded && labelTitle) labelTitle.textContent'));
-check('front and cinematic third-person camera modes perform collision checks',
-  menuSource.includes('<option value="front">Phía trước</option>') &&
-  menuSource.includes('<option value="cinematic">Điện ảnh</option>') &&
+check('all third-person camera presets keep collision-aware camera placement',
+  menuSource.includes('<option value="front">Thứ ba · phía trước</option>') &&
+  menuSource.includes('<option value="cinematic">Thứ ba · điện ảnh</option>') &&
+  menuSource.includes('<option value="overhead">Thứ ba · từ trên cao</option>') &&
   playerSource.includes("cameraMode === 'cinematic'") &&
+  playerSource.includes("cameraMode === 'overhead'") &&
   playerSource.includes('ph.blockedAt(cpx + sideX * sideOffset + camSign * dx * t'));
 check('personalization persists theme, UI size and FPS limit',
   menuSource.includes('theme: S.theme') &&
