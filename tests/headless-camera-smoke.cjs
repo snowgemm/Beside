@@ -416,7 +416,7 @@ check('terrain geometry is generated in a bounded Web Worker pool and transferre
   terrainSource.includes('completedTerrainJobs') &&
   terrainSource.includes('new THREE.BufferAttribute(toFloat32(data.positions),3)') &&
   terrainSource.includes('[copy.buffer]') &&
-  terrainSource.includes('if (terrainWorkers.length)'));
+  terrainSource.includes('if(terrainWorkers.length)'));
 check('initial terrain preload schedules nearby chunks without a synchronous full-radius build',
   terrainSource.includes('Never synchronously generate a whole preload radius during startup') &&
   !terrainSource.includes('process(1e9)') &&
