@@ -116,6 +116,7 @@
   W.useProvider = function (p) { p = p || W.ow; W.getHeight = p.getHeight; W.getBlock = p.getBlock; W.solid = p.solid; };
   W.hold = function (on) { W.held=!!on; chunks.forEach(function(m){m.visible=!on;}); if(water)water.visible=!on; if(grassMesh)grassMesh.visible=!on; if(flowerMesh)flowerMesh.visible=!on; if(!on)dirty=true; };
   var scene, material, decorMat, water, waterGeom, waterPos, waterCol, waterTime=0, waterAx=1e9, waterAz=1e9, wtex, grain, terrainNormal, surfaceQuality='medium', tr=1,tg=1,tb=1,chunks=new Map(),queue=[],qi=0,lcx=1e9,lcz=1e9,dirty=true;
+  var terrainWorkers=[],pendingTerrainJobs=new Map(),completedTerrainJobs=[],chunkRevisions=new Map(),terrainJobId=0;
   var grassMesh,flowerMesh,grassMaterial,flowerMaterial,grassTarget=44,flowerTarget=14,grassDirty=true,grassX=1e9,grassZ=1e9,grassDummy,flowerColor,grassColor,grassTintColor;
 
   function mkTex(size, fn, rep, colorTexture) {
@@ -298,6 +299,7 @@
     water=new THREE.Mesh(waterGeom,new THREE.MeshStandardMaterial({color:0xffffff,map:wtex,vertexColors:true,transparent:true,opacity:.76,depthWrite:false,side:THREE.DoubleSide,roughness:.28,metalness:.02,fog:true}));
     water.renderOrder=1;water.position.y=SEA-.035;water.userData.noShadow=true;scene.add(water);initGrass();
     scene.fog=new THREE.Fog(0xa8c9d7,20,80);scene.background=new THREE.Color(0xa8c9d7);W.setSurfaceQuality(surfaceQuality);W.setDrawDistance(W.drawDistance);
+    initTerrainWorkers();
   };
   // day cycle tint (sky.js): multiplies terrain, decor and water
   W.tint = function (r, g, b) {
@@ -358,11 +360,14 @@
   };
   function drop(m) { scene.remove(m); m.geometry.dispose(); if (m.decor) m.decor.geometry.dispose(); }
   function rebuildChunk(cx, cz) {
-    var m = chunks.get(cx + ',' + cz);
-    if (!m) return; // not loaded: it will be built from the edit layer when it streams in
-    drop(m); chunks.delete(cx + ',' + cz);
-    build(cx, cz);
-    var n = chunks.get(cx + ',' + cz); if (n) n.visible = !W.held;
+    var key=cx+','+cz,rev=chunkRevision(cx,cz)+1;
+    chunkRevisions.set(key,rev);
+    pendingTerrainJobs.delete(key); // discard a worker result computed before this edit
+    var m = chunks.get(key);
+    if (!m) { dirty=true; return; } // a pending/unloaded chunk will be regenerated from the new edit layer
+    drop(m);chunks.delete(key);
+    buildSync(cx,cz);
+    var n=chunks.get(key);if(n)n.visible=!W.held;
   }
   function rebuildAround(x, z) {
     var cx = Math.floor(x / CS), cz = Math.floor(z / CS), lx = x - cx * CS, lz = z - cz * CS;
@@ -410,31 +415,101 @@
     var sr=sand?.87:.90, sg=sand?.83:.88, sb=sand?.78:.90;
     return[Math.max(0,Math.min(1,r*low*fine*sr)),Math.max(0,Math.min(1,g*low*fine*sg)),Math.max(0,Math.min(1,b*low*fine*sb))];
   }
-  function build(cx,cz){
-    // One full sample ring is required beyond every terrain vertex so finite-difference slopes never read undefined.
-    var N=CS+3,H=new Float32Array(N*N),ox=cx*CS,oz=cz*CS,x,z;
-    for(z=-1;z<=CS+1;z++)for(x=-1;x<=CS+1;x++)H[(z+1)*N+x+1]=getHeight(ox+x,oz+z);
+  function toFloat32(values) { return values instanceof Float32Array ? values : new Float32Array(values); }
+  function attachChunk(cx,cz,H,BIO,data) {
+    var ox=cx*CS,oz=cz*CS,geo=new THREE.BufferGeometry();
+    // Keep transferred typed-array buffers; do not copy them through Float32BufferAttribute.
+    geo.setAttribute('position',new THREE.BufferAttribute(toFloat32(data.positions),3));
+    geo.setAttribute('color',new THREE.BufferAttribute(toFloat32(data.colors),3));
+    geo.setAttribute('normal',new THREE.BufferAttribute(toFloat32(data.normals),3));
+    geo.setAttribute('uv',new THREE.BufferAttribute(toFloat32(data.uvs),2));
+    geo.setIndex(data.indices instanceof Uint16Array ? data.indices : new Uint16Array(data.indices));
+    geo.computeBoundingSphere();
+    var mesh=new THREE.Mesh(geo,material);
+    mesh.position.set(ox,0,oz);mesh.matrixAutoUpdate=false;mesh.updateMatrix();
+    mesh.cx=cx;mesh.cz=cz;mesh.userData.terrain=true;mesh.castShadow=false;mesh.receiveShadow=false;
+    var dm=decorMesh(ox,oz,H,BIO);
+    if(dm){dm.matrixAutoUpdate=false;dm.updateMatrix();mesh.add(dm);mesh.decor=dm;}
+    bmap.set(bk(cx,cz),dbl.length?dbl.slice():null);dbl=[];
+    scene.add(mesh);chunks.set(cx+','+cz,mesh);
+    if(W.onChunkLoad)W.onChunkLoad(cx,cz);
+  }
+  function sampleChunkHeights(cx,cz) {
+    var N=CS+3,H=new Float32Array(N*N),ox=cx*CS,oz=cz*CS;
+    for(var z=-1;z<=CS+1;z++)for(var x=-1;x<=CS+1;x++)H[(z+1)*N+x+1]=getHeight(ox+x,oz+z);
+    return H;
+  }
+  function buildSync(cx,cz) {
+    var N=CS+3,H=sampleChunkHeights(cx,cz),ox=cx*CS,oz=cz*CS;
     var positions=[],colors=[],normals=[],uvs=[],indices=[],BIO=new Uint8Array(CS*CS);
-    for(z=0;z<=CS;z++)for(x=0;x<=CS;x++){
+    for(var z=0;z<=CS;z++)for(var x=0;x<=CS;x++){
       var hi=(z+1)*N+x+1,h=H[hi],hl=H[hi-1],hr=H[hi+1],hb=H[hi-N],hf=H[hi+N];
       var dx=hr-hl,dz=hf-hb,nx=-dx,ny=2,nz=-dz,inv=1/Math.sqrt(nx*nx+ny*ny+nz*nz),paint=vertexPaint(ox+x,oz+z,h,Math.sqrt(dx*dx+dz*dz)*.5);
-      positions.push(x,h,z);colors.push(paint[0],paint[1],paint[2]);normals.push(nx*inv,ny*inv,nz*inv);uvs.push((ox+x)*0.16,(oz+z)*0.16);
+      positions.push(x,h,z);colors.push(paint[0],paint[1],paint[2]);normals.push(nx*inv,ny*inv,nz*inv);uvs.push((ox+x)*.16,(oz+z)*.16);
     }
     for(z=0;z<CS;z++)for(x=0;x<CS;x++){
       var wx=ox+x,wz=oz+z;BIO[z*CS+x]=biomeW(wx+.5,wz+.5);
       var a=z*(CS+1)+x,b=a+1,d=a+CS+1,c=d+1;
       if(hash(wx,wz)>.5)indices.push(a,d,c,a,c,b);else indices.push(a,d,b,b,d,c);
     }
-    var geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));geo.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));geo.setAttribute('normal',new THREE.Float32BufferAttribute(normals,3));geo.setAttribute('uv',new THREE.Float32BufferAttribute(uvs,2));geo.setIndex(indices);
-    // Normals use the padded height samples, so the same world-space vertex receives the same normal on both sides of a chunk seam.
-    geo.computeBoundingSphere();
-    var mesh=new THREE.Mesh(geo,material);mesh.position.set(ox,0,oz);mesh.matrixAutoUpdate=false;mesh.updateMatrix();mesh.cx=cx;mesh.cz=cz;mesh.userData.terrain=true;mesh.castShadow=false;
-    // Never receive shadow-map shadows: streamed terrain chunks bypass scene.traverse(), and this caused the black triangular acne seen on Android.
-    // The player and vegetation use soft contact shading instead.
-    mesh.receiveShadow=false;
-    var dm=decorMesh(ox,oz,H,BIO);if(dm){dm.matrixAutoUpdate=false;dm.updateMatrix();mesh.add(dm);mesh.decor=dm;}
-    // The original code generated tree/rock blocker data but discarded it, so scenery had no physical collision.
-    bmap.set(bk(cx,cz),dbl.length?dbl.slice():null); dbl = []; scene.add(mesh);chunks.set(cx+','+cz,mesh);if(W.onChunkLoad)W.onChunkLoad(cx,cz);
+    attachChunk(cx,cz,H,BIO,{positions:positions,colors:colors,normals:normals,uvs:uvs,indices:indices});
+  }
+  function chunkRevision(cx,cz) { return chunkRevisions.get(cx+','+cz)||0; }
+  function isChunkWanted(cx,cz) {
+    if(W.held||lcx===1e9||lcz===1e9)return false;
+    var dx=cx-lcx,dz=cz-lcz;
+    return dx*dx+dz*dz<=W.drawDistance*W.drawDistance+1;
+  }
+  function addTerrainWorker() {
+    if(typeof Worker!=='function')return false;
+    try{
+      var slot={worker:new Worker('js/terrain-worker.js?v=20261109-terrain-worker-v1'),busy:false,job:null};
+      slot.worker.onmessage=function(event){
+        var message=event.data||{},job=slot.job;
+        if(!job||message.id!==job.id)return;
+        slot.busy=false;slot.job=null;
+        completedTerrainJobs.push({job:job,message:message});
+      };
+      slot.worker.onerror=function(){
+        var job=slot.job;
+        slot.busy=false;slot.job=null;
+        if(job)completedTerrainJobs.push({job:job,message:{type:'error',message:'Terrain worker crashed'}});
+        try{slot.worker.terminate();}catch(e){}
+        var index=terrainWorkers.indexOf(slot);if(index>=0)terrainWorkers.splice(index,1);
+      };
+      terrainWorkers.push(slot);return true;
+    }catch(e){return false;}
+  }
+  function initTerrainWorkers() {
+    terrainWorkers.forEach(function(slot){try{slot.worker.terminate();}catch(e){}});
+    terrainWorkers=[];pendingTerrainJobs.clear();completedTerrainJobs.length=0;
+    var count=G.input&&G.input.isTouch?1:2;
+    for(var i=0;i<count;i++)if(!addTerrainWorker())break;
+    W.terrainWorkersEnabled=terrainWorkers.length>0;
+  }
+  function postTerrainJob(slot,cx,cz) {
+    var key=cx+','+cz,id=++terrainJobId,H=sampleChunkHeights(cx,cz);
+    var job={id:id,cx:cx,cz:cz,key:key,revision:chunkRevision(cx,cz),heights:H};
+    slot.busy=true;slot.job=job;pendingTerrainJobs.set(key,id);
+    var copy=H.slice(),pal=G.palette||{};
+    var soil=pal.wood&&Array.isArray(pal.wood)?pal.wood[2]:0x8a5a30;
+    var stone=pal.stone&&Array.isArray(pal.stone)?pal.stone[2]:0x80838a;
+    try{
+      slot.worker.postMessage({type:'generate',id:id,cx:cx,cz:cz,seed:SEED,heights:copy,soil:soil,stone:stone},[copy.buffer]);
+    }catch(error){
+      slot.busy=false;slot.job=null;pendingTerrainJobs.delete(key);
+      buildSync(cx,cz);
+    }
+  }
+  function processTerrainCompletions(deadline) {
+    while(completedTerrainJobs.length&&performance.now()<deadline){
+      var entry=completedTerrainJobs.shift(),job=entry.job;
+      if(pendingTerrainJobs.get(job.key)===job.id)pendingTerrainJobs.delete(job.key);
+      if(job.revision!==chunkRevision(job.cx,job.cz)||!isChunkWanted(job.cx,job.cz)||chunks.has(job.key))continue;
+      if(entry.message&&entry.message.type==='generated'){
+        attachChunk(job.cx,job.cz,job.heights,entry.message,entry.message);
+      }else buildSync(job.cx,job.cz);
+    }
   }
 
   /* ---------- decor: one merged mesh per chunk, deterministic, visual only ---------- */
@@ -595,17 +670,34 @@
     queue.sort(function (a, b) { return a.d - b.d; });
   }
   function process(budget) {
-    var t0 = performance.now();
-    while (qi < queue.length) {
-      var c = queue[qi++];
-      if (!chunks.has(c.cx + ',' + c.cz)) build(c.cx, c.cz);
-      if (performance.now() - t0 >= budget) break;
+    var started=performance.now(),deadline=started+Math.max(.1,budget||0);
+    processTerrainCompletions(deadline);
+    var idle=null;
+    if(terrainWorkers.length){
+      while(qi<queue.length&&performance.now()<deadline){
+        idle=null;
+        for(var wi=0;wi<terrainWorkers.length;wi++)if(!terrainWorkers[wi].busy){idle=terrainWorkers[wi];break;}
+        if(!idle)break;
+        var c=queue[qi++],key=c.cx+','+c.cz;
+        if(chunks.has(key)||pendingTerrainJobs.has(key))continue;
+        postTerrainJob(idle,c.cx,c.cz);
+      }
+    }else{
+      while(qi<queue.length){
+        var syncChunk=queue[qi++],syncKey=syncChunk.cx+','+syncChunk.cz;
+        if(!chunks.has(syncKey)&&!pendingTerrainJobs.has(syncKey))buildSync(syncChunk.cx,syncChunk.cz);
+        if(performance.now()-started>=budget)break;
+      }
     }
   }
-  W.preload = function (px, pz, r) {
-    var old = W.drawDistance; W.drawDistance = r;
-    plan(Math.floor(px / CS), Math.floor(pz / CS)); process(1e9);
-    W.drawDistance = old; dirty = true;
+  W.preload = function (px,pz,r) {
+    // The first visible region is prioritised by the normal distance-sorted queue.
+    // Never synchronously generate a whole preload radius during startup.
+    dirty=true;lcx=1e9;lcz=1e9;
+  };
+  W.terrainWorkerStats = function () {
+    var active=0;for(var i=0;i<terrainWorkers.length;i++)if(terrainWorkers[i].busy)active++;
+    return {enabled:terrainWorkers.length>0,workers:terrainWorkers.length,active:active,pending:pendingTerrainJobs.size,completed:completedTerrainJobs.length,queued:Math.max(0,queue.length-qi)};
   };
   var swayAccumulator = 0;
   W.update = function(px,pz,budgetMs,dt){
