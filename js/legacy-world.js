@@ -691,17 +691,19 @@
     return m;
   }
 
+  function invalidateStaleTerrainJob(job) {
+    if(!job||isChunkWanted(job.cx,job.cz,job.lod))return;
+    if(pendingTerrainJobs.get(job.key)===job.id){
+      chunkRevisions.set(job.key,chunkRevision(job.cx,job.cz)+1);
+      pendingTerrainJobs.delete(job.key);
+    }
+  }
   function plan(pcx, pcz) {
     var R=W.drawDistance,FAR=W.farDrawDistance||R,r2=FAR*FAR+1;
     var unloadRadius=(FAR+1)*(FAR+1)+1,dx,dz;
-    // A job for a chunk that changed LOD or left the streaming radius must not attach later.
-    terrainWorkers.forEach(function(slot){
-      var job=slot.job;
-      if(job&&!isChunkWanted(job.cx,job.cz,job.lod)){
-        chunkRevisions.set(job.key,chunkRevision(job.cx,job.cz)+1);
-        if(pendingTerrainJobs.get(job.key)===job.id)pendingTerrainJobs.delete(job.key);
-      }
-    });
+    // Invalidate both active worker jobs and results waiting to be attached after a pause/dungeon transition.
+    terrainWorkers.forEach(function(slot){invalidateStaleTerrainJob(slot.job);});
+    completedTerrainJobs.forEach(function(entry){invalidateStaleTerrainJob(entry.job);});
     chunks.forEach(function(m,k){
       var ax=m.cx-pcx,az=m.cz-pcz,d2=ax*ax+az*az;
       if(d2>unloadRadius){
