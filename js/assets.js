@@ -46,7 +46,9 @@
       place: ['place.ogg', 'place.mp3', 'place.wav'], break: ['break.ogg', 'break.mp3', 'break.wav']
     }
   };
-  var A = G.assets = { manifest: MANIFEST }, tpl = {}, bufs = {}, raw = {}, pending = 0, timer = null, wrapped = false, envRefreshed = false;
+  var A = G.assets = { manifest: MANIFEST }, tpl = {}, bufs = {}, raw = {}, pending = 0, timer = null, wrapped = false;
+  var modelQueue = [], modelStates = Object.create(null), activeModelLoads = 0, MAX_MODEL_LOADS = 2;
+  var soundQueue = [], soundStates = Object.create(null), activeSoundLoad = false, decorRefreshTimer = null;
 
   // Use rough, lit materials instead of unlit plastic-looking colours. Preserve GLTF colour/texture data;
   // external GLB maps are already configured by GLTFLoader and should not be forced into another encoding.
@@ -146,9 +148,77 @@
     return replaced;
   }
   A.has = function (name) { return !!tpl[name]; };
+  function requestModel(name) {
+    if (!MANIFEST.models[name] || tpl[name] || modelStates[name]) return false;
+    modelStates[name] = 'queued';
+    modelQueue.push(name);
+    pumpModelQueue();
+    return true;
+  }
+  function pumpModelQueue() {
+    while (activeModelLoads < MAX_MODEL_LOADS && modelQueue.length) {
+      var name = modelQueue.shift();
+      if (modelStates[name] !== 'queued') continue;
+      modelStates[name] = 'loading';
+      activeModelLoads++;
+      (function (modelName) {
+        Promise.resolve().then(function () {
+          return loadModel(modelName, MANIFEST.models[modelName]);
+        }).then(function () {
+          modelStates[modelName] = tpl[modelName] ? 'ready' : 'failed';
+        }, function () {
+          modelStates[modelName] = 'failed';
+        }).then(function () {
+          activeModelLoads--;
+          pumpModelQueue();
+        });
+      })(name);
+    }
+  }
+  function requestSound(name) {
+    if (!MANIFEST.sounds[name] || bufs[name] || raw[name] || soundStates[name]) return false;
+    soundStates[name] = 'queued';
+    soundQueue.push(name);
+    pumpSoundQueue();
+    return true;
+  }
+  function pumpSoundQueue() {
+    if (activeSoundLoad) return;
+    while (soundQueue.length) {
+      var name = soundQueue.shift();
+      if (soundStates[name] !== 'queued') continue;
+      activeSoundLoad = true;
+      soundStates[name] = 'loading';
+      (function (soundName) {
+        loadSound(soundName, MANIFEST.sounds[soundName]).then(function (loaded) {
+          soundStates[soundName] = loaded ? 'ready' : 'failed';
+        }, function () {
+          soundStates[soundName] = 'failed';
+        }).then(function () {
+          activeSoundLoad = false;
+          if (pending && G.audio && G.audio.ctx) decodeAll();
+          pumpSoundQueue();
+        });
+      })(name);
+      return;
+    }
+  }
+  var ENVIRONMENT_MODELS = ['tree', 'tree2', 'tree3', 'pine', 'bush', 'rock', 'mushroomProp'];
+  function scheduleDecorRefresh(name) {
+    if (ENVIRONMENT_MODELS.indexOf(name) < 0 || !G.world || !G.world.refreshDecor) return;
+    if (decorRefreshTimer) clearTimeout(decorRefreshTimer);
+    // Coalesce nearby model completions into one chunk rebuild instead of rebuilding for every GLB.
+    decorRefreshTimer = setTimeout(function () {
+      decorRefreshTimer = null;
+      if (G.world && G.world.refreshDecor) G.world.refreshDecor();
+    }, 650);
+  }
+  A.requestModel = requestModel;
+  A.requestSound = requestSound;
+  A.modelStatus = function (name) { return modelStates[name] || (tpl[name] ? 'ready' : 'idle'); };
   A.model = function (name) {
     var t = tpl[name];
-    if (!t) return null;
+    if (!t) { requestModel(name); return null; }
     var c = t.clone(true);
     c.userData = {};
     // Mesh.copy() shares geometry/material with the cached template; mark these refs as borrowed.
@@ -183,7 +253,8 @@
   };
   A.sound = function (name) {
     var b = bufs[name], ctx = G.audio && G.audio.ctx;
-    if (!b || !ctx || ctx.state !== 'running') return false;
+    if (!b) { requestSound(name); return false; }
+    if (!ctx || ctx.state !== 'running') return false;
     var s = ctx.createBufferSource(); s.buffer = b; s.connect(G.audio.master); s.start(0);
     return true;
   };
@@ -289,9 +360,7 @@
           tpl[name] = fit(g.scene, def);
           shareModelTextures(g, def, tpl[name]);
         } catch (e) {}
-        if (!envRefreshed && A.has('tree') && A.has('tree2') && A.has('tree3') && A.has('pine') && A.has('bush') && A.has('rock') && A.has('mushroomProp') && G.world && G.world.refreshDecor) {
-          envRefreshed = true; G.world.refreshDecor();
-        }
+        scheduleDecorRefresh(name);
         finish();
       }
       function fallbackLoad() {
@@ -331,13 +400,8 @@
         base.call(G.audio, n);
       };
     }
-    var jobs = [], k;
-    if (window.THREE && THREE.GLTFLoader) for (k in MANIFEST.models) jobs.push(loadModel(k, MANIFEST.models[k]));
-    if (window.fetch) for (k in MANIFEST.sounds) jobs.push(loadSound(k, MANIFEST.sounds[k]));
-    return Promise.all(jobs).then(function () {
-      if (!envRefreshed && (A.has('tree') || A.has('tree2') || A.has('tree3') || A.has('pine') || A.has('bush') || A.has('rock') || A.has('mushroomProp')) && G.world && G.world.refreshDecor) { envRefreshed = true; G.world.refreshDecor(); }
-      if (pending && !timer) timer = setInterval(decodeAll, 500);
-    }, function () {});
+    // Startup installs request hooks only. Models and sounds enter bounded queues when first used.
+    return Promise.resolve();
   };
   /* ---------- REGISTRY + BUDGETS + VALIDATE (read-only views over existing data; see ART.md) ---------- */
   // voxel = one box (12 tris); item icons count filled grid cells
