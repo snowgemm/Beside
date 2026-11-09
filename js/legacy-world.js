@@ -460,7 +460,7 @@
   function addTerrainWorker() {
     if(typeof Worker!=='function')return false;
     try{
-      var slot={worker:new Worker('js/terrain-worker.js?v=20261109-terrain-worker-v28'),busy:false,job:null};
+      var slot={worker:new Worker('js/terrain-worker.js?v=20261109-terrain-core-v29'),busy:false,job:null};
       slot.worker.onmessage=function(event){
         var message=event.data||{},job=slot.job;
         if(!job)return;
