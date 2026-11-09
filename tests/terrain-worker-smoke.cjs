@@ -91,19 +91,41 @@ function findVertex(mesh, x, z) {
   }
   return -1;
 }
-for (let z = 0; z <= 16; z++) {
-  const fullIndex = findVertex(left, 16, z);
-  const lodIndex = findVertex(far, 0, z);
-  assert.notEqual(lodIndex, -1, 'far LOD must keep every west-edge vertex');
-  const a = fullIndex * 3, b = lodIndex * 3;
-  assert.equal(left.positions[a], far.positions[b] + 16, 'local X coordinates must resolve to the same world-space edge');
-  assert.equal(left.positions[a + 1], far.positions[b + 1], 'terrain heights must meet exactly at the LOD edge');
-  assert.equal(left.positions[a + 2], far.positions[b + 2]);
+function assertSharedEdge(full, coarse, fullPoint, coarsePoint, worldOffset) {
+  const aIndex = findVertex(full, fullPoint[0], fullPoint[1]);
+  const bIndex = findVertex(coarse, coarsePoint[0], coarsePoint[1]);
+  assert.notEqual(aIndex, -1);
+  assert.notEqual(bIndex, -1);
+  const a = aIndex * 3, b = bIndex * 3;
+  assert.equal(full.positions[a], coarse.positions[b] + worldOffset[0], 'world-space X must match at LOD seam');
+  assert.equal(full.positions[a + 1], coarse.positions[b + 1], 'terrain heights must meet exactly at LOD seam');
+  assert.equal(full.positions[a + 2], coarse.positions[b + 2] + worldOffset[1], 'world-space Z must match at LOD seam');
   for (let axis = 0; axis < 3; axis++) {
-    assert.equal(left.normals[a + axis], far.normals[b + axis]);
-    assert.equal(left.colors[a + axis], far.colors[b + axis]);
+    assert.equal(full.normals[a + axis], coarse.normals[b + axis], 'normals must match at the LOD seam');
+    assert.equal(full.colors[a + axis], coarse.colors[b + axis], 'vertex colours must match at the LOD seam');
+  }
+  const auv = aIndex * 2, buv = bIndex * 2;
+  assert.equal(full.uvs[auv], coarse.uvs[buv], 'world-space U coordinates must match at the LOD seam');
+  assert.equal(full.uvs[auv + 1], coarse.uvs[buv + 1], 'world-space V coordinates must match at the LOD seam');
+}
+const farWest = generate(7, -1, 0, 1);
+const farSouth = generate(8, 0, -1, 1);
+const farNorth = generate(9, 0, 1, 1);
+for (let edge = 0; edge <= 16; edge++) {
+  assertSharedEdge(left, far, [16, edge], [0, edge], [16, 0]);
+  assertSharedEdge(left, farWest, [0, edge], [16, edge], [-16, 0]);
+  assertSharedEdge(left, farNorth, [edge, 16], [edge, 0], [0, 16]);
+  assertSharedEdge(left, farSouth, [edge, 0], [edge, 16], [0, -16]);
+}
+for (const mesh of [left, far]) {
+  for (let i = 0; i < mesh.indices.length; i += 3) {
+    const a = mesh.indices[i] * 3, b = mesh.indices[i + 1] * 3, c = mesh.indices[i + 2] * 3;
+    const windingY = (mesh.positions[b + 2] - mesh.positions[a + 2]) * (mesh.positions[c] - mesh.positions[a]) -
+      (mesh.positions[b] - mesh.positions[a]) * (mesh.positions[c + 2] - mesh.positions[a + 2]);
+    assert.ok(windingY > 0, 'terrain triangles must keep upward-facing winding');
   }
 }
+
 const farRepeat = generate(6, 1, 0, 1);
 assert.deepEqual(Array.from(farRepeat.positions), Array.from(far.positions));
 assert.deepEqual(Array.from(farRepeat.indices), Array.from(far.indices));
@@ -114,5 +136,5 @@ assert.equal(messages[messages.length - 1].type, 'error',
   'invalid worker payloads should return a recoverable error instead of crashing silently');
 
 console.log('PASS terrain worker emits finite typed geometry, valid indices, matching chunk seams, deterministic output and transferable buffers');
-console.log('PASS far LOD reduces vertices and triangles while preserving exact shared-edge heights, normals and colours');
-console.log('Terrain worker checks: 5/5 passed');
+console.log('PASS far LOD reduces vertices and triangles, stitches all four edges, preserves UV/normal/colour continuity and keeps upward-facing triangles');
+console.log('Terrain worker checks: 6/6 passed');
