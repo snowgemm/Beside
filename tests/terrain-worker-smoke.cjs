@@ -117,6 +117,31 @@ for (let edge = 0; edge <= 16; edge++) {
   assertSharedEdge(left, farNorth, [edge, 16], [edge, 0], [0, 16]);
   assertSharedEdge(left, farSouth, [edge, 0], [edge, 16], [0, -16]);
 }
+function edgeSet(mesh) {
+  const edges = new Set();
+  for (let i = 0; i < mesh.indices.length; i += 3) {
+    const tri = [mesh.indices[i], mesh.indices[i + 1], mesh.indices[i + 2]];
+    for (let e = 0; e < 3; e++) {
+      const a = tri[e], b = tri[(e + 1) % 3];
+      edges.add(Math.min(a, b) + ':' + Math.max(a, b));
+    }
+  }
+  return edges;
+}
+const farEdges = edgeSet(far);
+for (let edge = 0; edge < 16; edge++) {
+  const boundarySegments = [
+    [[0, edge], [0, edge + 1]],
+    [[16, edge], [16, edge + 1]],
+    [[edge, 0], [edge + 1, 0]],
+    [[edge, 16], [edge + 1, 16]]
+  ];
+  for (const [a, b] of boundarySegments) {
+    const ia = findVertex(far, a[0], a[1]), ib = findVertex(far, b[0], b[1]);
+    assert.ok(farEdges.has(Math.min(ia, ib) + ':' + Math.max(ia, ib)),
+      'every unit boundary segment must be represented by a triangle edge');
+  }
+}
 for (const mesh of [left, far]) {
   for (let i = 0; i < mesh.indices.length; i += 3) {
     const a = mesh.indices[i] * 3, b = mesh.indices[i + 1] * 3, c = mesh.indices[i + 2] * 3;
