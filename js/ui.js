@@ -61,6 +61,7 @@
       e.textContent = ''; e.setAttribute('aria-label', b[2] || 'Cài đặt');
       e.appendChild(G.icons.ui(b[1], b[3])); if (b[2]) e.appendChild(h('span', 'lbl', b[2]));
     });
+    if (G.player && G.player.updateCameraButton) G.player.updateCameraButton();
     $('d-btn').onclick = function () { G.combat.respawn(); };
     window.addEventListener('keydown', function (e) { if (e.code === 'Enter' && deathEl.classList.contains('open')) G.combat.respawn(); });
     U.hasDeath = true;
