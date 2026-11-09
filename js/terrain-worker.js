@@ -1,12 +1,14 @@
 /* Pure terrain geometry generation. THREE.js objects stay on the main thread. */
 'use strict';
 
-var CS = 16;
+var CS = 16, SEA = 10;
 var BC = [[.55,.5],[.5,.85],[.88,.15],[.12,.5],[.3,.2]];
 var BTOP = [[.38,.72,.26],[.2,.5,.2],[.9,.78,.45],[.95,.97,1],[.8,.5,.18]];
 var BSIDE = [[.5,.36,.22],[.4,.3,.18],[.8,.62,.36],[.62,.66,.74],[.48,.32,.18]];
 var BSA = [[.52,.52,.55],[.44,.46,.44],[.74,.52,.34],[.52,.56,.64],[.52,.46,.42]];
-var SNOWC = [.95,.97,1];
+var BSB = [[.43,.43,.47],[.37,.39,.38],[.62,.42,.28],[.43,.47,.56],[.43,.38,.36]];
+var SNOWC = [.95,.97,1], SANDC = [.88,.8,.5];
+var CT = [0,0,0], CSd = [0,0,0], CA = [0,0,0], CB = [0,0,0];
 var BW = new Float64Array(5);
 
 function hash(x, z, seed) {
@@ -36,13 +38,31 @@ function biomeW(x,z,seed) {
   for(var j=0;j<5;j++){BW[j]/=sum;if(BW[j]>BW[best])best=j;}
   return best;
 }
-function vertexPaint(wx,wz,h,slope,seed,soil,stone) {
-  biomeW(wx,wz,seed);
-  var r=0,g=0,b=0;
-  for(var i=0;i<5;i++){
-    r+=BTOP[i][0]*BW[i];g+=BTOP[i][1]*BW[i];b+=BTOP[i][2]*BW[i];
+function columnColors(x,z,h,seed) {
+  var i,j,w,k,d;
+  for(j=0;j<3;j++)CT[j]=CSd[j]=CA[j]=CB[j]=0;
+  for(i=0;i<5;i++){
+    w=BW[i];
+    for(j=0;j<3;j++){
+      CT[j]+=BTOP[i][j]*w;CSd[j]+=BSIDE[i][j]*w;
+      CA[j]+=BSA[i][j]*w;CB[j]+=BSB[i][j]*w;
+    }
   }
-  var snow=smoothstep(24.5,27,h),sand=h<=11;
+  var hj=h+(hash(x+313,z-171,seed)-.5)*1.6;
+  k=smoothstep(19.5,22,hj);
+  if(k>0)for(j=0;j<3;j++){CT[j]+=(CA[j]-CT[j])*k;CSd[j]+=(CA[j]-CSd[j])*k;}
+  k=smoothstep(24.5,26.5,hj);
+  if(k>0)for(j=0;j<3;j++)CT[j]+=(SNOWC[j]-CT[j])*k;
+  if(h<=SEA+1)for(j=0;j<3;j++){CT[j]=SANDC[j];CSd[j]=SANDC[j]*.86;}
+  if(h<SEA){
+    d=SEA-h;k=Math.min(d*.08,.55);
+    CT[0]+=(.2-CT[0])*k;CT[1]+=(.4-CT[1])*k;CT[2]+=(.56-CT[2])*k;
+    CSd[0]+=(.2-CSd[0])*k;CSd[1]+=(.4-CSd[1])*k;CSd[2]+=(.56-CSd[2])*k;
+  }
+}
+function vertexPaint(wx,wz,h,slope,seed,soil,stone) {
+  biomeW(wx,wz,seed);columnColors(wx,wz,h,seed);
+  var r=CT[0],g=CT[1],b=CT[2],snow=smoothstep(24.5,27,h),sand=h<=SEA+1;
   function ch(c,n){return((c>>n)&255)/255;}
   var dirt=smoothstep(.35,1.5,slope)*(1-snow),rock=smoothstep(1,2.8,slope)*(1-snow);
   if(!sand){
