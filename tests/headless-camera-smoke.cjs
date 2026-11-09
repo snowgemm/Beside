@@ -423,6 +423,20 @@ check('terrain geometry is generated in a bounded Web Worker pool and transferre
   terrainSource.includes('new THREE.BufferAttribute(toFloat32(data.positions),3)') &&
   terrainSource.includes('[copy.buffer]') &&
   terrainSource.includes('if(terrainWorkers.length)'));
+check('terrain re-planning invalidates active and already-completed worker jobs after a pause or dungeon transition',
+  terrainSource.includes('function invalidateStaleTerrainJob(job)') &&
+  terrainSource.includes('terrainWorkers.forEach(function(slot){invalidateStaleTerrainJob(slot.job);})') &&
+  terrainSource.includes('completedTerrainJobs.forEach(function(entry){invalidateStaleTerrainJob(entry.job);})'));
+check('streamed terrain chunks release owned GLB decor clones without disposing shared templates',
+  terrainSource.includes('G.assets.disposeInstance(children[i])') &&
+  fs.readFileSync(path.join(jsDir, 'assets.js'), 'utf8').includes('o.userData.sharedAssetResources = true'));
+check('terrain edit rebuilds preserve the current chunk LOD',
+  terrainSource.includes('var lod=m.lod||0;') &&
+  terrainSource.includes('buildSync(cx,cz,lod);'));
+check('terrain worker fallback keeps a finite frame budget when update receives an invalid budget',
+  terrainSource.includes("budget=typeof budget==='number'&&isFinite(budget)?Math.max(.1,budget):1;") &&
+  terrainSource.includes('while(qi<queue.length&&performance.now()<deadline)'));
+
 check('initial terrain preload schedules nearby chunks without a synchronous full-radius build',
   terrainSource.includes('Never synchronously generate a whole preload radius during startup') &&
   !terrainSource.includes('process(1e9)') &&
