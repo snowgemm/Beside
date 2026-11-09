@@ -69,7 +69,7 @@ for (let z = 0; z <= 16; z++) {
   assert.equal(left.uvs[leftUv + 1], right.uvs[rightUv + 1]);
 }
 assert.equal(transfers.length, 6, 'all returned typed-array buffers should be transferable');
-assert.ok(transfers.every((buffer) => buffer instanceof ArrayBuffer));
+assert.ok(transfers.every((buffer) => Object.prototype.toString.call(buffer) === '[object ArrayBuffer]'));
 
 const repeat = generate(3, 0, 0);
 assert.deepEqual(Array.from(repeat.positions), Array.from(left.positions));
