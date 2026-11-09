@@ -315,6 +315,8 @@ check('player lands on the smooth rendered terrain instead of integer voxel step
 // Visual regression guards: streamed meshes are created outside the quality-setting traversal,
  // so their shadow receiver flag must be safe at construction time, not just toggled once.
 const terrainSource = fs.readFileSync(path.join(jsDir, 'legacy-world.js'), 'utf8');
+const terrainCoreSource = fs.readFileSync(path.join(jsDir, 'terrain-core.js'), 'utf8');
+const workerSource = fs.readFileSync(path.join(jsDir, 'terrain-worker.js'), 'utf8');
 const assetSource = fs.readFileSync(path.join(jsDir, 'assets.js'), 'utf8');
 check('GLB clones mark shared mesh resources and prop previews use the shared-safe disposer',
   assetSource.includes('o.userData.sharedAssetResources = true') &&
@@ -350,7 +352,8 @@ check('newly streamed terrain chunks never receive shadow-map shadows',
   terrainSource.includes('mesh.receiveShadow=false') &&
   !terrainSource.includes("mesh.receiveShadow=!!(G.quality&&G.quality.value==='high')"));
 check('overworld height samples stay fractional for smooth hills',
-  terrainSource.includes('return Math.max(3, Math.min(MAXH - 3, h))') &&
+  terrainSource.includes('var baseHeight = terrainCore.baseHeight') &&
+  terrainCoreSource.includes('return Math.max(3,Math.min(maxHeight-3,h))') &&
   terrainSource.includes('var N=CS+3,H=new Float32Array(N*N)'));
 check('ground detail texture does not repeat once per terrain block',
   terrainSource.includes('uvs.push((ox+x)*.16,(oz+z)*.16)') &&
@@ -410,7 +413,7 @@ check('terrain generation CPU budget adapts to the measured FPS instead of alway
   mainSource.includes('var chunkBudget = touch ? 1.4 : 2.4') &&
   mainSource.includes('G.world.update(p.x, p.z, chunkBudget, dt)'));
 check('terrain geometry is generated in a bounded Web Worker pool and transferred as typed arrays',
-  terrainSource.includes("new Worker('js/terrain-worker.js?v=20261109-terrain-worker-v28')") &&
+  terrainSource.includes("new Worker('js/terrain-worker.js?v=20261109-terrain-core-v29')") &&
   terrainSource.includes('W.farDrawDistance = terrainWorkers.length ? Math.min(10, W.drawDistance + 3) : W.drawDistance') &&
   terrainSource.includes('function desiredChunkLod(cx,cz)') &&
   terrainSource.includes('function isChunkWanted(cx,cz,lod)') &&
@@ -422,7 +425,11 @@ check('terrain geometry is generated in a bounded Web Worker pool and transferre
   terrainSource.includes('completedTerrainJobs') &&
   terrainSource.includes('new THREE.BufferAttribute(toFloat32(data.positions),3)') &&
   terrainSource.includes('[copy.buffer]') &&
-  terrainSource.includes('if(terrainWorkers.length)'));
+  terrainSource.includes('if(terrainWorkers.length)') &&
+  terrainSource.includes('window.TerrainCore.create(SEED, MAXH, SEA)') &&
+  workerSource.includes("importScripts('terrain-core.js')") &&
+  workerSource.includes('self.TerrainCore.create(seed,32,SEA)') &&
+  terrainCoreSource.includes('scope.TerrainCore = { create:create }'));
 check('terrain re-planning invalidates active and already-completed worker jobs after a pause or dungeon transition',
   terrainSource.includes('function invalidateStaleTerrainJob(job)') &&
   terrainSource.includes('terrainWorkers.forEach(function(slot){invalidateStaleTerrainJob(slot.job);})') &&
@@ -442,9 +449,11 @@ check('initial terrain preload schedules nearby chunks without a synchronous ful
   !terrainSource.includes('process(1e9)') &&
   terrainSource.includes('dirty=true;lcx=1e9;lcz=1e9;'));
 check('terrain worker is included in the versioned offline shell cache',
-  fs.readFileSync(path.join(root, 'sw.js'), 'utf8').includes("const CACHE_NAME = 'besidevalley-shell-v28'") &&
+  fs.readFileSync(path.join(root, 'sw.js'), 'utf8').includes("const CACHE_NAME = 'besidevalley-shell-v29'") &&
+  fs.readFileSync(path.join(root, 'sw.js'), 'utf8').includes("'./js/terrain-core.js'") &&
   fs.readFileSync(path.join(root, 'sw.js'), 'utf8').includes("'./js/terrain-worker.js'") &&
-  fs.readFileSync(path.join(root, 'index.html'), 'utf8').includes('?v=20261109-terrain-worker-v28'));
+  fs.readFileSync(path.join(root, 'index.html'), 'utf8').includes('js/terrain-core.js?v=20261109-terrain-core-v29') &&
+  fs.readFileSync(path.join(root, 'index.html'), 'utf8').indexOf('terrain-core.js') < fs.readFileSync(path.join(root, 'index.html'), 'utf8').indexOf('legacy-world.js'));
 check('expanded minimap renders cached 16x16 terrain tiles rather than one fillRect per world cell',
   fs.readFileSync(path.join(jsDir, 'minimap.js'), 'utf8').includes('function terrainTile(cx, cz)') &&
   fs.readFileSync(path.join(jsDir, 'minimap.js'), 'utf8').includes('c.drawImage(tile, px, pz, 16 * s, 16 * s)') &&
