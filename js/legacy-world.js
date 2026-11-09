@@ -100,7 +100,7 @@
     }
   }
 
-  var W = G.world = { CS: CS, SEA: SEA, WATER: WATER, seed: SEED, drawDistance: 5, getHeight: getHeight, getBlock: getBlock, solid: solid, held: false };
+  var W = G.world = { CS: CS, SEA: SEA, WATER: WATER, seed: SEED, drawDistance: 5, farDrawDistance: 5, getHeight: getHeight, getBlock: getBlock, solid: solid, held: false };
   W.ow = { getHeight: getHeight, getBlock: getBlock, solid: solid };
   W.baseHeight = baseHeight; // unedited terrain (gate / spawn placement)
   W.biome = function (x, z) { return BN[biomeW(Math.floor(x) + 0.5, Math.floor(z) + 0.5)]; };
@@ -298,8 +298,8 @@
     waterGeom.setAttribute('color',new THREE.BufferAttribute(waterCol,3));waterGeom.computeVertexNormals();
     water=new THREE.Mesh(waterGeom,new THREE.MeshStandardMaterial({color:0xffffff,map:wtex,vertexColors:true,transparent:true,opacity:.76,depthWrite:false,side:THREE.DoubleSide,roughness:.28,metalness:.02,fog:true}));
     water.renderOrder=1;water.position.y=SEA-.035;water.userData.noShadow=true;scene.add(water);initGrass();
-    scene.fog=new THREE.Fog(0xa8c9d7,20,80);scene.background=new THREE.Color(0xa8c9d7);W.setSurfaceQuality(surfaceQuality);W.setDrawDistance(W.drawDistance);
-    initTerrainWorkers();
+    scene.fog=new THREE.Fog(0xa8c9d7,20,80);scene.background=new THREE.Color(0xa8c9d7);W.setSurfaceQuality(surfaceQuality);
+    initTerrainWorkers();W.setDrawDistance(W.drawDistance);
   };
   // day cycle tint (sky.js): multiplies terrain, decor and water
   W.tint = function (r, g, b) {
@@ -313,7 +313,9 @@
   };
   W.setDrawDistance = function (n) {
     W.drawDistance = Math.max(3, Math.min(7, Math.round(n)));
-    var far = (n - 0.3) * CS;
+    // Keep a short full-detail ring and extend the horizon with stitched low-poly chunks.
+    W.farDrawDistance = terrainWorkers.length ? Math.min(10, W.drawDistance + 3) : W.drawDistance;
+    var far = (W.farDrawDistance - 0.25) * CS;
     if (scene && scene.fog && !W.held) { scene.fog.far = far; scene.fog.near = far * 0.45; }
     dirty = true;
   };
@@ -420,7 +422,7 @@
     return[Math.max(0,Math.min(1,r*low*fine*sr)),Math.max(0,Math.min(1,g*low*fine*sg)),Math.max(0,Math.min(1,b*low*fine*sb))];
   }
   function toFloat32(values) { return values instanceof Float32Array ? values : new Float32Array(values); }
-  function attachChunk(cx,cz,H,BIO,data) {
+  function attachChunk(cx,cz,H,BIO,data,lod) {
     var ox=cx*CS,oz=cz*CS,geo=new THREE.BufferGeometry();
     // Keep transferred typed-array buffers; do not copy them through Float32BufferAttribute.
     geo.setAttribute('position',new THREE.BufferAttribute(toFloat32(data.positions),3));
@@ -431,7 +433,7 @@
     geo.computeBoundingSphere();
     var mesh=new THREE.Mesh(geo,material);
     mesh.position.set(ox,0,oz);mesh.matrixAutoUpdate=false;mesh.updateMatrix();
-    mesh.cx=cx;mesh.cz=cz;mesh.userData.terrain=true;mesh.castShadow=false;mesh.receiveShadow=false;
+    mesh.cx=cx;mesh.cz=cz;mesh.lod=lod||0;mesh.userData.terrain=true;mesh.userData.terrainLod=mesh.lod;mesh.castShadow=false;mesh.receiveShadow=false;
     var dm=decorMesh(ox,oz,H,BIO);
     if(dm){dm.matrixAutoUpdate=false;dm.updateMatrix();mesh.add(dm);mesh.decor=dm;}
     bmap.set(bk(cx,cz),dbl.length?dbl.slice():null);dbl=[];
@@ -443,7 +445,7 @@
     for(var z=-1;z<=CS+1;z++)for(var x=-1;x<=CS+1;x++)H[(z+1)*N+x+1]=getHeight(ox+x,oz+z);
     return H;
   }
-  function buildSync(cx,cz) {
+  function buildSync(cx,cz,lod) {
     var N=CS+3,H=sampleChunkHeights(cx,cz),ox=cx*CS,oz=cz*CS;
     var positions=[],colors=[],normals=[],uvs=[],indices=[],BIO=new Uint8Array(CS*CS);
     for(var z=0;z<=CS;z++)for(var x=0;x<=CS;x++){
@@ -456,18 +458,22 @@
       var a=z*(CS+1)+x,b=a+1,d=a+CS+1,c=d+1;
       if(hash(wx,wz)>.5)indices.push(a,d,c,a,c,b);else indices.push(a,d,b,b,d,c);
     }
-    attachChunk(cx,cz,H,BIO,{positions:positions,colors:colors,normals:normals,uvs:uvs,indices:indices});
+    attachChunk(cx,cz,H,BIO,{positions:positions,colors:colors,normals:normals,uvs:uvs,indices:indices},lod||0);
   }
   function chunkRevision(cx,cz) { return chunkRevisions.get(cx+','+cz)||0; }
-  function isChunkWanted(cx,cz) {
-    if(W.held||lcx===1e9||lcz===1e9)return false;
+  function desiredChunkLod(cx,cz) {
     var dx=cx-lcx,dz=cz-lcz;
-    return dx*dx+dz*dz<=W.drawDistance*W.drawDistance+1;
+    return dx*dx+dz*dz>W.drawDistance*W.drawDistance+1?1:0;
+  }
+  function isChunkWanted(cx,cz,lod) {
+    if(W.held||lcx===1e9||lcz===1e9)return false;
+    var dx=cx-lcx,dz=cz-lcz,d2=dx*dx+dz*dz;
+    return d2<=W.farDrawDistance*W.farDrawDistance+1&&(lod==null||desiredChunkLod(cx,cz)===lod);
   }
   function addTerrainWorker() {
     if(typeof Worker!=='function')return false;
     try{
-      var slot={worker:new Worker('js/terrain-worker.js?v=20261109-terrain-worker-v1'),busy:false,job:null};
+      var slot={worker:new Worker('js/terrain-worker.js?v=20261109-terrain-worker-v28'),busy:false,job:null};
       slot.worker.onmessage=function(event){
         var message=event.data||{},job=slot.job;
         if(!job)return;
@@ -480,6 +486,7 @@
         if(job)completedTerrainJobs.push({job:job,message:{type:'error',message:'Terrain worker crashed'}});
         try{slot.worker.terminate();}catch(e){}
         var index=terrainWorkers.indexOf(slot);if(index>=0)terrainWorkers.splice(index,1);
+        if(!terrainWorkers.length){W.terrainWorkersEnabled=false;W.setDrawDistance(W.drawDistance);}
       };
       terrainWorkers.push(slot);return true;
     }catch(e){return false;}
@@ -491,19 +498,19 @@
     for(var i=0;i<count;i++)if(!addTerrainWorker())break;
     W.terrainWorkersEnabled=terrainWorkers.length>0;
   }
-  function postTerrainJob(slot,cx,cz) {
+  function postTerrainJob(slot,cx,cz,lod) {
     var key=cx+','+cz,id=++terrainJobId,H=sampleChunkHeights(cx,cz);
-    var job={id:id,cx:cx,cz:cz,key:key,revision:chunkRevision(cx,cz),heights:H};
+    var job={id:id,cx:cx,cz:cz,lod:lod,key:key,revision:chunkRevision(cx,cz),heights:H};
     slot.busy=true;slot.job=job;pendingTerrainJobs.set(key,id);
     var copy=H.slice(),pal=G.palette||{};
     var soil=pal.wood&&Array.isArray(pal.wood)?pal.wood[2]:0x8a5a30;
     var stone=pal.stone&&Array.isArray(pal.stone)?pal.stone[2]:0x80838a;
     try{
-      slot.worker.postMessage({type:'generate',id:id,cx:cx,cz:cz,seed:SEED,heights:copy,soil:soil,stone:stone},[copy.buffer]);
+      slot.worker.postMessage({type:'generate',id:id,cx:cx,cz:cz,lod:lod,seed:SEED,heights:copy,soil:soil,stone:stone},[copy.buffer]);
     }catch(error){
       slot.busy=false;slot.job=null;pendingTerrainJobs.delete(key);
       if(!pendingTerrainJobs.has(key))chunkRevisions.delete(key);
-      buildSync(cx,cz);
+      buildSync(cx,cz,lod);
     }
   }
   function processTerrainCompletions(deadline) {
@@ -511,13 +518,13 @@
       var entry=completedTerrainJobs.shift(),job=entry.job;
       var isCurrent=pendingTerrainJobs.get(job.key)===job.id;
       if(isCurrent)pendingTerrainJobs.delete(job.key);
-      var valid=isCurrent&&job.revision===chunkRevision(job.cx,job.cz)&&isChunkWanted(job.cx,job.cz)&&!chunks.has(job.key);
+      var valid=isCurrent&&job.revision===chunkRevision(job.cx,job.cz)&&isChunkWanted(job.cx,job.cz,job.lod)&&!chunks.has(job.key);
       // Clear revision bookkeeping after the last in-flight job for this chunk has settled.
       if(!pendingTerrainJobs.has(job.key))chunkRevisions.delete(job.key);
       if(!valid)continue;
       if(entry.message&&entry.message.type==='generated'){
-        attachChunk(job.cx,job.cz,job.heights,entry.message.biomes,entry.message);
-      }else buildSync(job.cx,job.cz);
+        attachChunk(job.cx,job.cz,job.heights,entry.message.biomes,entry.message,job.lod);
+      }else buildSync(job.cx,job.cz,job.lod);
     }
   }
 
@@ -665,18 +672,37 @@
   }
 
   function plan(pcx, pcz) {
-    var R = W.drawDistance, r2 = R * R + 1, ur = (R + 1) * (R + 1) + 1, dx, dz;
-    chunks.forEach(function (m, k) {
-      var ax = m.cx - pcx, az = m.cz - pcz;
-      if (ax * ax + az * az > ur) { drop(m); chunks.delete(k);
-      bmap.delete(bk(m.cx, m.cz)); if (W.onChunkUnload) W.onChunkUnload(m.cx, m.cz); }
+    var R=W.drawDistance,FAR=W.farDrawDistance||R,r2=FAR*FAR+1;
+    var unloadRadius=(FAR+1)*(FAR+1)+1,dx,dz;
+    // A job for a chunk that changed LOD or left the streaming radius must not attach later.
+    terrainWorkers.forEach(function(slot){
+      var job=slot.job;
+      if(job&&!isChunkWanted(job.cx,job.cz,job.lod)){
+        chunkRevisions.set(job.key,chunkRevision(job.cx,job.cz)+1);
+        if(pendingTerrainJobs.get(job.key)===job.id)pendingTerrainJobs.delete(job.key);
+      }
     });
-    queue = []; qi = 0;
-    for (dx = -R; dx <= R; dx++) for (dz = -R; dz <= R; dz++) {
-      var d2 = dx * dx + dz * dz;
-      if (d2 <= r2 && !chunks.has((pcx + dx) + ',' + (pcz + dz))) queue.push({ cx: pcx + dx, cz: pcz + dz, d: d2 });
+    chunks.forEach(function(m,k){
+      var ax=m.cx-pcx,az=m.cz-pcz,d2=ax*ax+az*az;
+      if(d2>unloadRadius){
+        drop(m);chunks.delete(k);bmap.delete(bk(m.cx,m.cz));
+        if(W.onChunkUnload)W.onChunkUnload(m.cx,m.cz);
+      }else{
+        var wantedLod=d2>R*R+1?1:0;
+        if((m.lod||0)!==wantedLod){
+          drop(m);chunks.delete(k);bmap.delete(bk(m.cx,m.cz));
+          if(W.onChunkUnload)W.onChunkUnload(m.cx,m.cz);
+        }
+      }
+    });
+    queue=[];qi=0;
+    for(dx=-FAR;dx<=FAR;dx++)for(dz=-FAR;dz<=FAR;dz++){
+      var d2=dx*dx+dz*dz,key=(pcx+dx)+','+(pcz+dz);
+      if(d2<=r2&&!chunks.has(key)){
+        queue.push({cx:pcx+dx,cz:pcz+dz,d:d2,lod:d2>R*R+1?1:0});
+      }
     }
-    queue.sort(function (a, b) { return a.d - b.d; });
+    queue.sort(function(a,b){return a.d-b.d;});
   }
   function process(budget) {
     var started=performance.now(),deadline=started+Math.max(.1,budget||0);
@@ -689,12 +715,12 @@
         if(!idle)break;
         var c=queue[qi++],key=c.cx+','+c.cz;
         if(chunks.has(key)||pendingTerrainJobs.has(key))continue;
-        postTerrainJob(idle,c.cx,c.cz);
+        postTerrainJob(idle,c.cx,c.cz,c.lod);
       }
     }else{
       while(qi<queue.length){
         var syncChunk=queue[qi++],syncKey=syncChunk.cx+','+syncChunk.cz;
-        if(!chunks.has(syncKey)&&!pendingTerrainJobs.has(syncKey))buildSync(syncChunk.cx,syncChunk.cz);
+        if(!chunks.has(syncKey)&&!pendingTerrainJobs.has(syncKey))buildSync(syncChunk.cx,syncChunk.cz,syncChunk.lod);
         if(performance.now()-started>=budget)break;
       }
     }
