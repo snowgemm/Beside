@@ -410,7 +410,12 @@ check('terrain generation CPU budget adapts to the measured FPS instead of alway
   mainSource.includes('var chunkBudget = touch ? 1.4 : 2.4') &&
   mainSource.includes('G.world.update(p.x, p.z, chunkBudget, dt)'));
 check('terrain geometry is generated in a bounded Web Worker pool and transferred as typed arrays',
-  terrainSource.includes("new Worker('js/terrain-worker.js?v=20261109-terrain-worker-v1')") &&
+  terrainSource.includes("new Worker('js/terrain-worker.js?v=20261109-terrain-worker-v28')") &&
+  terrainSource.includes('W.farDrawDistance = terrainWorkers.length ? Math.min(10, W.drawDistance + 3) : W.drawDistance') &&
+  terrainSource.includes('function desiredChunkLod(cx,cz)') &&
+  terrainSource.includes('function isChunkWanted(cx,cz,lod)') &&
+  terrainSource.includes('mesh.userData.terrainLod=mesh.lod') &&
+  terrainSource.includes('postTerrainJob(idle,c.cx,c.cz,c.lod)') &&
   terrainSource.includes('function initTerrainWorkers()') &&
   terrainSource.includes('function processTerrainCompletions(deadline)') &&
   terrainSource.includes('pendingTerrainJobs') &&
