@@ -322,9 +322,9 @@ check('GLB clones mark shared mesh resources and prop previews use the shared-sa
   fs.readFileSync(path.join(jsDir, 'dungeon.js'), 'utf8').includes('G.assets.disposeInstance(o)'));
 
 check('terrain chunk edge slope samples stay inside a one-cell padded grid',
-  terrainSource.includes('var N=CS+3,H=new Float32Array(N*N)') &&
-  terrainSource.includes('for(z=-1;z<=CS+1;z++)for(x=-1;x<=CS+1;x++)') &&
-  !terrainSource.includes('var N=18,H=new Float32Array(N*N)'));
+  terrainSource.includes('function sampleChunkHeights(cx,cz)') &&
+  terrainSource.includes('for(var z=-1;z<=CS+1;z++)for(var x=-1;x<=CS+1;x++)') &&
+  fs.readFileSync(path.join(jsDir, 'terrain-worker.js'), 'utf8').includes('var N=CS+3'));
 {
   // Exercise every terrain-vertex edge and corner using the same grid/index scheme as build().
   const chunkSize = 16;
@@ -353,7 +353,8 @@ check('overworld height samples stay fractional for smooth hills',
   terrainSource.includes('return Math.max(3, Math.min(MAXH - 3, h))') &&
   terrainSource.includes('var N=CS+3,H=new Float32Array(N*N)'));
 check('ground detail texture does not repeat once per terrain block',
-  terrainSource.includes('uvs.push((ox+x)*0.16,(oz+z)*0.16)'));
+  terrainSource.includes('uvs.push((ox+x)*.16,(oz+z)*.16)') &&
+  fs.readFileSync(path.join(jsDir, 'terrain-worker.js'), 'utf8').includes('uvs[ui]=(ox+x)*.16'));
 check('character rigs use rough lit materials instead of unlit plastic shading',
   fs.readFileSync(path.join(jsDir, 'rig.js'), 'utf8').includes('new THREE.MeshStandardMaterial({ color: c, vertexColors: true, roughness: 0.96, metalness: 0'));
 check('environment asset loader preserves lit PBR materials and uses licensed textured nature variants',
@@ -393,7 +394,7 @@ check('grass is distributed across the full local radius with a deterministic sp
   !terrainSource.includes('dx<=25&&gn<grassTarget'));
 check('terrain normals are derived from padded heights and stay consistent across streamed chunk seams',
   terrainSource.includes('normals.push(nx*inv,ny*inv,nz*inv)') &&
-  terrainSource.includes("setAttribute('normal',new THREE.Float32BufferAttribute(normals,3))") &&
+  terrainSource.includes("new THREE.BufferAttribute(toFloat32(data.normals),3)") &&
   terrainSource.includes('var N=CS+3,H=new Float32Array(N*N)') &&
   !terrainSource.includes('geo.computeVertexNormals();geo.computeBoundingSphere();'));
 check('desktop high quality enables a subtle periodic ground normal map while mobile stays lightweight',
@@ -616,7 +617,7 @@ check('streamed GLB decor staging references are scoped to each chunk build',
 check('chunk geometry and collision staging arrays are released after their data is copied',
   terrainSource.includes('geo.setIndex(di); dp = dc = di = null; geo.computeVertexNormals();') &&
   terrainSource.includes('if (!n) { dp = dc = di = null; return null; }') &&
-  terrainSource.includes('bmap.set(bk(cx,cz),dbl.length?dbl.slice():null); dbl = [];'));
+  terrainSource.includes('bmap.set(bk(cx,cz),dbl.length?dbl.slice():null);dbl=[];'));
 check('three distinct close-range tree models use merged procedural trees at distance',
   assetSource.includes("tree2: { url: QUATERNIUS_MODEL_BASE + 'tree2.glb'") &&
   assetSource.includes("tree3: { url: QUATERNIUS_MODEL_BASE + 'tree3.glb'") &&
@@ -652,11 +653,12 @@ check('keyboard focus is visible on map and button controls',
   styleSource.includes('button:focus-visible,#minimap:focus-visible{outline:2px solid var(--hi)') &&
   styleSource.includes('.menu-row select:focus-visible'));
 check('offline cache is bumped and versioned local assets prevent stale code from loading',
-  swSource.includes("CACHE_NAME = 'besidevalley-shell-v27'") &&
+  swSource.includes("CACHE_NAME = 'besidevalley-shell-v28'") &&
+  swSource.includes("'./js/terrain-worker.js'") &&
   swSource.includes("url.searchParams.get('v')") &&
   swSource.includes('function fallbackCacheKey(requestUrl)') &&
   swSource.includes('cache.match(fallbackKey)') &&
-  indexSource.includes('20261105-android-profile-capture-v27'));
+  indexSource.includes('20261109-terrain-worker-v28'));
 check('player jump input triggers a short takeoff pose independent of refresh rate',
   rigSource.includes("state === 'jump'") && rigSource.includes('this.jumpT = 0.32') &&
   rigSource.includes('var jumpPulse = Math.sin') && playerSource.includes("rig.play('jump'"));
