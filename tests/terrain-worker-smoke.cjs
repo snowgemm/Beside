@@ -28,10 +28,10 @@ function makeHeights(cx, cz) {
   }
   return values;
 }
-function generate(id, cx, cz) {
+function generate(id, cx, cz, lod = 0) {
   const before = messages.length;
   self.onmessage({ data: {
-    type: 'generate', id, cx, cz, seed: 1337,
+    type: 'generate', id, cx, cz, lod, seed: 1337,
     heights: makeHeights(cx, cz), soil: 0x8a5a30, stone: 0x80838a
   } });
   assert.equal(messages.length, before + 1, 'worker must return one result for each request');
@@ -75,10 +75,42 @@ const repeat = generate(3, 0, 0);
 assert.deepEqual(Array.from(repeat.positions), Array.from(left.positions));
 assert.deepEqual(Array.from(repeat.colors), Array.from(left.colors));
 assert.deepEqual(Array.from(repeat.indices), Array.from(left.indices));
+const far = generate(5, 1, 0, 1);
+assert.equal(far.type, 'generated');
+assert.equal(far.lod, 1);
+assert.equal(far.positions.length / 3, 177,
+  'far LOD should retain a 9x9 coarse grid, 8x8 patch centres and all 32 edge midpoints');
+assert.equal(far.indices.length, 864,
+  'boundary-stitched LOD should use fewer triangles than the full-resolution chunk');
+assert.ok(far.indices.every((index) => index < far.positions.length / 3),
+  'far LOD indices must address an existing vertex');
+
+function findVertex(mesh, x, z) {
+  for (let i = 0; i < mesh.positions.length; i += 3) {
+    if (mesh.positions[i] === x && mesh.positions[i + 2] === z) return i / 3;
+  }
+  return -1;
+}
+for (let z = 0; z <= 16; z++) {
+  const fullIndex = findVertex(left, 16, z);
+  const lodIndex = findVertex(far, 0, z);
+  assert.notEqual(lodIndex, -1, 'far LOD must keep every west-edge vertex');
+  const a = fullIndex * 3, b = lodIndex * 3;
+  for (let axis = 0; axis < 3; axis++) {
+    assert.equal(left.positions[a + axis], far.positions[b + axis]);
+    assert.equal(left.normals[a + axis], far.normals[b + axis]);
+    assert.equal(left.colors[a + axis], far.colors[b + axis]);
+  }
+}
+const farRepeat = generate(6, 1, 0, 1);
+assert.deepEqual(Array.from(farRepeat.positions), Array.from(far.positions));
+assert.deepEqual(Array.from(farRepeat.indices), Array.from(far.indices));
+
 
 self.onmessage({ data: { type: 'generate', id: 4, cx: 0, cz: 0, seed: 1337, heights: new Float32Array(8) } });
 assert.equal(messages[messages.length - 1].type, 'error',
   'invalid worker payloads should return a recoverable error instead of crashing silently');
 
 console.log('PASS terrain worker emits finite typed geometry, valid indices, matching chunk seams, deterministic output and transferable buffers');
-console.log('Terrain worker checks: 4/4 passed');
+console.log('PASS far LOD reduces vertices and triangles while preserving exact shared-edge heights, normals and colours');
+console.log('Terrain worker checks: 5/5 passed');
