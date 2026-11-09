@@ -507,7 +507,7 @@
       if(pendingTerrainJobs.get(job.key)===job.id)pendingTerrainJobs.delete(job.key);
       if(job.revision!==chunkRevision(job.cx,job.cz)||!isChunkWanted(job.cx,job.cz)||chunks.has(job.key))continue;
       if(entry.message&&entry.message.type==='generated'){
-        attachChunk(job.cx,job.cz,job.heights,entry.message,entry.message);
+        attachChunk(job.cx,job.cz,job.heights,entry.message.biomes,entry.message);
       }else buildSync(job.cx,job.cz);
     }
   }
