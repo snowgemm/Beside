@@ -96,8 +96,10 @@ for (let z = 0; z <= 16; z++) {
   const lodIndex = findVertex(far, 0, z);
   assert.notEqual(lodIndex, -1, 'far LOD must keep every west-edge vertex');
   const a = fullIndex * 3, b = lodIndex * 3;
+  assert.equal(left.positions[a], far.positions[b] + 16, 'local X coordinates must resolve to the same world-space edge');
+  assert.equal(left.positions[a + 1], far.positions[b + 1], 'terrain heights must meet exactly at the LOD edge');
+  assert.equal(left.positions[a + 2], far.positions[b + 2]);
   for (let axis = 0; axis < 3; axis++) {
-    assert.equal(left.positions[a + axis], far.positions[b + axis]);
     assert.equal(left.normals[a + axis], far.normals[b + axis]);
     assert.equal(left.colors[a + axis], far.colors[b + axis]);
   }
