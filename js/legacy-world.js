@@ -5,38 +5,13 @@
   var CS = 16, SEA = 10, MAXH = 32, SEED = G.seed || 1337;
   var AIR = 0, GRASS = 1, SAND = 2, STONE = 3, SNOW = 4, WATER = 5;
 
-  /* ---------- biomes: palettes (index = meadow, forest, desert, snow, autumn) ---------- */
+  /* ---------- shared deterministic terrain core ---------- */
   var BN = ['meadow', 'forest', 'desert', 'snow', 'autumn'];
-  var BC = [[.55, .5], [.5, .85], [.88, .15], [.12, .5], [.3, .2]]; // (temperature, moisture) centres
-  var BTOP = [[.38, .72, .26], [.2, .5, .2], [.9, .78, .45], [.95, .97, 1], [.8, .5, .18]];
-  var BSIDE = [[.5, .36, .22], [.4, .3, .18], [.8, .62, .36], [.62, .66, .74], [.48, .32, .18]];
-  var BSA = [[.52, .52, .55], [.44, .46, .44], [.74, .52, .34], [.52, .56, .64], [.52, .46, .42]]; // strata A
-  var BSB = [[.43, .43, .47], [.37, .39, .38], [.62, .42, .28], [.43, .47, .56], [.43, .38, .36]]; // strata B
-  var SANDC = [.88, .8, .5], SNOWC = [.95, .97, 1];
-
-  function hash(x, z) {
-    var h = (Math.imul(x, 374761393) + Math.imul(z, 668265263) + Math.imul(SEED, 1442695041)) | 0;
-    h = Math.imul(h ^ (h >>> 13), 1274126177);
-    h ^= h >>> 16;
-    return (h >>> 0) / 4294967296;
-  }
-  function vnoise(x, z) {
-    var xi = Math.floor(x), zi = Math.floor(z), xf = x - xi, zf = z - zi;
-    var u = xf * xf * (3 - 2 * xf), v = zf * zf * (3 - 2 * zf);
-    var a = hash(xi, zi), b = hash(xi + 1, zi), c = hash(xi, zi + 1), d = hash(xi + 1, zi + 1);
-    return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v;
-  }
-  function fbm(x, z, o) {
-    var s = 0, a = 1, t = 0, f = 1;
-    for (var i = 0; i < o; i++) { s += vnoise(x * f, z * f) * a; t += a; a *= 0.5; f *= 2; }
-    return s / t;
-  }
-  function baseHeight(x, z) {
-    var px = Math.floor(x) + 0.5, pz = Math.floor(z) + 0.5;
-    var n = fbm(px * 0.006, pz * 0.006, 3), m = fbm(px * 0.03 + 50, pz * 0.03 - 70, 4);
-    var h = 13 + (n - 0.5) * 35 + (m - 0.5) * 6;
-    return Math.max(3, Math.min(MAXH - 3, h));
-  }
+  // The same pure math module is loaded by the terrain worker and this fallback path.
+  var terrainCore = window.TerrainCore.create(SEED, MAXH, SEA);
+  var hash = terrainCore.hash, fbm = terrainCore.fbm, baseHeight = terrainCore.baseHeight;
+  var biomeW = terrainCore.biomeW, columnColors = terrainCore.columnColors, vertexPaint = terrainCore.vertexPaint;
+  var BW = terrainCore.BW, CT = terrainCore.CT, CSd = terrainCore.CSd, CA = terrainCore.CA, CB = terrainCore.CB;
   /* ---------- edit layer: sparse column (x,z) -> height over the heightmap ---------- */
   var EMAX = 20000, EMIN_H = 1, EMAX_H = 48, edits = new Map();
   function ek(x, z) { return (x + 1048576) * 2097152 + (z + 1048576); }
