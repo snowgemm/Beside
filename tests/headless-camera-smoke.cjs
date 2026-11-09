@@ -408,6 +408,23 @@ check('renderer uses sRGB output and filmic tone mapping for coherent PBR materi
 check('terrain generation CPU budget adapts to the measured FPS instead of always consuming 4 ms',
   mainSource.includes('var chunkBudget = touch ? 1.4 : 2.4') &&
   mainSource.includes('G.world.update(p.x, p.z, chunkBudget, dt)'));
+check('terrain geometry is generated in a bounded Web Worker pool and transferred as typed arrays',
+  terrainSource.includes("new Worker('js/terrain-worker.js?v=20261109-terrain-worker-v1')") &&
+  terrainSource.includes('function initTerrainWorkers()') &&
+  terrainSource.includes('function processTerrainCompletions(deadline)') &&
+  terrainSource.includes('pendingTerrainJobs') &&
+  terrainSource.includes('completedTerrainJobs') &&
+  terrainSource.includes('new THREE.BufferAttribute(toFloat32(data.positions),3)') &&
+  terrainSource.includes('[copy.buffer]') &&
+  terrainSource.includes('if (terrainWorkers.length)'));
+check('initial terrain preload schedules nearby chunks without a synchronous full-radius build',
+  terrainSource.includes('Never synchronously generate a whole preload radius during startup') &&
+  !terrainSource.includes('process(1e9)') &&
+  terrainSource.includes('dirty=true;lcx=1e9;lcz=1e9;'));
+check('terrain worker is included in the versioned offline shell cache',
+  swSource.includes("const CACHE_NAME = 'besidevalley-shell-v28'") &&
+  swSource.includes("'./js/terrain-worker.js'") &&
+  indexSource.includes('v20261109-terrain-worker-v28'));
 check('expanded minimap renders cached 16x16 terrain tiles rather than one fillRect per world cell',
   fs.readFileSync(path.join(jsDir, 'minimap.js'), 'utf8').includes('function terrainTile(cx, cz)') &&
   fs.readFileSync(path.join(jsDir, 'minimap.js'), 'utf8').includes('c.drawImage(tile, px, pz, 16 * s, 16 * s)') &&
@@ -712,6 +729,16 @@ check('opt-in profile controls keep a solid compact surface and touch-sized butt
   styleSource.includes('#profile-tools[hidden]{display:none!important}') &&
   styleSource.includes('#profile-tools button{min-height:44px') &&
   styleSource.includes('background:rgba(15,20,25,.94)'));
+const terrainWorkerRun = spawnSync(process.execPath, [path.join(__dirname, 'terrain-worker-smoke.cjs')], {
+  encoding: 'utf8',
+  timeout: 10000
+});
+if (terrainWorkerRun.stdout) process.stdout.write(terrainWorkerRun.stdout);
+if (terrainWorkerRun.stderr) process.stderr.write(terrainWorkerRun.stderr);
+check('terrain worker geometry and seam integration regression passes',
+  terrainWorkerRun.status === 0 && !terrainWorkerRun.error,
+  terrainWorkerRun.error ? terrainWorkerRun.error.message : (terrainWorkerRun.status === 0 ? '' : 'exit=' + terrainWorkerRun.status));
+
 const lazyAssetRun = spawnSync(process.execPath, [path.join(__dirname, 'assets-lazy-load.cjs')], {
   encoding: 'utf8',
   timeout: 10000
