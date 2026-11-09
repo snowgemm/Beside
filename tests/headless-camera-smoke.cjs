@@ -4,6 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const assert = require('node:assert/strict');
+const { spawnSync } = require('node:child_process');
 
 const root = path.resolve(__dirname, '..');
 const jsDir = path.join(root, 'js');
@@ -711,6 +712,16 @@ check('opt-in profile controls keep a solid compact surface and touch-sized butt
   styleSource.includes('#profile-tools[hidden]{display:none!important}') &&
   styleSource.includes('#profile-tools button{min-height:44px') &&
   styleSource.includes('background:rgba(15,20,25,.94)'));
+const lazyAssetRun = spawnSync(process.execPath, [path.join(__dirname, 'assets-lazy-load.cjs')], {
+  encoding: 'utf8',
+  timeout: 10000
+});
+if (lazyAssetRun.stdout) process.stdout.write(lazyAssetRun.stdout);
+if (lazyAssetRun.stderr) process.stderr.write(lazyAssetRun.stderr);
+check('on-demand GLB and SFX integration regression passes',
+  lazyAssetRun.status === 0 && !lazyAssetRun.error,
+  lazyAssetRun.error ? lazyAssetRun.error.message : (lazyAssetRun.status === 0 ? '' : 'exit=' + lazyAssetRun.status));
+
 const failures = results.filter((result) => !result.pass);
 console.log('JavaScript syntax: ' + jsFiles.length + ' files passed');
 console.log('Headless camera/input checks: ' + (results.length - failures.length) + '/' + results.length + ' passed');
