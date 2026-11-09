@@ -56,6 +56,30 @@ assert.equal(left.biomes.length, 16 * 16);
 assert.ok(finite(left.positions) && finite(left.colors) && finite(left.normals) && finite(left.uvs));
 assert.ok(left.indices.every((index) => index < 17 * 17), 'all indices must address an existing vertex');
 
+// The renderer fallback and worker must share the exact same biome and colour implementation.
+const core = context.TerrainCore.create(1337, 32, 10);
+const sharedHeights = makeHeights(0, 0), stride = 19;
+for (let z = 0; z <= 16; z++) {
+  for (let x = 0; x <= 16; x++) {
+    const heightIndex = (z + 1) * stride + x + 1;
+    const height = sharedHeights[heightIndex];
+    const slopeX = sharedHeights[heightIndex + 1] - sharedHeights[heightIndex - 1];
+    const slopeZ = sharedHeights[heightIndex + stride] - sharedHeights[heightIndex - stride];
+    const expected = core.vertexPaint(x, z, height, Math.sqrt(slopeX * slopeX + slopeZ * slopeZ) * .5, 0x8a5a30, 0x80838a);
+    const vertex = (z * 17 + x) * 3;
+    for (let channel = 0; channel < 3; channel++) {
+      assert.equal(left.colors[vertex + channel], expected[channel],
+        'worker colour must exactly match the shared main-thread terrain core');
+    }
+  }
+}
+for (let z = 0; z < 16; z++) {
+  for (let x = 0; x < 16; x++) {
+    assert.equal(left.biomes[z * 16 + x], core.biomeW(x + .5, z + .5),
+      'worker biome assignments must match the shared terrain core');
+  }
+}
+
 for (let z = 0; z <= 16; z++) {
   const leftVertex = (z * 17 + 16) * 3;
   const rightVertex = (z * 17) * 3;
@@ -162,6 +186,7 @@ self.onmessage({ data: { type: 'generate', id: 4, cx: 0, cz: 0, seed: 1337, heig
 assert.equal(messages[messages.length - 1].type, 'error',
   'invalid worker payloads should return a recoverable error instead of crashing silently');
 
+console.log('PASS worker colours and biome assignments match the exact shared terrain core');
 console.log('PASS terrain worker emits finite typed geometry, valid indices, matching chunk seams, deterministic output and transferable buffers');
 console.log('PASS far LOD reduces vertices and triangles, stitches all four edges, preserves UV/normal/colour continuity and keeps upward-facing triangles');
 console.log('Terrain worker checks: 6/6 passed');
