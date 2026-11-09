@@ -388,10 +388,12 @@
   }
   function buildSync(cx,cz,lod) {
     var N=CS+3,H=sampleChunkHeights(cx,cz),ox=cx*CS,oz=cz*CS;
-    var positions=[],colors=[],normals=[],uvs=[],indices=[],BIO=new Uint8Array(CS*CS);
+    var positions=[],colors=[],normals=[],uvs=[],indices=[],BIO=new Uint8Array(CS*CS),pal=G.palette||{};
+    var soil=pal.wood&&Array.isArray(pal.wood)?pal.wood[2]:0x8a5a30;
+    var stone=pal.stone&&Array.isArray(pal.stone)?pal.stone[2]:0x80838a;
     for(var z=0;z<=CS;z++)for(var x=0;x<=CS;x++){
       var hi=(z+1)*N+x+1,h=H[hi],hl=H[hi-1],hr=H[hi+1],hb=H[hi-N],hf=H[hi+N];
-      var dx=hr-hl,dz=hf-hb,nx=-dx,ny=2,nz=-dz,inv=1/Math.sqrt(nx*nx+ny*ny+nz*nz),paint=vertexPaint(ox+x,oz+z,h,Math.sqrt(dx*dx+dz*dz)*.5);
+      var dx=hr-hl,dz=hf-hb,nx=-dx,ny=2,nz=-dz,inv=1/Math.sqrt(nx*nx+ny*ny+nz*nz),paint=vertexPaint(ox+x,oz+z,h,Math.sqrt(dx*dx+dz*dz)*.5,soil,stone);
       positions.push(x,h,z);colors.push(paint[0],paint[1],paint[2]);normals.push(nx*inv,ny*inv,nz*inv);uvs.push((ox+x)*.16,(oz+z)*.16);
     }
     for(z=0;z<CS;z++)for(x=0;x<CS;x++){
