@@ -180,6 +180,9 @@ function check(name, condition, detail = '') {
   check('world topColor uses the live shared TerrainCore channels',
     actual === expected && actual !== 0, 'actual=0x' + actual.toString(16) + ', expected=0x' + expected.toString(16));
 }
+check('synchronous terrain fallback passes the same ground and stone palette as the worker',
+  /paint=vertexPaint\\([^;]*,soil,stone\\)/.test(terrainSource) &&
+  terrainSource.includes('var soil=pal.wood') && terrainSource.includes('var stone=pal.stone'));
 
 let sharedGeometryDisposals = 0, sharedMaterialDisposals = 0;
 let ownedGeometryDisposals = 0, ownedMaterialDisposals = 0;
