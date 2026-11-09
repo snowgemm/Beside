@@ -5,6 +5,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 
+const coreSource = fs.readFileSync(path.join(__dirname, '..', 'js', 'terrain-core.js'), 'utf8');
 const source = fs.readFileSync(path.join(__dirname, '..', 'js', 'terrain-worker.js'), 'utf8');
 const messages = [];
 let transfers = [];
@@ -16,6 +17,7 @@ const self = {
   }
 };
 const context = vm.createContext({ self, Float32Array, Float64Array, Uint8Array, Uint16Array, Math, Number, Error });
+context.importScripts = function () { vm.runInContext(coreSource, context, { filename: 'js/terrain-core.js' }); };
 vm.runInContext(source, context, { filename: 'js/terrain-worker.js' });
 
 function makeHeights(cx, cz) {
