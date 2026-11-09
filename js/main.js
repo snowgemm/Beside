@@ -86,6 +86,8 @@
       quality: G.quality ? G.quality.value : null,
       adaptiveScale: adaptiveScale,
       drawDistance: G.world && G.world.drawDistance != null ? G.world.drawDistance : null,
+      farDrawDistance: G.world && G.world.farDrawDistance != null ? G.world.farDrawDistance : null,
+      terrainWorkers: G.world && typeof G.world.terrainWorkerStats === 'function' ? G.world.terrainWorkerStats() : null,
       chunks: G.world && typeof G.world.chunkCount === 'function' ? G.world.chunkCount() : null,
       dungeonActive: !!(G.dungeon && G.dungeon.active),
       player: G.player && G.player.pos ? {
@@ -282,7 +284,7 @@
     }
     if (hudT >= 0.4) {
       hudT = 0;
-      hud.textContent = 'FPS ' + fps + (G.dungeon.active ? '' : ' · Tầm nhìn ' + G.world.drawDistance + ' · Vùng ' + G.world.chunkCount());
+      hud.textContent = 'FPS ' + fps + (G.dungeon.active ? '' : ' · Xa ' + (G.world.farDrawDistance || G.world.drawDistance) + ' · Chi tiết ' + G.world.drawDistance + ' · Chunk ' + G.world.chunkCount());
       if (coordsHud) coordsHud.textContent = 'X ' + p.x.toFixed(1) + ' · Y ' + p.y.toFixed(1) + ' · Z ' + p.z.toFixed(1);
     }
   }
