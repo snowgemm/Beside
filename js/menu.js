@@ -9,7 +9,8 @@
     if (G.quality && G.quality.set) G.quality.set(S.quality);
     if (G.camera) { G.camera.fov = S.fov; G.camera.updateProjectionMatrix(); }
     if (G.player && typeof G.player.camDist === 'number') G.player.camDist = S.camera;
-    if (G.player) G.player.cameraMode = S.cameraMode;
+    if (G.player && G.player.setCameraMode) G.player.setCameraMode(S.cameraMode, false);
+    else if (G.player) G.player.cameraMode = S.cameraMode;
     if (G.sky && G.sky.setSpeed) G.sky.setSpeed(S.daySpeed);
     if (G.fx && G.fx.setQuality) G.fx.setQuality(S.particles);
     if (G.setFpsCap) G.setFpsCap(S.fpsCap);
@@ -56,7 +57,7 @@
       '<div class="menu-section">GÓC NHÌN & ĐIỀU KHIỂN</div>' +
       '<div class="menu-row"><label for="menu-fov">Góc nhìn <b id="menu-fovv"></b></label><input id="menu-fov" type="range" min="55" max="90" step="1"></div>' +
       '<div class="menu-row"><label for="menu-camera">Khoảng cách camera <b id="menu-camerav"></b></label><input id="menu-camera" type="range" min="3" max="11" step="0.5"></div>' +
-      '<div class="menu-row"><label for="menu-camera-mode">Góc nhìn thứ ba</label><select id="menu-camera-mode"><option value="rear">Phía sau</option><option value="front">Phía trước</option><option value="cinematic">Điện ảnh</option></select></div>' +
+      '<div class="menu-row"><label for="menu-camera-mode">Chế độ góc nhìn</label><select id="menu-camera-mode"><option value="first">Thứ nhất</option><option value="rear">Thứ ba · phía sau</option><option value="front">Thứ ba · phía trước</option><option value="cinematic">Thứ ba · điện ảnh</option><option value="overhead">Thứ ba · từ trên cao</option></select></div>' +
       '<div class="menu-row"><label for="menu-sens">Độ nhạy camera <b id="menu-sensv"></b></label><input id="menu-sens" type="range" min="20" max="100" step="5"></div>' +
       '<div class="menu-section">HIỆU NĂNG & CÁ NHÂN HÓA</div>' +
       '<div class="menu-row"><label for="menu-fpscap">Giới hạn FPS</label><select id="menu-fpscap"><option value="0">Theo màn hình</option><option value="30">30 FPS</option><option value="60">60 FPS</option><option value="90">90 FPS</option><option value="120">120 FPS</option><option value="144">144 FPS</option></select></div>' +
@@ -124,7 +125,7 @@
       if (typeof d.map === 'boolean') S.map = d.map;
       if (typeof d.vib === 'boolean') S.vib = d.vib;
       if (d.quality === 'low' || d.quality === 'medium' || d.quality === 'high') S.quality = d.quality;
-      if (d.cameraMode === 'rear' || d.cameraMode === 'front' || d.cameraMode === 'cinematic') S.cameraMode = d.cameraMode;
+      if (['first', 'rear', 'front', 'cinematic', 'overhead'].indexOf(d.cameraMode) >= 0) S.cameraMode = d.cameraMode;
       if ([0,30,60,90,120,144].indexOf(d.fpsCap) >= 0) S.fpsCap = d.fpsCap;
       if (typeof d.uiScale === 'number' && isFinite(d.uiScale)) S.uiScale = Math.max(.85, Math.min(1.25, d.uiScale));
       if (['amber','emerald','ocean','violet'].indexOf(d.theme) >= 0) S.theme = d.theme;
