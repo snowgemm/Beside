@@ -11,7 +11,7 @@
   var terrainCore = window.TerrainCore.create(SEED, MAXH, SEA);
   var hash = terrainCore.hash, fbm = terrainCore.fbm, baseHeight = terrainCore.baseHeight;
   var biomeW = terrainCore.biomeW, columnColors = terrainCore.columnColors, vertexPaint = terrainCore.vertexPaint;
-  var BW = terrainCore.BW, CT = terrainCore.CT, CSd = terrainCore.CSd, CA = terrainCore.CA, CB = terrainCore.CB;
+  var CT = terrainCore.CT;
   /* ---------- edit layer: sparse column (x,z) -> height over the heightmap ---------- */
   var EMAX = 20000, EMIN_H = 1, EMAX_H = 48, edits = new Map();
   function ek(x, z) { return (x + 1048576) * 2097152 + (z + 1048576); }
@@ -40,40 +40,6 @@
     return y < SEA ? WATER : AIR;
   }
   function solid(x, y, z) { var b = getBlock(x, y, z); return b > 0 && b !== WATER; }
-
-  /* ---------- biome weights + column colours (visual only) ---------- */
-  var BW = new Float32Array(5);
-  function clamp01(v) { return v < 0 ? 0 : v > 1 ? 1 : v; }
-  function ss(a, b, v) { var k = clamp01((v - a) / (b - a)); return k * k * (3 - 2 * k); }
-  // fills BW with normalised weights, returns index of the dominant biome
-  function biomeW(x, z) {
-    var t = clamp01((fbm(x * 0.004 + 200, z * 0.004 + 300, 2) - 0.5) * 2.4 + 0.5);
-    var m = clamp01((fbm(x * 0.004 - 400, z * 0.004 + 100, 2) - 0.5) * 2.4 + 0.5);
-    var s = 0, i, dt, dm, best = 0;
-    for (i = 0; i < 5; i++) { dt = t - BC[i][0]; dm = m - BC[i][1]; BW[i] = Math.exp(-(dt * dt + dm * dm) / 0.04); s += BW[i]; }
-    for (i = 0; i < 5; i++) { BW[i] /= s; if (BW[i] > BW[best]) best = i; }
-    return best;
-  }
-  var CT = [0, 0, 0], CSd = [0, 0, 0], CA = [0, 0, 0], CB = [0, 0, 0];
-  function columnColors(x, z, h) { // uses BW from the last biomeW call
-    var i, j, w, k, d;
-    for (j = 0; j < 3; j++) CT[j] = CSd[j] = CA[j] = CB[j] = 0;
-    for (i = 0; i < 5; i++) {
-      w = BW[i];
-      for (j = 0; j < 3; j++) { CT[j] += BTOP[i][j] * w; CSd[j] += BSIDE[i][j] * w; CA[j] += BSA[i][j] * w; CB[j] += BSB[i][j] * w; }
-    }
-    var hj = h + (hash(x + 313, z - 171) - 0.5) * 1.6;
-    k = ss(19.5, 22, hj);
-    if (k > 0) for (j = 0; j < 3; j++) { CT[j] += (CA[j] - CT[j]) * k; CSd[j] += (CA[j] - CSd[j]) * k; }
-    k = ss(24.5, 26.5, hj);
-    if (k > 0) for (j = 0; j < 3; j++) CT[j] += (SNOWC[j] - CT[j]) * k;
-    if (h <= SEA + 1) for (j = 0; j < 3; j++) { CT[j] = SANDC[j]; CSd[j] = SANDC[j] * 0.86; }
-    if (h < SEA) { // shallow floor stays light, deeper floor goes blue and dark
-      d = SEA - h; k = Math.min(d * 0.08, 0.55);
-      CT[0] += (.2 - CT[0]) * k; CT[1] += (.4 - CT[1]) * k; CT[2] += (.56 - CT[2]) * k;
-      CSd[0] += (.2 - CSd[0]) * k; CSd[1] += (.4 - CSd[1]) * k; CSd[2] += (.56 - CSd[2]) * k;
-    }
-  }
 
   var W = G.world = { CS: CS, SEA: SEA, WATER: WATER, seed: SEED, drawDistance: 5, farDrawDistance: 5, getHeight: getHeight, getBlock: getBlock, solid: solid, held: false };
   W.ow = { getHeight: getHeight, getBlock: getBlock, solid: solid };
@@ -396,18 +362,6 @@
     idx.push(base, base + 1, base + 2, base, base + 2, base + 3);
   }
 
-  function vertexPaint(wx,wz,h,slope){
-    biomeW(wx,wz);columnColors(wx,wz,h);
-    var r=CT[0],g=CT[1],b=CT[2],snow=ss(24.5,27,h),sand=h<=SEA+1,pal=G.palette||{};
-    var soil=pal.wood&&Array.isArray(pal.wood)?pal.wood[2]:0x8a5a30,stone=pal.stone&&Array.isArray(pal.stone)?pal.stone[2]:0x80838a;
-    function ch(c,n){return((c>>n)&255)/255;}
-    var dirt=ss(.35,1.5,slope)*(1-snow),rock=ss(1,2.8,slope)*(1-snow);
-    if(!sand){r+=(ch(soil,16)-r)*dirt;g+=(ch(soil,8)-g)*dirt;b+=(ch(soil,0)-b)*dirt;r+=(ch(stone,16)-r)*rock;g+=(ch(stone,8)-g)*rock;b+=(ch(stone,0)-b)*rock;}
-    var low=.94+fbm(wx*.012+17,wz*.012-23,2)*.12,fine=.985+hash(Math.floor(wx*3)+201,Math.floor(wz*3)-71)*.03;
-    // Compress bright sand more than grass to stop midday exposure clipping while retaining biome variation.
-    var sr=sand?.87:.90, sg=sand?.83:.88, sb=sand?.78:.90;
-    return[Math.max(0,Math.min(1,r*low*fine*sr)),Math.max(0,Math.min(1,g*low*fine*sg)),Math.max(0,Math.min(1,b*low*fine*sb))];
-  }
   function toFloat32(values) { return values instanceof Float32Array ? values : new Float32Array(values); }
   function attachChunk(cx,cz,H,BIO,data,lod) {
     var ox=cx*CS,oz=cz*CS,geo=new THREE.BufferGeometry();
