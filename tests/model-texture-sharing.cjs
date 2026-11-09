@@ -155,7 +155,7 @@ async function runScenario(options = {}) {
     return Promise.resolve({ ok: true, arrayBuffer: () => Promise.resolve(data) });
   }
   window.fetch = fetch;
-  const context = vm.createContext({ window, THREE, fetch, Promise, ArrayBuffer, Uint8Array, setInterval, clearInterval, console });
+  const context = vm.createContext({ window, THREE, fetch, Promise, ArrayBuffer, Uint8Array, setTimeout, clearTimeout, setInterval, clearInterval, console });
   vm.runInContext(assetsSource, context, { filename: 'js/assets.js' });
 
   const G = window.Game;
@@ -167,7 +167,17 @@ async function runScenario(options = {}) {
   G.assets.manifest.sounds = {};
   await G.assets.load();
 
-  const instances = ['tree', 'tree2', 'tree3'].map((name) => G.assets.model(name));
+  const names = ['tree', 'tree2', 'tree3'];
+  names.forEach((name) => {
+    assert.equal(G.assets.model(name), null,
+      'first access should queue the model and keep the caller on its procedural fallback');
+  });
+  for (let attempt = 0; attempt < 40 && names.some((name) => ['queued', 'loading'].includes(G.assets.modelStatus(name))); attempt++) {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  }
+  assert.deepEqual(names.map((name) => G.assets.modelStatus(name)), ['ready', 'ready', 'ready'],
+    'all requested models should finish loading before their templates are inspected');
+  const instances = names.map((name) => G.assets.model(name));
   const modelResources = instances.map((instance) => {
     const materials = [];
     const geometries = [];
