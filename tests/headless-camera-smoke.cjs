@@ -709,8 +709,8 @@ function firstGateDistance(seed) {
 
 const starterGateSeeds = [1, 42, 1337, 123456789, 987654321, 2147483646];
 const starterGateDistances = starterGateSeeds.map(firstGateDistance);
-check('first dungeon entrance is generated within expanded-map range for representative seeds',
-  starterGateDistances.every((distance) => Number.isFinite(distance) && distance <= 45),
+check('first dungeon entrance stays within the documented 24–42 unit range for representative seeds',
+  starterGateDistances.every((distance) => Number.isFinite(distance) && distance >= 24 && distance <= 42),
   'distances=' + starterGateDistances.map((distance) => Number.isFinite(distance) ? distance.toFixed(1) : 'missing').join(','));
 check('title screen explains the first dungeon objective',
   uiSource.includes('Mục tiêu đầu tiên: tìm cổng xanh ◆ trên bản đồ và nhấn E / Tương tác'));
