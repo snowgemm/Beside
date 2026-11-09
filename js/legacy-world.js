@@ -361,7 +361,17 @@
     edits.clear();
     list.forEach(function (c) { rebuildChunk(c[0], c[1]); });
   };
-  function drop(m) { scene.remove(m); m.geometry.dispose(); if (m.decor) m.decor.geometry.dispose(); }
+  function drop(m) {
+    scene.remove(m);
+    if(m.geometry&&m.geometry.dispose)m.geometry.dispose();
+    if(!m.decor)return;
+    if(m.decor.geometry&&m.decor.geometry.dispose)m.decor.geometry.dispose();
+    // Decor GLBs are per-chunk clones; release owned instance data but preserve shared template resources.
+    if(G.assets&&G.assets.disposeInstance){
+      var children=m.decor.children||[];
+      for(var i=0;i<children.length;i++)G.assets.disposeInstance(children[i]);
+    }
+  }
   function rebuildChunk(cx, cz) {
     var key=cx+','+cz;
     // Keep a revision only while a worker result could still arrive for this key.
