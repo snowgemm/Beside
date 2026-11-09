@@ -68,8 +68,8 @@ for (let z = 0; z <= 16; z++) {
     const expected = core.vertexPaint(x, z, height, Math.sqrt(slopeX * slopeX + slopeZ * slopeZ) * .5, 0x8a5a30, 0x80838a);
     const vertex = (z * 17 + x) * 3;
     for (let channel = 0; channel < 3; channel++) {
-      assert.equal(left.colors[vertex + channel], expected[channel],
-        'worker colour must exactly match the shared main-thread terrain core');
+      assert.equal(left.colors[vertex + channel], Math.fround(expected[channel]),
+        'worker Float32 colour must match the shared main-thread terrain core');
     }
   }
 }
