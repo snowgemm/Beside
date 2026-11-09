@@ -163,6 +163,24 @@ function check(name, condition, detail = '') {
   results.push({ name, pass: Boolean(condition), ...(detail ? { detail } : {}) });
 }
 
+{
+  const terrainWindow = { Game: { seed: 1337, save: { register() {} } } };
+  const terrainContext = vm.createContext({ window: terrainWindow });
+  vm.runInContext(fs.readFileSync(path.join(jsDir, 'terrain-core.js'), 'utf8'), terrainContext,
+    { filename: 'terrain-core.js' });
+  terrainWindow.TerrainCore = terrainContext.TerrainCore;
+  vm.runInContext(fs.readFileSync(path.join(jsDir, 'legacy-world.js'), 'utf8'), terrainContext,
+    { filename: 'legacy-world.js' });
+  const core = terrainWindow.TerrainCore.create(1337, 32, 10);
+  const height = core.baseHeight(0, 0);
+  core.biomeW(0.5, 0.5);
+  core.columnColors(0, 0, height);
+  const expected = ((core.CT[0] * 255) << 16) | ((core.CT[1] * 255) << 8) | (core.CT[2] * 255);
+  const actual = terrainWindow.Game.world.topColor(0, 0);
+  check('world topColor uses the live shared TerrainCore channels',
+    actual === expected && actual !== 0, 'actual=0x' + actual.toString(16) + ', expected=0x' + expected.toString(16));
+}
+
 let sharedGeometryDisposals = 0, sharedMaterialDisposals = 0;
 let ownedGeometryDisposals = 0, ownedMaterialDisposals = 0;
 const sharedMesh = {
