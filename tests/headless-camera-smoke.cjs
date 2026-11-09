@@ -148,6 +148,7 @@ const scene = new Object3D();
 const camera = new Object3D();
 const G = window.Game;
 load('assets.js');
+load('items.js');
 G.events = { on() {}, emit() {} };
 G.player.init(scene, camera, { x: 0, y: 2, z: 0.5 });
 const canvas = element('canvas');
@@ -232,6 +233,28 @@ function wheel(deltaY) {
 
 const P = G.player;
 P.third = true;
+P.setCameraMode('rear', false);
+const cameraSequence = [];
+for (let i = 0; i < 5; i++) cameraSequence.push(P.cycleCameraMode());
+check('view button cycles first-person, rear, front, cinematic and overhead camera modes',
+  cameraSequence.join(',') === 'front,cinematic,overhead,first,rear' &&
+  P.third && P.cameraMode === 'rear',
+  'sequence=' + cameraSequence.join(','));
+P.setCameraMode('first', false);
+check('first-person mode hides the third-person rig and disables third-person zoom', !P.third && P.cameraMode === 'first');
+P.setCameraMode('overhead', false);
+check('overhead mode uses a stable fixed camera pitch', Math.abs(P.pitch + 1.05) < 1e-9);
+P.setCameraMode('rear', false);
+check('leaving overhead mode restores the previous orbit pitch', Math.abs(P.pitch + 0.18) < 1e-9);
+const testArmor = { slot: 'armor', rarity: 2, name: 'Giáp thép' };
+const testTrinket = { slot: 'trinket', rarity: 3, name: 'Mề đay' };
+const equippedSpec = P.makeSpec(null, testArmor, testTrinket);
+const equippedPartNames = equippedSpec.parts.map((part) => part.name);
+check('equipped armor adds visible chest, shoulder and leg meshes to the player rig',
+  ['armorChest','armorShoulderL','armorShoulderR','armorLegL','armorLegR'].every((name) => equippedPartNames.includes(name)));
+check('equipped trinkets add a visible pendant to the player rig',
+  equippedPartNames.includes('trinketChain') && equippedPartNames.includes('trinketGem'));
+P.setCameraMode('rear', false);
 P.camDist = 4.6;
 document.pointerLockElement = canvas;
 
