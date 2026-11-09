@@ -686,7 +686,8 @@ check('offline cache is bumped and versioned local assets prevent stale code fro
   swSource.includes("url.searchParams.get('v')") &&
   swSource.includes('function fallbackCacheKey(requestUrl)') &&
   swSource.includes('cache.match(fallbackKey)') &&
-  indexSource.includes('20261109-terrain-worker-v28'));
+  indexSource.includes('20261109-terrain-core-v29') &&
+  swSource.includes("'./js/terrain-core.js'"));
 check('player jump input triggers a short takeoff pose independent of refresh rate',
   rigSource.includes("state === 'jump'") && rigSource.includes('this.jumpT = 0.32') &&
   rigSource.includes('var jumpPulse = Math.sin') && playerSource.includes("rig.play('jump'"));
