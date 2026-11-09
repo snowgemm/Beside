@@ -1,24 +1,82 @@
 (function () {
   var G = window.Game = window.Game || {};
-    var P = G.player = { pos: { x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, r: 0.3, h: 1.8, sr: 0.45, mass: 1.2, imass: 1 / 1.2, onGround: false, inWater: false, autoStep: true, stepDy: 0, wet: 0, swimUp: false }, stun: 0, yaw: 0, pitch: 0, onGround: false, inWater: false, third: true, camDist: 6.5, cameraMode: 'rear', stepOff: 0,
+    var P = G.player = { pos: { x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, r: 0.3, h: 1.8, sr: 0.45, mass: 1.2, imass: 1 / 1.2, onGround: false, inWater: false, autoStep: true, stepDy: 0, wet: 0, swimUp: false }, stun: 0, yaw: 0, pitch: -0.18, onGround: false, inWater: false, third: true, camDist: 6.5, cameraMode: 'rear', stepOff: 0,
     health: 100, maxHealth: 100, weapon: { damage: 10, reach: 2.2, cooldown: 0.4 }, dead: false, rollT: 0, rollDir: { x: 0, z: 0 }, kb: { x: 0, z: 0 }, shake: 0, swingT: 0, iframes: 0,
     equip: { weapon: null, armor: null, trinket: null }, dr: 0, crit: 0.05, speedMult: 1 };
   (function () { var b = P.pos; P.vel = Object.defineProperties({}, { x: { get: function () { return b.vx; }, set: function (v) { b.vx = v; }, enumerable: true }, y: { get: function () { return b.vy; }, set: function (v) { b.vy = v; }, enumerable: true }, z: { get: function () { return b.vz; }, set: function (v) { b.vz = v; }, enumerable: true } }); })();
-  var W, cam, scn, rig, curW, spawn, shadow = null, wasGround = false, lastJump = false, wallCd = 0, jbuf = 0, coy = 0, camInit = false, cpx = 0, cpy = 0, cpz = 0, cvx = 0, cvy = 0, cvz = 0, camCur = 6.5, lastSwing = 0, lastHp = -1, wasDead = false, stepT = 0, shakeTime = 0;
+  var W, cam, scn, rig, curW, curA, curT, spawn, shadow = null, wasGround = false, lastJump = false, wallCd = 0, jbuf = 0, coy = 0, camInit = false, cpx = 0, cpy = 0, cpz = 0, cvx = 0, cvy = 0, cvz = 0, camCur = 6.5, lastSwing = 0, lastHp = -1, wasDead = false, stepT = 0, shakeTime = 0;
 
   function weaponKind(w) {
     var n = (w && w.name) || '';
     return n.indexOf('Rìu') === 0 ? 'axe' : n.indexOf('Dao') === 0 ? 'dagger' : n.indexOf('Giáo') === 0 ? 'spear' : 'sword';
   }
-  // rig spec; weapon = equipped item or null (kind from the base name in items.js, blade colour from rarity)
-  P.makeSpec = function (w) {
+  var CAMERA_MODES = ['first', 'rear', 'front', 'cinematic', 'overhead'];
+  var CAMERA_LABELS = {
+    first: ['Góc thứ nhất', 'Góc 1'],
+    rear: ['Phía sau', 'Sau'],
+    front: ['Phía trước', 'Trước'],
+    cinematic: ['Điện ảnh', 'Vai'],
+    overhead: ['Từ trên cao', 'Trên']
+  };
+  var savedOrbitPitch = -0.18;
+
+  P.setCameraMode = function (mode, persist) {
+    if (CAMERA_MODES.indexOf(mode) < 0) mode = 'rear';
+    if (mode === 'overhead' && P.cameraMode !== 'overhead') savedOrbitPitch = P.pitch;
+    if (P.cameraMode === 'overhead' && mode !== 'overhead') P.pitch = savedOrbitPitch;
+    P.cameraMode = mode;
+    P.third = mode !== 'first';
+    if (mode === 'overhead') P.pitch = -1.05;
+    camInit = false;
+    P.updateCameraButton();
+    if (G.menu && G.menu.settings) G.menu.settings.cameraMode = mode;
+    if (persist !== false && G.save && G.save.request) G.save.request();
+    return mode;
+  };
+  P.cycleCameraMode = function () {
+    var index = CAMERA_MODES.indexOf(P.cameraMode);
+    return P.setCameraMode(CAMERA_MODES[(index + 1 + CAMERA_MODES.length) % CAMERA_MODES.length], true);
+  };
+  P.updateCameraButton = function () {
+    var button = document.getElementById('btn-view'), labels = CAMERA_LABELS[P.cameraMode] || CAMERA_LABELS.rear;
+    if (!button) return;
+    if (typeof button.setAttribute === 'function') button.setAttribute('aria-label', 'Góc nhìn: ' + labels[0]);
+    var shortLabel = button.querySelector && button.querySelector('.lbl');
+    if (shortLabel) shortLabel.textContent = labels[1];
+  };
+
+  // The in-world rig reflects equipped armour and trinkets, not just the inventory paper-doll.
+  P.makeSpec = function (w, armor, trinket) {
     var S = G.rig.part, R = w && G.items && G.items.RARITIES[w.rarity], hx = R ? R.hex : 0xb8b8b8, tn = 0x3a6fd8, k = weaponKind(w);
+    var AR = armor && G.items && G.items.RARITIES[armor.rarity], TR = trinket && G.items && G.items.RARITIES[trinket.rarity];
+    var armorName = (armor && armor.name || '').toLowerCase();
+    var armorBase = armorName.indexOf('giáp thép') >= 0 ? 0x596574 : armorName.indexOf('giáp xích') >= 0 ? 0x8996a5 : 0x765033;
+    var armorTrim = AR ? AR.hex : 0xb8b8b8, trinketColor = TR ? TR.hex : 0xd8b84a;
     var parts = [
       S('legL', null, [.2, .5, .2], [0, -.25, 0], [-.13, .5, 0], 0x35406a, { color2: 0x3b2a20 }), S('legR', null, [.2, .5, .2], [0, -.25, 0], [.13, .5, 0], 0x35406a, { color2: 0x3b2a20 }),
       S('torso', null, [.5, .5, .3], [0, .25, 0], [0, .5, 0], tn), S('head', 'torso', [.7, .7, .7], [0, .35, 0], [0, .5, 0], 0xf0c09a),
       S('hair', 'head', [.76, .28, .76], [0, 0, 0], [0, .6, 0], 0x5a3a22),
       S('eyeL', 'head', [.1, .14, .04], [0, 0, 0], [-.17, .36, -.355], 0x1a1a2a, { flat: true }), S('eyeR', 'head', [.1, .14, .04], [0, 0, 0], [.17, .36, -.355], 0x1a1a2a, { flat: true }),
       S('armL', 'torso', [.15, .45, .15], [0, -.2, 0], [-.33, .45, 0], tn), S('armR', 'torso', [.15, .45, .15], [0, -.2, 0], [.33, .45, 0], tn)];
+    if (armor) {
+      parts.push(
+        S('armorChest', 'torso', [.58, .44, .36], [0, .25, -.008], [0, 0, 0], armorBase, { color2: armorTrim }),
+        S('armorShoulderL', 'armL', [.29, .18, .26], [0, .02, -.01], [0, 0, 0], armorBase, { color2: armorTrim }),
+        S('armorShoulderR', 'armR', [.29, .18, .26], [0, .02, -.01], [0, 0, 0], armorBase, { color2: armorTrim }),
+        S('armorLegL', 'legL', [.24, .28, .22], [0, -.25, -.012], [0, 0, 0], armorBase, { color2: armorTrim }),
+        S('armorLegR', 'legR', [.24, .28, .22], [0, -.25, -.012], [0, 0, 0], armorBase, { color2: armorTrim })
+      );
+    }
+    if (trinket) {
+      if ((trinket.name || '').toLowerCase().indexOf('nhẫn') >= 0) {
+        parts.push(S('trinketBand', 'armR', [.19, .09, .19], [0, -.34, -.015], [0, 0, 0], trinketColor, { flat: true }));
+      } else {
+        parts.push(
+          S('trinketChain', 'torso', [.32, .06, .075], [0, .16, -.19], [0, 0, 0], 0x8a7544),
+          S('trinketGem', 'torso', [.13, .15, .07], [0, .07, -.225], [0, 0, 0], trinketColor, { flat: true })
+        );
+      }
+    }
     if (w) {
       parts.push(S('hand', 'armR', null, null, [0, -.4, 0], 0, { rot: [.8, 0, 0] }));
       if (k === 'axe') parts.push(S('wShaft', 'hand', [.07, .7, .07], [0, -.25, 0], [0, 0, 0], 0x6a4a22), S('wHead', 'hand', [.3, .24, .07], [.15, -.55, 0], [0, 0, 0], hx));
@@ -30,7 +88,8 @@
   };
   function mkRig() {
     if (rig) rig.dispose();
-    curW = P.equip.weapon; rig = G.rig.build(P.makeSpec(curW)); scn.add(rig.group); rig.group.visible = false;
+    curW = P.equip.weapon; curA = P.equip.armor; curT = P.equip.trinket;
+    rig = G.rig.build(P.makeSpec(curW, curA, curT)); scn.add(rig.group); rig.group.visible = false;
     if (P.dead) rig.play('death', { keep: true });
   }
   function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
@@ -65,8 +124,11 @@
     var I = G.input, p = P.pos, b = p, v = P.vel;
     I.poll();
     if (P.dead) { I.moveX = I.moveZ = 0; I.jump = false; }
-    P.yaw -= I.lookDX; P.pitch = clamp(P.pitch - I.lookDY, -1.45, 1.45); I.lookDX = I.lookDY = 0;
-    if (I.viewToggle) { P.third = !P.third; I.viewToggle = false; }
+    P.yaw -= I.lookDX;
+    if (P.cameraMode === 'overhead') { P.pitch = -1.05; I.lookDY = 0; }
+    else P.pitch = clamp(P.pitch - I.lookDY, -1.45, 1.45);
+    I.lookDX = I.lookDY = 0;
+    if (I.viewToggle) { P.cycleCameraMode(); I.viewToggle = false; }
     wasGround = b.onGround;
     var inW = b.inWater, ph = G.phys, A = G.audio;
     var sy = Math.sin(P.yaw), cy = Math.cos(P.yaw);
@@ -117,12 +179,13 @@
     }
 
     P.stepOff -= P.stepOff * Math.min(1, 10 * dt);
-    var cameraMode = P.cameraMode || 'rear', frontView = cameraMode === 'front';
+    var cameraMode = P.cameraMode || 'rear', frontView = cameraMode === 'front', overheadView = cameraMode === 'overhead';
+    var cameraPitch = overheadView ? -1.05 : P.pitch;
     var cameraYaw = P.yaw + (cameraMode === 'cinematic' ? 0.22 : 0);
-    var cp = Math.cos(P.pitch), dx = -Math.sin(cameraYaw) * cp, dy = Math.sin(P.pitch), dz = -Math.cos(cameraYaw) * cp, camVis = true;
+    var cp = Math.cos(cameraPitch), dx = -Math.sin(cameraYaw) * cp, dy = Math.sin(cameraPitch), dz = -Math.cos(cameraYaw) * cp, camVis = true;
     var camSign = frontView ? 1 : -1, sideX = Math.cos(P.yaw), sideZ = -Math.sin(P.yaw);
-    var sideOffset = cameraMode === 'cinematic' ? 0.95 : 0, liftOffset = cameraMode === 'cinematic' ? 0.7 : 0;
-    cam.rotation.set(P.pitch, P.yaw + (frontView ? Math.PI : cameraMode === 'cinematic' ? -0.22 : 0), 0);
+    var sideOffset = cameraMode === 'cinematic' ? 0.95 : 0, liftOffset = cameraMode === 'cinematic' ? 0.7 : overheadView ? 0.5 : 0;
+    cam.rotation.set(cameraPitch, P.yaw + (frontView ? Math.PI : cameraMode === 'cinematic' ? -0.22 : 0), 0);
     var hx = p.x, hy = p.y + 1.6 + P.stepOff, hz = p.z;
     if (!P.third) {
       cam.position.set(p.x, p.y + 1.62 + P.stepOff, p.z); camInit = false;
@@ -141,7 +204,7 @@
       else if (dist - camCur > 0.03) camCur += (dist - camCur) * (1 - Math.exp(-5 * dt)); else camCur = dist;
       cam.position.set(cpx + sideX * sideOffset + camSign * dx * camCur, cpy + liftOffset + camSign * dy * camCur, cpz + sideZ * sideOffset + camSign * dz * camCur);
       if (typeof cam.lookAt === 'function') cam.lookAt(cpx, cpy, cpz);
-      else cam.rotation.set(P.pitch, P.yaw + (frontView ? Math.PI : cameraMode === 'cinematic' ? -0.22 : 0), 0);
+      else cam.rotation.set(cameraPitch, P.yaw + (frontView ? Math.PI : cameraMode === 'cinematic' ? -0.22 : 0), 0);
       camVis = camCur > 0.8;
     }
     if (P.shake > 0.001) {
@@ -153,7 +216,7 @@
       P.shake *= Math.max(0, 1 - 10 * dt);
     } else shakeTime = 0;
     var hs = Math.hypot(v.x, v.z);
-    if (P.equip.weapon !== curW) mkRig();
+    if (P.equip.weapon !== curW || P.equip.armor !== curA || P.equip.trinket !== curT) mkRig();
     if (P.dead && !wasDead) rig.play('death', { keep: true }); else if (!P.dead && wasDead) rig.play('idle');
     wasDead = P.dead;
     if (!P.dead && P.health < lastHp) rig.play('hurt');
