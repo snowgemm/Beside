@@ -360,11 +360,15 @@
   };
   function drop(m) { scene.remove(m); m.geometry.dispose(); if (m.decor) m.decor.geometry.dispose(); }
   function rebuildChunk(cx, cz) {
-    var key=cx+','+cz,rev=chunkRevision(cx,cz)+1;
-    chunkRevisions.set(key,rev);
-    pendingTerrainJobs.delete(key); // discard a worker result computed before this edit
-    var m = chunks.get(key);
-    if (!m) { dirty=true; return; } // a pending/unloaded chunk will be regenerated from the new edit layer
+    var key=cx+','+cz;
+    // Keep a revision only while a worker result could still arrive for this key.
+    if(pendingTerrainJobs.has(key)){
+      chunkRevisions.set(key,chunkRevision(cx,cz)+1);
+      pendingTerrainJobs.delete(key);
+    }
+    var m=chunks.get(key);
+    if(!m){dirty=true;return;}
+    chunkRevisions.delete(key);
     drop(m);chunks.delete(key);
     buildSync(cx,cz);
     var n=chunks.get(key);if(n)n.visible=!W.held;
@@ -466,9 +470,9 @@
       var slot={worker:new Worker('js/terrain-worker.js?v=20261109-terrain-worker-v1'),busy:false,job:null};
       slot.worker.onmessage=function(event){
         var message=event.data||{},job=slot.job;
-        if(!job||message.id!==job.id)return;
+        if(!job)return;
         slot.busy=false;slot.job=null;
-        completedTerrainJobs.push({job:job,message:message});
+        completedTerrainJobs.push({job:job,message:message.id===job.id?message:{type:'error',message:'Unexpected terrain worker response'}});
       };
       slot.worker.onerror=function(){
         var job=slot.job;
@@ -498,14 +502,19 @@
       slot.worker.postMessage({type:'generate',id:id,cx:cx,cz:cz,seed:SEED,heights:copy,soil:soil,stone:stone},[copy.buffer]);
     }catch(error){
       slot.busy=false;slot.job=null;pendingTerrainJobs.delete(key);
+      if(!pendingTerrainJobs.has(key))chunkRevisions.delete(key);
       buildSync(cx,cz);
     }
   }
   function processTerrainCompletions(deadline) {
     while(completedTerrainJobs.length&&performance.now()<deadline){
       var entry=completedTerrainJobs.shift(),job=entry.job;
-      if(pendingTerrainJobs.get(job.key)===job.id)pendingTerrainJobs.delete(job.key);
-      if(job.revision!==chunkRevision(job.cx,job.cz)||!isChunkWanted(job.cx,job.cz)||chunks.has(job.key))continue;
+      var isCurrent=pendingTerrainJobs.get(job.key)===job.id;
+      if(isCurrent)pendingTerrainJobs.delete(job.key);
+      var valid=isCurrent&&job.revision===chunkRevision(job.cx,job.cz)&&isChunkWanted(job.cx,job.cz)&&!chunks.has(job.key);
+      // Clear revision bookkeeping after the last in-flight job for this chunk has settled.
+      if(!pendingTerrainJobs.has(job.key))chunkRevisions.delete(job.key);
+      if(!valid)continue;
       if(entry.message&&entry.message.type==='generated'){
         attachChunk(job.cx,job.cz,job.heights,entry.message.biomes,entry.message);
       }else buildSync(job.cx,job.cz);
