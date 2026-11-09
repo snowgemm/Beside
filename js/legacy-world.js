@@ -312,6 +312,7 @@
     }
   };
   W.setDrawDistance = function (n) {
+    n=Number(n);if(!isFinite(n))n=W.drawDistance;
     W.drawDistance = Math.max(3, Math.min(7, Math.round(n)));
     // Keep a short full-detail ring and extend the horizon with stitched low-poly chunks.
     W.farDrawDistance = terrainWorkers.length ? Math.min(10, W.drawDistance + 3) : W.drawDistance;
@@ -371,8 +372,9 @@
     var m=chunks.get(key);
     if(!m){dirty=true;return;}
     chunkRevisions.delete(key);
+    var lod=m.lod||0;
     drop(m);chunks.delete(key);
-    buildSync(cx,cz);
+    buildSync(cx,cz,lod);
     var n=chunks.get(key);if(n)n.visible=!W.held;
   }
   function rebuildAround(x, z) {
@@ -513,6 +515,14 @@
       buildSync(cx,cz,lod);
     }
   }
+  function validTerrainData(data,lod) {
+    if(!data||data.lod!==lod||!data.positions||!data.colors||!data.normals||!data.uvs||!data.indices||!data.biomes)return false;
+    var vertexValues=data.positions.length;
+    return vertexValues>0&&vertexValues%3===0&&
+      data.colors.length===vertexValues&&data.normals.length===vertexValues&&
+      data.uvs.length===vertexValues/3*2&&data.indices.length%3===0&&
+      data.biomes.length===CS*CS;
+  }
   function processTerrainCompletions(deadline) {
     while(completedTerrainJobs.length&&performance.now()<deadline){
       var entry=completedTerrainJobs.shift(),job=entry.job;
@@ -522,7 +532,7 @@
       // Clear revision bookkeeping after the last in-flight job for this chunk has settled.
       if(!pendingTerrainJobs.has(job.key))chunkRevisions.delete(job.key);
       if(!valid)continue;
-      if(entry.message&&entry.message.type==='generated'){
+      if(entry.message&&entry.message.type==='generated'&&validTerrainData(entry.message,job.lod)){
         attachChunk(job.cx,job.cz,job.heights,entry.message.biomes,entry.message,job.lod);
       }else buildSync(job.cx,job.cz,job.lod);
     }
@@ -705,7 +715,9 @@
     queue.sort(function(a,b){return a.d-b.d;});
   }
   function process(budget) {
-    var started=performance.now(),deadline=started+Math.max(.1,budget||0);
+    var started=performance.now();
+    budget=typeof budget==='number'&&isFinite(budget)?Math.max(.1,budget):1;
+    var deadline=started+budget;
     processTerrainCompletions(deadline);
     var idle=null;
     if(terrainWorkers.length){
@@ -718,10 +730,9 @@
         postTerrainJob(idle,c.cx,c.cz,c.lod);
       }
     }else{
-      while(qi<queue.length){
+      while(qi<queue.length&&performance.now()<deadline){
         var syncChunk=queue[qi++],syncKey=syncChunk.cx+','+syncChunk.cz;
         if(!chunks.has(syncKey)&&!pendingTerrainJobs.has(syncKey))buildSync(syncChunk.cx,syncChunk.cz,syncChunk.lod);
-        if(performance.now()-started>=budget)break;
       }
     }
   }
