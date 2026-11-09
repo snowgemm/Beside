@@ -57,7 +57,7 @@ assert.ok(finite(left.positions) && finite(left.colors) && finite(left.normals) 
 assert.ok(left.indices.every((index) => index < 17 * 17), 'all indices must address an existing vertex');
 
 // The renderer fallback and worker must share the exact same biome and colour implementation.
-const core = context.TerrainCore.create(1337, 32, 10);
+const core = self.TerrainCore.create(1337, 32, 10);
 const sharedHeights = makeHeights(0, 0), stride = 19;
 for (let z = 0; z <= 16; z++) {
   for (let x = 0; x <= 16; x++) {
