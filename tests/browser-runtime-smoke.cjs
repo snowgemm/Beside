@@ -103,13 +103,45 @@ async function runDesktop(browser) {
     // Start the overworld and prove keyboard input advances the player simulation.
     await page.locator('#t-new').click();
     await page.waitForFunction(() => !window.Game.paused && !window.Game.ui.titleOpen, null, { timeout: 5000 });
+    await page.evaluate(() => {
+      const game = window.Game;
+      const originalUpdate = game.player.update;
+      game.__browserSmokePlayerUpdates = 0;
+      game.player.update = function (dt) {
+        game.__browserSmokePlayerUpdates++;
+        return originalUpdate.call(this, dt);
+      };
+    });
     const before = await page.evaluate(() => ({
       x: window.Game.player.pos.x,
-      z: window.Game.player.pos.z
+      z: window.Game.player.pos.z,
+      updates: window.Game.__browserSmokePlayerUpdates
     }));
     await page.bringToFront();
     await page.keyboard.down('w');
-    await page.waitForTimeout(700);
+    try {
+      // Wait for real simulation steps rather than assuming a fixed render cadence on SwiftShader.
+      await page.waitForFunction(({ updates }) =>
+        window.Game.__browserSmokePlayerUpdates >= updates + 12, before, { timeout: 15000 });
+    } catch (error) {
+      const state = await page.evaluate(() => ({
+        paused: window.Game.paused,
+        titleOpen: window.Game.ui.titleOpen,
+        menuOpen: window.Game.menu.open,
+        moveX: window.Game.input.moveX,
+        moveZ: window.Game.input.moveZ,
+        playerUpdates: window.Game.__browserSmokePlayerUpdates,
+        dead: window.Game.player.dead,
+        onGround: window.Game.player.pos.onGround,
+        position: {
+          x: window.Game.player.pos.x,
+          y: window.Game.player.pos.y,
+          z: window.Game.player.pos.z
+        }
+      }));
+      throw new Error('desktop: player update loop did not advance after keyboard input; before=' +
+        JSON.stringify(before) + ', state=' + JSON.stringify(state) + '; ' + error.message);
+    }
     const movementProbe = await page.evaluate(() => {
       const game = window.Game;
       game.input.poll();
@@ -124,7 +156,7 @@ async function runDesktop(browser) {
         onGround: game.player.pos.onGround,
         position: { x: p.x, y: p.y, z: p.z },
         velocity: { x: p.vx, y: p.vy, z: p.vz },
-        frames: game.renderer.info.render.frame
+        playerUpdates: game.__browserSmokePlayerUpdates
       };
     });
     await page.keyboard.up('w');
