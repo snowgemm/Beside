@@ -1,5 +1,8 @@
 name: Headless camera smoke test
 
+permissions:
+  contents: read
+
 on:
   push:
   pull_request:
@@ -7,14 +10,32 @@ on:
 
 jobs:
   headless-camera:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          node-version: 20
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+      - name: Install pinned Playwright browser runner
+        run: npm install --no-save --package-lock=false playwright@1.65.0
+      - name: Install Chromium headless shell and system dependencies
+        run: node_modules/.bin/playwright install --with-deps --only-shell chromium
+      - name: Run desktop and mobile WebGL browser smoke tests
+        run: |
+          python3 -m http.server 4173 --bind 127.0.0.1 --directory . >/tmp/beside-http.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:4173/index.html >/dev/null; then break; fi
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:4173/index.html >/dev/null
+          BESIDE_BASE_URL=http://127.0.0.1:4173 node tests/browser-runtime-smoke.cjs
       - name: Run JavaScript syntax and headless camera checks
         run: node tests/headless-camera-smoke.cjs
       - name: Verify immutable model cache migration
@@ -24,7 +45,7 @@ jobs:
       - name: Audit pinned GLB topology and texture budgets
         run: node tests/glb-asset-audit.cjs
       - name: Upload GLB audit report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: beside-glb-audit
           path: asset-audit-report.json
