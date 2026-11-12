@@ -153,7 +153,7 @@ async function runMobile(browser) {
     assert.ok(layout.documentWidth <= layout.viewportWidth + 1, 'mobile: page overflows horizontally');
     assert.equal(layout.attackButtonVisible, true, 'mobile: attack control is not visible');
 
-    await page.locator('#btn-menu').tap();
+    await page.locator('#t-set').tap();
     await page.locator('#menu.open').waitFor({ state: 'attached', timeout: 5000 });
     await page.locator('#menu-quality').selectOption('low');
     assert.equal(await page.evaluate(() => window.Game.quality.value), 'low',
