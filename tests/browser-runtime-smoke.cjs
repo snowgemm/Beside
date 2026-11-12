@@ -15,11 +15,21 @@ const browserArgs = [
 async function openGame(browser, options, label) {
   const context = await browser.newContext(options);
   // The game shell is tested without a service-worker cache masking missing or stale assets.
-  await context.addInitScript(() => {
+  await context.addInitScript((testLabel) => {
     try {
       Object.defineProperty(navigator, 'serviceWorker', { value: undefined });
     } catch (_) {}
-  });
+    // Headless Chromium does not provide a user-visible pointer-lock surface.
+    // Keep real keyboard events while preventing the game's lock-failure pause handler.
+    if (testLabel === 'desktop') {
+      try {
+        Object.defineProperty(HTMLCanvasElement.prototype, 'requestPointerLock', {
+          configurable: true,
+          value: function () { return Promise.resolve(); }
+        });
+      } catch (_) {}
+    }
+  }, label);
 
   const page = await context.newPage();
   const pageErrors = [];
@@ -97,13 +107,31 @@ async function runDesktop(browser) {
       x: window.Game.player.pos.x,
       z: window.Game.player.pos.z
     }));
+    await page.bringToFront();
     await page.keyboard.down('w');
     await page.waitForTimeout(700);
+    const movementProbe = await page.evaluate(() => {
+      const game = window.Game;
+      game.input.poll();
+      const p = game.player.pos;
+      return {
+        paused: game.paused,
+        titleOpen: game.ui.titleOpen,
+        menuOpen: game.menu.open,
+        moveX: game.input.moveX,
+        moveZ: game.input.moveZ,
+        dead: game.player.dead,
+        onGround: game.player.pos.onGround,
+        position: { x: p.x, y: p.y, z: p.z },
+        velocity: { x: p.vx, y: p.vy, z: p.vz },
+        frames: game.renderer.info.render.frame
+      };
+    });
     await page.keyboard.up('w');
-    await page.waitForFunction(({ x, z }) => {
-      const p = window.Game.player.pos;
-      return Math.hypot(p.x - x, p.z - z) > 0.12;
-    }, before, { timeout: 5000 });
+    const moved = Math.hypot(movementProbe.position.x - before.x, movementProbe.position.z - before.z);
+    assert.ok(moved > 0.12,
+      'desktop: keyboard input did not move the player; before=' + JSON.stringify(before) +
+      ', probe=' + JSON.stringify(movementProbe));
 
     const result = await page.evaluate(() => ({
       paused: window.Game.paused,
