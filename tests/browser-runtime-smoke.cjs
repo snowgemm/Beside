@@ -14,12 +14,10 @@ const browserArgs = [
 
 async function openGame(browser, options, label) {
   const context = await browser.newContext(options);
-  // The game shell is tested without a service-worker cache masking missing or stale assets.
+  // Keep test-only pointer-lock handling isolated from the application runtime.
+  // Headless Chromium does not provide a user-visible pointer-lock surface.
   await context.addInitScript((testLabel) => {
-    try {
-      Object.defineProperty(navigator, 'serviceWorker', { value: undefined });
-    } catch (_) {}
-    // Headless Chromium does not provide a user-visible pointer-lock surface.
+    // Avoid a user-visible pointer-lock dependency in the keyboard movement smoke test.
     // Keep real keyboard events while preventing the game's lock-failure pause handler.
     if (testLabel === 'desktop') {
       try {
