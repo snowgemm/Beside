@@ -154,7 +154,7 @@
       }
       var payload = {
         schemaVersion: 1,
-        build: '20261105-android-profile-capture-v27',
+        build: '20261107-first-run-dungeon-access-v28',
         exportedAt: new Date().toISOString(),
         environment: {
           viewport: { width: window.innerWidth, height: window.innerHeight },
