@@ -71,7 +71,7 @@
     titleEl.innerHTML = '<div class="logo"><span class="l1">BESIDEVALLEY</span><span class="l2">DUNGEONS</span></div>' +
       '<div class="t-btns">' + (has ? '<button id="t-cont" class="primary" type="button">Tiếp tục</button>' : '') +
       '<button id="t-new" type="button"' + (has ? '' : ' class="primary"') + '>Chơi mới</button><button id="t-set" type="button">Cài đặt</button></div>' +
-      '<div class="t-ver">Hầm ngục khối · phiêu lưu một mình</div>';
+      '<div class="t-ver">Mục tiêu đầu tiên: tìm cổng xanh ◆ trên bản đồ và nhấn E / Tương tác</div>';
     if (has) $('t-cont').onclick = startGame;
     $('t-new').onclick = function () {
       if (!has) { startGame(); return; }
