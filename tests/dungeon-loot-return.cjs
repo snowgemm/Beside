@@ -99,6 +99,7 @@ assert.equal(loot.drops.length, 30, 'normal drops should remain bounded at MAXD'
 const originalWorldMeshes = originalWorldDrops.map(drop => drop.mesh);
 
 // Dungeon entry hides the saved overworld drops and starts a separate drop list.
+loot.drops = [];
 const dungeonDrops = [
   loot.spawnDrop(makeItem('dungeon-accepted'), 5, 5, 0),
   loot.spawnDrop(makeItem('dungeon-overflow-1'), 6, 5, 0),
