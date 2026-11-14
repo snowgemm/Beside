@@ -19,6 +19,7 @@ The capture controls are only visible when `profile=1` is present. The panel is 
 ## What each sample contains
 
 - Main-loop FPS estimate, pixel ratio, quality preset, adaptive resolution scale and draw distance.
+- A rolling 120-frame window with p50/p95 frame-interval cadence and synchronous CPU time for simulation, environment/effects/minimap, world/chunk/water/grass updates, and renderer command submission.
 - Loaded chunk count, player world coordinates and overworld/dungeon state.
 - Three.js render calls, triangles, points and lines for the most recent render.
 - Three.js geometry/texture object counts and program count.
@@ -32,6 +33,8 @@ The export also contains the build ID, viewport/screen dimensions, device pixel 
 - `renderer.info.render.calls/triangles/points/lines` are per-render counters. Compare the same scene and build.
 - `renderer.info.memory.geometries/textures` and `programs` are object counts, not byte totals or authoritative VRAM measurements. Compare trends after warm-up; internal renderer caches may persist.
 - A single FPS sample cannot establish sustained performance, thermal throttling or battery cost.
+- CPU phase timings are collected only in `?profile=1`; they are synchronous JavaScript durations, not GPU execution time. `renderSubmitCpuMs` measures how long `renderer.render()` takes to submit work, not when the GPU finishes it. Compare p50 and p95 across repeated captures.
+- If the frame interval is high but all measured CPU phases are low, investigate GPU time, browser compositing, thermal throttling and refresh scheduling using device/browser profiling rather than assuming the renderer submission value is GPU time.
 
 Three.js documents `WebGLRenderer.info` as rendering/memory statistics and notes the default reset behavior around render calls: [WebGLRenderer](https://threejs.org/docs/pages/WebGLRenderer.html).
 
@@ -58,6 +61,10 @@ The scene is a third-person forest/coast overworld view. This is a single user s
 - Do not infer GPU bottlenecks from renderer counters alone. Use a browser performance trace or device GPU profiler before changing shaders, shadows, geometry or resolution.
 - Preserve the exported JSON alongside the exact build SHA and the test scenario.
 
+## Saved settings and adaptive quality
+
+The runtime starts with mobile draw distance 3, but `Game.menu.apply()` restores the locally saved `settings.dd` after save loading. A previously selected value of 7 can therefore override the startup default. The current governor lowers adaptive resolution only after touch-device frame cadence exceeds 25 ms for 2 seconds; it reduces draw distance only after cadence exceeds 28 ms for 5 seconds. The old 47 FPS observation is about 21.3 ms per frame, so it would not meet either threshold. A fresh capture is needed before changing these thresholds.
+
 ## Versioning
 
-This runbook was added with build token `20261105-android-profile-capture-v27`. The opt-in panel has no effect when the query parameter is absent.
+This runbook is updated with build token `20261115-performance-profile-v30`. The opt-in panel performs no timing instrumentation when the query parameter is absent.

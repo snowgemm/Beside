@@ -1,7 +1,7 @@
 # Besidevalley — Quality Upgrade Roadmap
 
-Last reviewed: 2026-11-05  
-Baseline: `main` at `128b8d93d2f179944abe2783fdac593d7e0198a2`  
+Last reviewed: 2026-11-15  
+Baseline: `main` at `3cbc78329ba504ffee292b3e8291547b8e764fb0`  
 Runtime: plain JavaScript + Three.js r128, mobile-first controls, static Vercel hosting and offline shell.
 
 ## Quality target
@@ -263,3 +263,12 @@ A cohesive smooth-toon adventure game that is readable, responsive and stable on
 - CI verifies the opt-in query gate, local manual capture/export wiring, hidden-by-default markup, touch target size and versioned cache token.
 - No live Android run or JSON profile has been collected by the assistant. The supplied screenshot is a single user-side observation; it does not identify a CPU/GPU bottleneck.
 - The capture panel performs no automatic sampling and does not upload data. Review the downloaded JSON before sharing it.
+
+
+### Stage 30: opt-in CPU phase profiling
+- Extend the existing Android profile panel with a fixed 120-frame rolling window and p50/p95 summaries.
+- Separate simulation, environment/effects/minimap, world/chunk/water/grass and renderer command-submission costs.
+- Keep all timing calls disabled during normal gameplay; do not add polling or per-frame object allocation.
+- Treat `renderer.render()` duration as synchronous CPU submission time, never as GPU completion time.
+- Use the next real-device capture to choose a single measured bottleneck before tuning quality thresholds, chunk generation, water animation or model batching.
+- Acceptance: profile captures identify build SHA, scene and draw counters; comparisons use the same Android device, browser, orientation, quality preset and scene. No performance improvement is claimed by instrumentation alone.

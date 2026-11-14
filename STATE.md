@@ -272,3 +272,12 @@ Stage 16 (hidden-page simulation and audio lifecycle; 2026-11-04):
 - Added `tests/combat-timing.cjs` and wired it into CI for timing, target filtering, cooldown, dodge/death cancellation and queued input.
 - Bumped static asset query tokens and offline shell cache to v29.
 - CI proves deterministic timing/state contracts; hands-on combat feel and mobile input latency remain manual device checks.
+
+
+## Stage 30: opt-in CPU phase profiling for Android
+- Extended the existing `?profile=1` panel with a fixed 120-frame timing ring buffer.
+- Captures p50/p95 frame interval and synchronous JavaScript durations for simulation, environment/effects/minimap, world/chunk/water/grass updates, and `renderer.render()` submission.
+- Timing calls and sample writes are disabled unless the profile query parameter is present; normal gameplay keeps the profiler dormant.
+- Corrected the exported build identifier so captures identify the current v30 assets/cache rather than the stale v28 label.
+- Added source-level regression coverage and updated the Android profiling runbook.
+- Evidence boundary: renderer submission time is not GPU completion time. No new device capture, FPS gain, GPU timing, or thermal/battery claim is made. The local `game-dev` CLI is unavailable in this environment; collect the JSON on the actual phone before selecting the next optimization.

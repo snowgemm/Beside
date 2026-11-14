@@ -597,11 +597,11 @@ check('keyboard focus is visible on map and button controls',
   styleSource.includes('button:focus-visible,#minimap:focus-visible{outline:2px solid var(--hi)') &&
   styleSource.includes('.menu-row select:focus-visible'));
 check('offline cache is bumped and versioned local assets prevent stale code from loading',
-  swSource.includes("CACHE_NAME = 'besidevalley-shell-v29'") &&
+  swSource.includes("CACHE_NAME = 'besidevalley-shell-v30'") &&
   swSource.includes("url.searchParams.get('v')") &&
   swSource.includes('function fallbackCacheKey(requestUrl)') &&
   swSource.includes('cache.match(fallbackKey)') &&
-  indexSource.includes('20261115-combat-impact-sync-v29'));
+  indexSource.includes('20261115-performance-profile-v30'));
 check('player jump input triggers a short takeoff pose independent of refresh rate',
   rigSource.includes("state === 'jump'") && rigSource.includes('this.jumpT = 0.32') &&
   rigSource.includes('var jumpPulse = Math.sin') && playerSource.includes("rig.play('jump'"));
@@ -675,6 +675,15 @@ check('opt-in profile controls keep a solid compact surface and touch-sized butt
   styleSource.includes('#profile-tools[hidden]{display:none!important}') &&
   styleSource.includes('#profile-tools button{min-height:44px') &&
   styleSource.includes('background:rgba(15,20,25,.94)'));
+check('opt-in profiler reports rolling p50/p95 CPU phase timings without normal-play timing calls',
+  mainSource.includes("var BUILD_ID = '20261115-performance-profile-v30';") &&
+  mainSource.includes("var profilingEnabled = !!(profileTools && new URLSearchParams(window.location.search).get('profile') === '1');") &&
+  mainSource.includes('FRAME_SAMPLE_LIMIT = 120') &&
+  mainSource.includes('new Float32Array(FRAME_SAMPLE_LIMIT)') &&
+  mainSource.includes('simulationCpuMs: summarizeFrameTiming(frameTiming.simulation)') &&
+  mainSource.includes('worldCpuMs: summarizeFrameTiming(frameTiming.world)') &&
+  mainSource.includes('renderSubmitCpuMs: summarizeFrameTiming(frameTiming.renderSubmit)') &&
+  mainSource.includes('recordFrameTimings(raw * 1000, simulationCpuMs, environmentCpuMs, worldCpuMs, renderSubmitCpuMs)'));
 // Exercise the production terrain and dungeon generators together without a renderer.
 function firstGateDistance(seed) {
   const gameWindow = {

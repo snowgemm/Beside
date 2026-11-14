@@ -1,5 +1,6 @@
 (function () {
   var G = window.Game = window.Game || {};
+  var BUILD_ID = '20261115-performance-profile-v30';
   var touch = G.input.isTouch;
   var renderer = new THREE.WebGLRenderer({ antialias: !touch, powerPreference: 'high-performance' });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, touch ? 1.35 : 1.65));
@@ -73,6 +74,39 @@
 
   var hud = document.getElementById('hud'), coordsHud = document.getElementById('coords');
   var last = performance.now(), accT = 0, accN = 0, hudT = 0, fps = 0, slowT = 0, lowered = 0, adaptiveSlowT = 0, adaptiveFastT = 0;
+  // Profiling is opt-in; normal gameplay does not pay for per-frame timing calls.
+  var profileTools = document.getElementById('profile-tools');
+  var profilingEnabled = !!(profileTools && new URLSearchParams(window.location.search).get('profile') === '1');
+  var FRAME_SAMPLE_LIMIT = 120;
+  var frameTiming = {
+    interval: new Float32Array(FRAME_SAMPLE_LIMIT),
+    simulation: new Float32Array(FRAME_SAMPLE_LIMIT),
+    environment: new Float32Array(FRAME_SAMPLE_LIMIT),
+    world: new Float32Array(FRAME_SAMPLE_LIMIT),
+    renderSubmit: new Float32Array(FRAME_SAMPLE_LIMIT)
+  };
+  var frameTimingCount = 0, frameTimingCursor = 0;
+  function recordFrameTimings(intervalMs, simulationMs, environmentMs, worldMs, renderSubmitMs) {
+    if (!profilingEnabled) return;
+    var i = frameTimingCursor;
+    frameTiming.interval[i] = intervalMs;
+    frameTiming.simulation[i] = simulationMs;
+    frameTiming.environment[i] = environmentMs;
+    frameTiming.world[i] = worldMs;
+    frameTiming.renderSubmit[i] = renderSubmitMs;
+    frameTimingCursor = (i + 1) % FRAME_SAMPLE_LIMIT;
+    frameTimingCount = Math.min(FRAME_SAMPLE_LIMIT, frameTimingCount + 1);
+  }
+  function summarizeFrameTiming(samples) {
+    if (!frameTimingCount) return { p50Ms: null, p95Ms: null };
+    var values = new Array(frameTimingCount), i;
+    for (i = 0; i < frameTimingCount; i++) values[i] = samples[i];
+    values.sort(function (a, b) { return a - b; });
+    return {
+      p50Ms: Math.round(values[Math.floor((frameTimingCount - 1) * 0.5)] * 100) / 100,
+      p95Ms: Math.round(values[Math.ceil(frameTimingCount * 0.95) - 1] * 100) / 100
+    };
+  }
   // Manual, bounded diagnostics: no HUD, polling timer, or per-frame history allocation.
   var rendererHistory = [], RENDERER_HISTORY_LIMIT = 120;
   G.debug = G.debug || {};
@@ -80,6 +114,7 @@
     var info = renderer.info || {}, render = info.render || {}, memory = info.memory || {};
     return {
       label: label == null ? '' : String(label),
+      build: BUILD_ID,
       timeMs: Math.round(performance.now()),
       fps: fps,
       pixelRatio: renderer.getPixelRatio ? renderer.getPixelRatio() : null,
@@ -104,7 +139,15 @@
         geometries: memory.geometries || 0,
         textures: memory.textures || 0
       },
-      programs: info.programs ? info.programs.length : 0
+      programs: info.programs ? info.programs.length : 0,
+      timings: {
+        sampleCount: frameTimingCount,
+        frameIntervalMs: summarizeFrameTiming(frameTiming.interval),
+        simulationCpuMs: summarizeFrameTiming(frameTiming.simulation),
+        environmentCpuMs: summarizeFrameTiming(frameTiming.environment),
+        worldCpuMs: summarizeFrameTiming(frameTiming.world),
+        renderSubmitCpuMs: summarizeFrameTiming(frameTiming.renderSubmit)
+      }
     };
   };
   G.debug.captureRendererSnapshot = function (label) {
@@ -123,8 +166,7 @@
   };
 
   // The on-device capture panel is opt-in and has no frame-loop work.
-  var profileTools = document.getElementById('profile-tools');
-  if (profileTools && new URLSearchParams(window.location.search).get('profile') === '1') {
+  if (profilingEnabled) {
     var profileCapture = document.getElementById('profile-capture');
     var profileExport = document.getElementById('profile-export');
     var profileClear = document.getElementById('profile-clear');
@@ -154,16 +196,18 @@
       }
       var payload = {
         schemaVersion: 1,
-        build: '20261107-first-run-dungeon-access-v28',
+        build: BUILD_ID,
         exportedAt: new Date().toISOString(),
         environment: {
           viewport: { width: window.innerWidth, height: window.innerHeight },
           screen: { width: screen.width, height: screen.height },
           devicePixelRatio: window.devicePixelRatio || 1,
-          touch: !!(navigator.maxTouchPoints > 0)
+          touch: !!(navigator.maxTouchPoints > 0),
+          profilingEnabled: profilingEnabled
         },
         interpretation: {
           fps: 'Observed main-loop frame cadence; not isolated GPU render time.',
+          cpuTimings: 'p50/p95 over the latest 120 frames. Phase timings measure synchronous JavaScript time; renderSubmitCpuMs does not measure asynchronous GPU completion.',
           rendererMemory: 'Three.js geometry and texture object counts, not byte totals or authoritative VRAM.'
         },
         snapshots: snapshots
@@ -240,22 +284,31 @@
     if (desiredFps > 0 && elapsedMs + 0.05 < 1000 / desiredFps) return;
     var raw = elapsedMs / 1000; last = now;
     var dt = Math.min(raw, 0.05);
+    var simulationCpuMs = 0, environmentCpuMs = 0, worldCpuMs = 0, renderSubmitCpuMs = 0;
+    var stageStart = profilingEnabled ? performance.now() : 0;
     G.inventory.update();
     var inp = G.input;
     if (!G.paused) G.player.update(dt);
     else { inp.attackQ = inp.dodgeQ = inp.interactQ = false; inp.lookDX = inp.lookDY = 0; inp.viewToggle = false; }
     var p = G.player.pos;
     if (!G.paused) { G.combat.update(dt); G.enemies.update(dt, p.x, p.y, p.z); G.loot.update(dt); G.dungeon.update(dt); }
+    if (profilingEnabled) { simulationCpuMs = performance.now() - stageStart; stageStart = performance.now(); }
     G.sky.update(G.paused ? 0 : dt);
     G.fx.update(G.paused ? 0 : dt, p.x, p.y, p.z);
     G.minimap.update(raw);
+    if (profilingEnabled) { environmentCpuMs = performance.now() - stageStart; stageStart = performance.now(); }
     // Keep chunk generation within a small CPU budget; allow more work only after measured frame time shows spare headroom.
     var chunkBudget = touch ? 1.4 : 2.4;
     if (fps > 100 && !touch) chunkBudget = 3.4;
     else if (fps > 70) chunkBudget = touch ? 1.8 : 3.0;
     else if (fps > 0 && fps < 35) chunkBudget = 0.7;
     G.world.update(p.x, p.z, chunkBudget, dt);
+    if (profilingEnabled) { worldCpuMs = performance.now() - stageStart; stageStart = performance.now(); }
     renderer.render(scene, camera);
+    if (profilingEnabled) {
+      renderSubmitCpuMs = performance.now() - stageStart;
+      recordFrameTimings(raw * 1000, simulationCpuMs, environmentCpuMs, worldCpuMs, renderSubmitCpuMs);
+    }
 
     if (raw < 0.25) { accT += raw; accN++; hudT += raw; }
     if (accT >= 1) {
