@@ -597,11 +597,11 @@ check('keyboard focus is visible on map and button controls',
   styleSource.includes('button:focus-visible,#minimap:focus-visible{outline:2px solid var(--hi)') &&
   styleSource.includes('.menu-row select:focus-visible'));
 check('offline cache is bumped and versioned local assets prevent stale code from loading',
-  swSource.includes("CACHE_NAME = 'besidevalley-shell-v28'") &&
+  swSource.includes("CACHE_NAME = 'besidevalley-shell-v29'") &&
   swSource.includes("url.searchParams.get('v')") &&
   swSource.includes('function fallbackCacheKey(requestUrl)') &&
   swSource.includes('cache.match(fallbackKey)') &&
-  indexSource.includes('20261107-first-run-dungeon-access-v28'));
+  indexSource.includes('20261115-combat-impact-sync-v29'));
 check('player jump input triggers a short takeoff pose independent of refresh rate',
   rigSource.includes("state === 'jump'") && rigSource.includes('this.jumpT = 0.32') &&
   rigSource.includes('var jumpPulse = Math.sin') && playerSource.includes("rig.play('jump'"));
@@ -626,9 +626,10 @@ check('distant idle mob animation is throttled while AI and physics remain full-
   enemySource.includes('P.move(e, dt);') &&
   enemySource.includes('e.rig.update(dt, rigSpeed)') &&
   enemySource.includes('e.rig.update(rigDt,'));
-check('camera hit feedback only fires after a valid combat target is hit',
-  fs.readFileSync(path.join(jsDir, 'combat.js'), 'utf8').includes('P.shake = Math.max(P.shake || 0, crit ? 0.11 : 0.045)') &&
-  fs.readFileSync(path.join(jsDir, 'combat.js'), 'utf8').indexOf('P.shake = Math.max(P.shake || 0, crit ? 0.11 : 0.045)') > fs.readFileSync(path.join(jsDir, 'combat.js'), 'utf8').indexOf('C.attack = function ()'));
+check('camera hit feedback only fires during confirmed delayed impact resolution',
+  combatSource.includes('function resolveAttack()') &&
+  combatSource.indexOf('P.shake = Math.max(P.shake || 0, crit ? 0.11 : 0.045)') > combatSource.indexOf('G.enemies.hurt(e,') &&
+  combatSource.indexOf('P.shake = Math.max(P.shake || 0, crit ? 0.11 : 0.045)') < combatSource.indexOf('  C.respawn = function ()'));
 
 // Boss slam telegraphs use two child meshes that share one CircleGeometry.
 const previousEnemies = G.enemies;
