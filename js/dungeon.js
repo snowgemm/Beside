@@ -305,12 +305,9 @@
   }
   function leave() {
     if (!run) return null;
-    var r = run, out = r.ent.out;
+    var r = run, out = r.ent.out, dungeonDrops = L.drops.slice();
     G.boss.cleanup();
-    L.drops.forEach(function (d) {
-      if (G.inventory.add(d.item)) G.toast('Nhặt được: ' + d.item.name, G.items.RARITIES[d.item.rarity].color, d.item);
-      scene.remove(d.mesh);
-    });
+    // Restore the overworld drop list before rehoming dungeon overflow so new drops use overworld terrain height.
     L.drops = r.sDrops; L.drops.forEach(function (d) { d.mesh.visible = true; });
     E.clear(); E.swap(r.sEn);
     scene.remove(r.grp); dispose(r.grp);
@@ -319,6 +316,8 @@
     for (var k in gates) gates[k].visible = true;
     D.active = false; insideKey = null; run = null; near = null;
     roomHud.style.display = 'none'; bossBar.style.display = 'none'; hudTxt = '';
+    // Collect what fits; return every remaining item to the overworld around the dungeon entrance.
+    L.returnDungeonDrops(dungeonDrops, out.x, out.z);
     G.save.request();
     return out;
   }
