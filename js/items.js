@@ -127,7 +127,7 @@
     if (imported && haloGeo) {
       var ring = new THREE.Mesh(haloGeo, haloMats[item.rarity] || haloMats[0]); ring.rotation.x = Math.PI / 2; ring.position.y = 0.025; ring.userData.noShadow = true; m.add(ring);
     }
-    var b = { x: x, y: y, z: z, vx: Math.cos(a) * sp, vy: 4 + Math.random() * 2, vz: Math.sin(a) * sp, r: 0.18, h: 0.35, onGround: false, inWater: false, mass: 0.3, imass: 1 / 0.3, autoStep: false, stepDy: 0, wet: 0, swimUp: false };
+    var b = { x: x, y: y, z: z, vx: Math.cos(a) * sp, vy: 4 + Math.random() * 2, vz: Math.sin(a) * sp, r: 0.18, h: 0.35, onGround: false, inWater: false, mass: 0.3, autoStep: false, stepDy: 0, wet: 0, swimUp: false };
     m.rotation.x = imported ? 0 : 0.6; m.position.set(x, y + 0.3, z); scene.add(m);
     var drop = { item: item, mesh: m, b: b, y: y, x: x, z: z, t: 0, delay: delay || 0, bob: Math.random() * 6, bounces: 0, settled: false };
     L.drops.push(drop);
