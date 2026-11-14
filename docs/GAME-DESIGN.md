@@ -186,7 +186,8 @@ Bốn rarity hiện có: **Thường, Tốt, Hiếm, Sử thi**. Rarity quyết 
 - Người chơi có thể xem so sánh chỉ số, trang bị, tháo trang bị và vứt vật phẩm.
 - Loot được tạo theo seed và nguồn rơi; chest có xác suất nhận đồ cao hơn enemy drop.
 - Nếu inventory đầy, game phải báo rõ và không âm thầm làm mất vật phẩm.
-- Khi rời dungeon, các drop còn lại được xử lý theo logic hiện tại; cần kiểm thử trường hợp túi đầy.
+- **Rủi ro P0 phát hiện khi đọc source:** `Inv.add()` trả về `false` khi túi đầy, nhưng luồng rời dungeon hiện vẫn gỡ drop khỏi scene sau khi thử tự thêm vào inventory. Vì vậy vật phẩm còn rơi có thể biến mất khi rời dungeon với túi đầy. Đây là hành vi cần sửa và có regression test, không phải luật gameplay mong muốn.
+- Quy tắc mục tiêu: drop phải còn tồn tại/được chuyển giao rõ ràng cho đến khi người chơi nhận được hoặc chủ động bỏ lại; không xóa im lặng khi inventory từ chối item.
 
 ### 8.3 Tiến trình
 
