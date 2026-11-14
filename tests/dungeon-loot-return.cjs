@@ -109,6 +109,8 @@ loot.drops = originalWorldDrops;
 originalWorldDrops.forEach(drop => { drop.mesh.visible = true; });
 
 // Only one item fits. The two rejected items must be re-created at the overworld gate.
+dungeonDrops[1].t = 42;
+dungeonDrops[1].delay = 0.25;
 const overflow = loot.returnDungeonDrops(dungeonDrops, 100, 200);
 assert.equal(receivedItems.length, 1, 'the available inventory slot should be used');
 assert.equal(receivedItems[0].id, 'dungeon-accepted', 'the first fitting dungeon item should be collected');
@@ -128,6 +130,8 @@ assert.ok(returned.every(drop =>
   Math.abs(drop.z - 200) <= 1.65 &&
   Math.abs(drop.b.y - 12.75) < 1e-9),
   'overflow drops must spawn near the exit using the restored overworld height');
+assert.equal(returned[0].t, 42, 'returning a drop must preserve its age');
+assert.equal(returned[0].delay, 0.25, 'returning a drop must preserve its remaining pickup delay');
 assert.ok(toasts.some(message => message.includes('còn 2 vật phẩm')),
   'the player must be told that overflow loot remains at the dungeon entrance');
 
@@ -137,4 +141,4 @@ assert.equal(loot.drops.length, 32, 'a later drop should preserve the existing o
 assert.ok(returned.every(drop => loot.drops.includes(drop)),
   'later cap enforcement must not mass-delete the dungeon overflow batch');
 
-process.stdout.write('Dungeon loot return checks: 8 assertions passed\\n');
+process.stdout.write('Dungeon loot return checks: 15 assertions passed\\n');
