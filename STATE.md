@@ -253,3 +253,12 @@ Stage 16 (hidden-page simulation and audio lifecycle; 2026-11-04):
 - User-supplied Android landscape screenshot (2026-11-05 18:16): HUD shows 47 FPS, draw distance 7 and 185 loaded chunks at X 54.3 / Y 11.4 / Z -11.0; battery display 49%. The HUD's “Vùng” value is confirmed by `js/main.js` to be `G.world.chunkCount()`.
 - This is a single observational sample, not a stable-session average. The FPS HUD reflects main-loop frame cadence, not isolated GPU execution time. Device model, browser version, refresh-rate cap, quality preset and sustained thermal state were not captured.
 - No automatic capture, FPS improvement, GPU-time result, VRAM-byte figure or battery/thermal improvement is claimed.
+
+
+## Stage 28: preserve dungeon loot when the inventory is full
+- Fixed dungeon exit/respawn handling: collect only items accepted by the 24-slot inventory and recreate every rejected item as an overworld drop around the dungeon entrance.
+- Recreate overflow only after restoring the overworld height provider, so drops use valid terrain height instead of the dungeon floor.
+- Preserve the saved overworld drop set while merging returned dungeon drops. Normal drop-cap enforcement now removes at most one oldest drop per later spawn instead of purging an entire over-cap batch.
+- Added a focused Node regression test covering a full overworld drop set, one free inventory slot, two overflow items, world-height placement, mesh cleanup, player feedback and subsequent drop-cap behavior.
+- Added the regression test to the headless CI workflow.
+- Verification boundary: CI checks the production loot module under a deterministic Three.js test double; actual Android pickup feel and ground placement still require a device playtest.
