@@ -149,7 +149,9 @@
         angle = i * 2.399963229728653;
         radius = 1.35 + (i % 2) * 0.3;
         // Recreate the drop against the restored overworld height provider, preserving its item and lifetime.
-        L.spawnDrop(d.item, x + Math.cos(angle) * radius, z + Math.sin(angle) * radius, 0, null, true);
+        var returned = L.spawnDrop(d.item, x + Math.cos(angle) * radius, z + Math.sin(angle) * radius, 0, null, true);
+        returned.t = isFinite(d.t) ? Math.max(0, d.t) : 0;
+        returned.delay = isFinite(d.delay) ? Math.max(0, d.delay) : 0;
         overflow++;
       }
     }
