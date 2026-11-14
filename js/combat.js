@@ -99,8 +99,12 @@
   /* ---------- Combat ---------- */
   var C = G.combat = {};
   var COS_HALF_ARC = Math.cos(50 * Math.PI / 180);
+  // The hit lands during the visible strike phase, not on the input frame.
+  var ATTACK_TIMING = { duration: 0.32, windup: 0.15, strike: 0.3, impact: 0.7 };
+  ATTACK_TIMING.hitTime = ATTACK_TIMING.duration * (ATTACK_TIMING.windup + (1 - ATTACK_TIMING.windup) * ATTACK_TIMING.strike * ATTACK_TIMING.impact);
+  C.attackTiming = ATTACK_TIMING;
   var cam, hpFill, hpText, hpGhost, hpBox, dodgeBtn, fade, lastHp = -1, lastMax = -1, attackCd = 0, dodgeCd = 0, deadT = 0, deathShown = false, lastCd = -1, lastWpn;
-  var pool = [], POOL = 12, activeN = 0, pv = null;
+  var attackState = null, pool = [], POOL = 12, activeN = 0, pv = null;
 
   C.init = function (camera) {
     cam = camera; pv = new THREE.Vector3();
@@ -133,18 +137,14 @@
     if (navigator.vibrate) { try { navigator.vibrate(30); } catch (e) {} }
   };
   C.dodgeLeft = function () { return dodgeCd > 0 ? dodgeCd : 0; };
-  C.respawn = function () {
-    var P = G.player;
-    if (!P.dead) return;
-    P.respawn(); P.health = P.maxHealth; P.dead = false; P.iframes = 1.5; fade.style.opacity = 0; deadT = 0; deathShown = false;
-    if (G.ui) G.ui.showDeath(false);
-  };
+  function cancelAttack() {
+    attackState = null;
+    if (G.player && G.player.cancelAttack) G.player.cancelAttack();
+    else if (G.player) G.player.swingT = 0;
+  }
 
-  C.attack = function () {
-    var P = G.player, w = P.weapon;
-    if (attackCd > 0 || P.dead || P.rollT > 0) return;
-    attackCd = w.cooldown; P.swingT = 0.25; A.play('swing');
-    var fx = -Math.sin(P.yaw), fz = -Math.cos(P.yaw), list = G.enemies.list;
+  function resolveAttack() {
+    var P = G.player, w = P.weapon, fx = -Math.sin(P.yaw), fz = -Math.cos(P.yaw), list = G.enemies.list;
     for (var i = 0; i < list.length; i++) {
       var e = list[i];
       if (e.dead) continue;
@@ -153,19 +153,37 @@
       if ((dx * fx + dz * fz) / d < COS_HALF_ARC && d > e.def.radius + 0.3) continue;
       var crit = Math.random() < P.crit; C.critHit = crit;
       G.enemies.hurt(e, Math.round(w.damage * (crit ? 2 : 1)), dx / d * 6, dz / d * 6);
-      // Small confirmed-hit feedback; only set after a target passes range and arc checks.
+      // Confirmed-hit feedback is emitted only at the strike moment.
       P.shake = Math.max(P.shake || 0, crit ? 0.11 : 0.045);
       C.critHit = false;
     }
+  }
+
+  C.respawn = function () {
+    var P = G.player;
+    if (!P.dead) return;
+    cancelAttack();
+    P.respawn(); P.health = P.maxHealth; P.dead = false; P.iframes = 1.5; fade.style.opacity = 0; deadT = 0; deathShown = false;
+    if (G.ui) G.ui.showDeath(false);
+  };
+
+  C.attack = function () {
+    var P = G.player, w = P.weapon;
+    if (attackCd > 0 || P.dead || P.rollT > 0 || attackState) return false;
+    attackCd = w.cooldown; P.swingT = ATTACK_TIMING.duration; attackState = { elapsed: 0 }; A.play('swing');
+    return true;
   };
 
   C.dodge = function () {
     var P = G.player, I = G.input;
-    if (dodgeCd > 0 || P.dead || P.rollT > 0) return;
+    if (dodgeCd > 0 || P.dead || P.rollT > 0) return false;
+    // A dodge cancels an uncommitted strike so no hidden hit can land during the roll.
+    cancelAttack();
     var sy = Math.sin(P.yaw), cy = Math.cos(P.yaw), mx = I.moveX, mz = I.moveZ;
     var wx = -sy * mz + cy * mx, wz = -cy * mz - sy * mx, l = Math.sqrt(wx * wx + wz * wz);
     if (l < 0.1) { wx = -sy; wz = -cy; l = 1; }
     P.rollDir.x = wx / l; P.rollDir.z = wz / l; P.rollT = 0.35; dodgeCd = 1.0; A.play('swing');
+    return true;
   };
 
   C.hurtPlayer = function (dmg, fx, fz) {
@@ -181,17 +199,25 @@
   };
 
   C.update = function (dt) {
-    var P = G.player, I = G.input;
+    var P = G.player, I = G.input, startedAttack = false, startedDodge = false;
     if (attackCd > 0) attackCd -= dt;
     if (dodgeCd > 0) dodgeCd -= dt;
     if (P.iframes > 0) P.iframes -= dt;
     if (P.dead) {
+      if (attackState || P.swingT > 0) cancelAttack();
       deadT += dt;
       if (G.ui && G.ui.hasDeath) { if (deadT > 0.9 && !deathShown) { deathShown = true; G.ui.showDeath(true); } }
       else if (deadT > 1.6) C.respawn();
     } else {
-      if (I.attackQ) C.attack();
-      if (I.dodgeQ) C.dodge();
+      if (I.dodgeQ) startedDodge = C.dodge();
+      if (!startedDodge && I.attackQ) startedAttack = C.attack();
+      if (attackState && !startedAttack && P.rollT <= 0) {
+        attackState.elapsed += Math.max(0, dt);
+        if (attackState.elapsed >= ATTACK_TIMING.hitTime) {
+          attackState = null;
+          resolveAttack();
+        }
+      } else if (P.rollT > 0 && attackState) cancelAttack();
     }
     I.attackQ = I.dodgeQ = false;
     if (P.health !== lastHp || P.maxHealth !== lastMax) {

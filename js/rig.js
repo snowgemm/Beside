@@ -52,7 +52,11 @@
     if (state === 'idle' || state === 'walk') {
       this.speedV = state === 'walk' ? (o.speed || 3) : 0; this.autoHop = state === 'walk';
       if (this.death) { this.death = null; this.dead = false; }
-    } else if (state === 'attack') this.atk = { t: 0, dur: Math.max(0.05, o.dur || 0.5), w: o.windup == null ? 0.35 : Math.min(0.9, o.windup) };
+    } else if (state === 'attack') this.atk = {
+      t: 0, dur: Math.max(0.05, o.dur || 0.5),
+      w: o.windup == null ? 0.35 : Math.min(0.9, o.windup),
+      strike: o.strike == null ? 0.3 : Math.max(0.05, Math.min(0.8, +o.strike || 0.3))
+    };
     else if (state === 'jump') { this.jumpT = 0.32; }
     else if (state === 'land') {
       this.impactT = 0.22; this.impactStrength = Math.max(this.impactStrength, Math.max(0.18, Math.min(1, +o.strength || 0.3)));
@@ -133,7 +137,7 @@
     // attack: wind-up, strike, recover
     a = this.atk;
     if (a) {
-      a.t += dt; u = a.t / a.dur; w = a.w; st = (1 - w) * 0.3;
+      a.t += dt; u = a.t / a.dur; w = a.w; st = (1 - w) * a.strike;
       if (u >= 1) this.atk = null;
       else {
         if (u < w) { k = ease(u / w); ang = -2.4 * k; lz = 0.1 * k; hd = 0.25 * k; jw = -0.7 * k; sq = -0.2 * k; }

@@ -113,7 +113,7 @@ Thứ tự ưu tiên:
 
 Vòng cơ bản: **Quan sát → Tiếp cận/giữ khoảng cách → Tấn công hoặc né → Đọc phản hồi → Thu thập phần thưởng**.
 
-**Đã triển khai:** tấn công theo hướng nhân vật, giới hạn tầm/khung góc đánh, chí mạng, sát thương, knockback, né tránh, thời gian bất tử ngắn sau khi trúng đòn và phản hồi HUD/âm thanh/hiệu ứng.
+**Đã triển khai:** tấn công theo hướng nhân vật, giới hạn tầm/khung góc đánh, chí mạng, sát thương, knockback, né tránh, thời gian bất tử ngắn sau khi trúng đòn và phản hồi HUD/âm thanh/hiệu ứng. Đòn đánh cơ bản có pha lấy đà, thời điểm sát thương được đồng bộ vào pha vung vũ khí; né tránh trong lúc lấy đà hủy cú đánh chưa chạm đích.
 
 **Chưa có trong bản hiện tại:** hệ combo nhiều nhịp, heavy attack, skill tree, phép chủ động hoặc stamina economy. Không đưa chúng vào scope bắt buộc trước khi đòn đánh, hit detection và dodge hiện tại được playtest, cân bằng.
 

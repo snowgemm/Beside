@@ -119,6 +119,14 @@ A cohesive smooth-toon adventure game that is readable, responsive and stable on
 
 **Acceptance:** animation reinforces feedback, remains coherent across the UI and does not cause a performance regression on phones. Subjective feel still needs a human playtest.
 
+**Stage 29: synchronize basic attack impact with the visible strike**
+- The basic melee attack no longer damages enemies on the input frame. A single impact tick is scheduled 70% through the rig's strike segment, after anticipation and before recovery.
+- Animation duration, wind-up ratio and strike ratio are shared through the combat timing contract so animation and gameplay timing cannot drift independently.
+- A successful dodge during wind-up cancels the pending impact and player attack pose; death also cancels an uncommitted hit.
+- The hit resolves against the live enemy list and current player position/facing, preserving the existing range, height, arc, critical, knockback and feedback rules.
+- Regression coverage includes delayed impact, target filters, one hit per swing, cooldown, dodge/death cancellation and queued-input timing.
+- Subjective attack feel and mobile input latency still require hands-on playtesting; headless CI alone does not establish animation quality.
+
 ### P4 — Models and character presentation
 
 **Stage 23: share byte-identical broadleaf tree textures**

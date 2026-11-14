@@ -52,6 +52,10 @@
   };
   // knockback impulse (blocks of velocity), briefly reduces ground control
   P.knock = function (ix, iy, iz) { var v = P.pos; v.vx += ix; v.vz += iz; if (iy > v.vy) v.vy = iy; v.onGround = false; P.stun = 0.22; };
+  P.cancelAttack = function () {
+    P.swingT = 0; lastSwing = 0;
+    if (rig) rig.atk = null;
+  };
   P.recalc = function () {
     var e = P.equip, w = e.weapon && e.weapon.stats, a = e.armor && e.armor.stats, t = e.trinket && e.trinket.stats;
     P.weapon.damage = w ? w.damage : 10; P.weapon.reach = w ? w.reach : 2.2; P.weapon.cooldown = 0.4 * (w ? w.cdMult : 1);
@@ -158,7 +162,10 @@
     wasDead = P.dead;
     if (!P.dead && P.health < lastHp) rig.play('hurt');
     lastHp = P.health;
-    if (P.swingT > lastSwing) rig.play('attack', { dur: 0.32, windup: 0.15 });
+    if (P.swingT > lastSwing) {
+      var attackTiming = G.combat && G.combat.attackTiming;
+      rig.play('attack', attackTiming ? { dur: attackTiming.duration, windup: attackTiming.windup, strike: attackTiming.strike } : { dur: 0.32, windup: 0.15, strike: 0.3 });
+    }
     if (P.swingT > 0) P.swingT -= dt;
     lastSwing = P.swingT;
     rig.tiltX = P.rollT > 0 ? -6.283 * (1 - P.rollT / 0.35) : 0;

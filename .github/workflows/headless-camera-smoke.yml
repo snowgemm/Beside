@@ -27,6 +27,8 @@ jobs:
         run: node_modules/.bin/playwright install --with-deps --only-shell chromium
       - name: Verify dungeon loot survives exit with a full inventory
         run: node tests/dungeon-loot-return.cjs
+      - name: Verify attack timing and dodge cancellation
+        run: node tests/combat-timing.cjs
       - name: Run desktop and mobile WebGL browser smoke tests
         run: |
           python3 -m http.server 4173 --bind 127.0.0.1 --directory . >/tmp/beside-http.log 2>&1 &

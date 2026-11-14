@@ -262,3 +262,13 @@ Stage 16 (hidden-page simulation and audio lifecycle; 2026-11-04):
 - Added a focused Node regression test covering a full overworld drop set, one free inventory slot, two overflow items, world-height placement, mesh cleanup, player feedback and subsequent drop-cap behavior.
 - Added the regression test to the headless CI workflow.
 - Verification boundary: CI checks the production loot module under a deterministic Three.js test double; actual Android pickup feel and ground placement still require a device playtest.
+
+
+## Stage 29: synchronize basic attack impact with the visible strike
+- Moved basic melee damage from the input frame to a single impact tick 70% through the rig strike segment, after wind-up and before recovery.
+- Shared attack duration, wind-up ratio and strike ratio through `Game.combat.attackTiming`, keeping player rig and gameplay hit timing on one contract.
+- Dodge during wind-up cancels the pending hit and attack pose; death cancels an uncommitted hit.
+- Preserved live range, height, facing arc, critical, knockback, damage numbers and hit feedback at impact.
+- Added `tests/combat-timing.cjs` and wired it into CI for timing, target filtering, cooldown, dodge/death cancellation and queued input.
+- Bumped static asset query tokens and offline shell cache to v29.
+- CI proves deterministic timing/state contracts; hands-on combat feel and mobile input latency remain manual device checks.
