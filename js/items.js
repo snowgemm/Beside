@@ -117,8 +117,9 @@
     it.seed = seed; it.id = 'i' + seed.toString(36);
     return it;
   };
-  // y (optional) = start height of the pop; the drop gets an outward + upward impulse, falls, bounces twice, settles
-  L.spawnDrop = function (item, x, z, delay, y0) {
+  // y (optional) = start height of the pop; the drop gets an outward + upward impulse, falls, bounces twice, settles.
+  // preserveExistingDrops is used only when moving unclaimed dungeon loot back into the overworld.
+  L.spawnDrop = function (item, x, z, delay, y0, preserveExistingDrops) {
     var y = y0 != null ? y0 : G.world.getHeight(x, z) + 0.5, modelKey = null, m, a = Math.random() * 6.283, sp = 1.2 + Math.random() * 1.8, imported = false;
     if (item && item.slot === 'trinket') modelKey = 'coin';
     if (modelKey && G.assets && G.assets.model) { m = G.assets.model(modelKey); imported = !!m; }
@@ -126,10 +127,34 @@
     if (imported && haloGeo) {
       var ring = new THREE.Mesh(haloGeo, haloMats[item.rarity] || haloMats[0]); ring.rotation.x = Math.PI / 2; ring.position.y = 0.025; ring.userData.noShadow = true; m.add(ring);
     }
-    var b = { x: x, y: y, z: z, vx: Math.cos(a) * sp, vy: 4 + Math.random() * 2, vz: Math.sin(a) * sp, r: 0.18, h: 0.35, onGround: false, inWater: false, mass: 0.3, autoStep: false, stepDy: 0, wet: 0, swimUp: false };
+    var b = { x: x, y: y, z: z, vx: Math.cos(a) * sp, vy: 4 + Math.random() * 2, vz: Math.sin(a) * sp, r: 0.18, h: 0.35, onGround: false, inWater: false, mass: 0.3, imass: 1 / 0.3, autoStep: false, stepDy: 0, wet: 0, swimUp: false };
     m.rotation.x = imported ? 0 : 0.6; m.position.set(x, y + 0.3, z); scene.add(m);
-    L.drops.push({ item: item, mesh: m, b: b, y: y, x: x, z: z, t: 0, delay: delay || 0, bob: Math.random() * 6, bounces: 0, settled: false });
-    while (L.drops.length > MAXD) removeDrop(L.drops[0]);
+    var drop = { item: item, mesh: m, b: b, y: y, x: x, z: z, t: 0, delay: delay || 0, bob: Math.random() * 6, bounces: 0, settled: false };
+    L.drops.push(drop);
+    // A return can merge two separately bounded sets (overworld + dungeon). Trim one old drop per later spawn, never purge the whole overflow batch.
+    if (!preserveExistingDrops && L.drops.length > MAXD) removeDrop(L.drops[0]);
+    return drop;
+  };
+
+  L.returnDungeonDrops = function (drops, x, z) {
+    var overflow = 0, i, d, angle, radius;
+    if (!Array.isArray(drops)) return 0;
+    for (i = 0; i < drops.length; i++) {
+      d = drops[i];
+      if (!d || !d.item) continue;
+      if (d.mesh) scene.remove(d.mesh);
+      if (G.inventory.add(d.item)) {
+        G.toast('Nhặt được: ' + d.item.name, RAR[d.item.rarity].color, d.item);
+      } else {
+        angle = i * 2.399963229728653;
+        radius = 1.35 + (i % 2) * 0.3;
+        // Recreate the drop against the restored overworld height provider, preserving its item and lifetime.
+        L.spawnDrop(d.item, x + Math.cos(angle) * radius, z + Math.sin(angle) * radius, 0, null, true);
+        overflow++;
+      }
+    }
+    if (overflow && G.toast) G.toast('Hành trang đầy · còn ' + overflow + ' vật phẩm tại cổng hầm ngục', '#ff8080');
+    return overflow;
   };
   function removeDrop(d) { scene.remove(d.mesh); var i = L.drops.indexOf(d); if (i >= 0) L.drops.splice(i, 1); }
 
