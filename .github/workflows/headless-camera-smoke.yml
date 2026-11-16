@@ -40,6 +40,7 @@ jobs:
           done
           curl -fsS http://127.0.0.1:4173/index.html >/dev/null
           BESIDE_BASE_URL=http://127.0.0.1:4173 node tests/browser-runtime-smoke.cjs
+          BESIDE_BASE_URL=http://127.0.0.1:4173 node tests/profile-dev-mode-smoke.cjs
       - name: Run JavaScript syntax and headless camera checks
         run: node tests/headless-camera-smoke.cjs
       - name: Verify immutable model cache migration

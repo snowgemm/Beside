@@ -68,7 +68,7 @@
       '<div class="menu-row"><label for="menu-map">Bản đồ nhỏ</label><input id="menu-map" type="checkbox"></div>' +
       '<div class="menu-row"><label for="menu-map-zoom">Thu phóng bản đồ <b id="menu-map-zoom-val"></b></label><input id="menu-map-zoom" type="range" min="1.4" max="3.2" step="0.1"></div>' +
       '<div class="menu-row"><label for="menu-vib">Rung phản hồi</label><input id="menu-vib" type="checkbox"></div>' +
-      '<div class="menu-btns"><button id="menu-reset" type="button">Khôi phục cài đặt mặc định</button><button id="menu-home" type="button">Về màn hình chính</button><button id="menu-new" type="button">Chơi mới</button></div>' +
+      '<div class="menu-btns"><button id="menu-dev" type="button">Chế độ nhà phát triển</button><button id="menu-reset" type="button">Khôi phục cài đặt mặc định</button><button id="menu-home" type="button">Về màn hình chính</button><button id="menu-new" type="button">Chơi mới</button></div>' +
       '<div class="menu-foot">Cài đặt được lưu tự động trên thiết bị.</div></div>';
     vol = document.getElementById('menu-vol'); dd = document.getElementById('menu-dd'); ddv = document.getElementById('menu-ddv'); map = document.getElementById('menu-map');
     vib = document.getElementById('menu-vib'); qual = document.getElementById('menu-quality'); sens = document.getElementById('menu-sens'); sensv = document.getElementById('menu-sensv');

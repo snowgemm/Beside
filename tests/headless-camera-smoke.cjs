@@ -601,7 +601,7 @@ check('offline cache is bumped and versioned local assets prevent stale code fro
   swSource.includes("url.searchParams.get('v')") &&
   swSource.includes('function fallbackCacheKey(requestUrl)') &&
   swSource.includes('cache.match(fallbackKey)') &&
-  indexSource.includes('20261116-profiler-fix-v31'));
+  indexSource.includes('20261116-devtools-profile-v32'));
 check('player jump input triggers a short takeoff pose independent of refresh rate',
   rigSource.includes("state === 'jump'") && rigSource.includes('this.jumpT = 0.32') &&
   rigSource.includes('var jumpPulse = Math.sin') && playerSource.includes("rig.play('jump'"));
@@ -676,7 +676,7 @@ check('opt-in profile controls keep a solid compact surface and touch-sized butt
   styleSource.includes('#profile-tools button{min-height:44px') &&
   styleSource.includes('background:rgba(15,20,25,.94)'));
 check('opt-in profiler reports rolling p50/p95 CPU phase timings without normal-play timing calls',
-  mainSource.includes("var BUILD_ID = '20261116-profiler-fix-v31';") &&
+  mainSource.includes("var BUILD_ID = '20261116-devtools-profile-v32';") &&
   mainSource.includes("var profileQueryEnabled = !!(profileTools && new URLSearchParams(window.location.search).get('profile') === '1');") &&
   mainSource.includes('FRAME_SAMPLE_LIMIT = 120') &&
   mainSource.includes('new Float32Array(FRAME_SAMPLE_LIMIT)') &&
@@ -732,3 +732,13 @@ for (const result of results) {
   console.log((result.pass ? 'PASS ' : 'FAIL ') + result.name + (result.detail ? ' (' + result.detail + ')' : ''));
 }
 if (failures.length) process.exitCode = 1;
+
+check('Developer Mode code gate and allowlisted QA module are included without arbitrary code execution',
+  indexSource.includes('js/dev-mode.js?v=20261116-devtools-profile-v32') &&
+  menuSource.includes('id="menu-dev"') &&
+  fs.readFileSync(path.join(jsDir, 'dev-mode.js'), 'utf8').includes('crypto.subtle.digest') &&
+  !fs.readFileSync(path.join(jsDir, 'dev-mode.js'), 'utf8').includes('eval(') &&
+  !fs.readFileSync(path.join(jsDir, 'dev-mode.js'), 'utf8').includes('new Function'));
+check('Dev Mode save sandbox and test actor removal are wired',
+  fs.readFileSync(path.join(jsDir, 'save.js'), 'utf8').includes('S.setDevSandbox = function (enabled)') &&
+  fs.readFileSync(path.join(jsDir, 'enemies.js'), 'utf8').includes('E.remove = function (enemy)'));

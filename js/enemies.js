@@ -114,6 +114,7 @@
     var i = E.list.indexOf(e); if (i >= 0) E.list.splice(i, 1);
   }
   E.spawn = spawn;
+  E.remove = function (enemy) { if (enemy) removeEnemy(enemy); };
   E.clear = function () { while (E.list.length) removeEnemy(E.list[0]); projs.forEach(function (q) { scene.remove(q.m); }); projs.length = 0; };
   // swap the active enemy set (list + projectiles); returns the previous set, hidden
   E.swap = function (prev) {

@@ -1,0 +1,46 @@
+'use strict';
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const {chromium}=require('playwright');
+const baseURL=process.env.BESIDE_BASE_URL||'http://127.0.0.1:4173';
+const ACCESS_CODE='BESIDE-DEV-2026';
+const args=['--enable-webgl','--ignore-gpu-blocklist','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader'];
+(async()=>{
+ let browser;
+ try{
+  browser=await chromium.launch({headless:true,args});
+  const context=await browser.newContext({viewport:{width:1365,height:820},acceptDownloads:true});
+  const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.stack||e.message));
+  const response=await page.goto(baseURL+'?profile=1',{waitUntil:'domcontentloaded',timeout:45000});assert.ok(response&&response.ok());
+  await page.waitForFunction(()=>!!(window.Game&&window.Game.devMode&&window.Game.renderer),null,{timeout:45000});
+  await page.waitForFunction(()=>window.Game.renderer.info.render.frame>=120,null,{timeout:30000});
+  await page.locator('#profile-capture').click();
+  const status=await page.locator('#profile-status').textContent();assert.match(status,/Mẫu 1/);assert.match(status,/120\/120 frame/);
+  const downloadPromise=page.waitForEvent('download');await page.locator('#profile-export').click();
+  const file=await downloadPromise,path=await file.path();assert.ok(path);
+  const json=JSON.parse(fs.readFileSync(path,'utf8'));assert.equal(json.schemaVersion,2);assert.equal(json.snapshots.length,1);
+  await page.locator('#t-set').click();await page.locator('#menu.open').waitFor({state:'attached',timeout:5000});
+  await page.locator('#menu-dev').click();await page.locator('#dev-mode:not([hidden])').waitFor({state:'visible',timeout:5000});
+  await page.locator('#dev-code').fill('wrong-code');await page.locator('#dev-lock button[type=submit]').click();
+  await page.waitForFunction(()=>document.querySelector('#dev-lock-status').textContent==='Mã không đúng.',null,{timeout:5000});
+  assert.equal(await page.locator('#dev-workspace').isVisible(),false);
+  await page.locator('#dev-code').fill(ACCESS_CODE);await page.locator('#dev-lock button[type=submit]').click();
+  await page.locator('#dev-workspace:not([hidden])').waitFor({state:'visible',timeout:10000});
+  await page.locator('#dev-checks').click();assert.match(await page.locator('#dev-status').textContent(),/14\/14 ready/);
+  const oldSave=await page.evaluate(()=>localStorage.getItem('besidevalley-dungeons/save'));
+  await page.locator('[data-tab=actors]').click();await page.locator('#dev-enemy-type').selectOption('slime');await page.locator('#dev-enemy-count').selectOption('1');
+  const oldCount=await page.evaluate(()=>window.Game.enemies.list.length);await page.locator('#dev-spawn-enemy').click();
+  await page.waitForFunction(n=>window.Game.enemies.list.length===n+1,oldCount,{timeout:5000});
+  await page.locator('#dev-clean-actors').click();assert.equal(await page.evaluate(()=>window.Game.enemies.list.length),oldCount);
+  await page.locator('[data-tab=items]').click();await page.locator('#dev-roll-loot').click();
+  const item=JSON.parse(await page.locator('#dev-loot-output').textContent());assert.ok(item.name&&item.stats);
+  await page.locator('[data-tab=qa]').click();await page.locator('#dev-profiler-enable').click();
+  await page.waitForFunction(()=>window.Game.debug.isProfilingEnabled(),null,{timeout:3000});
+  await page.locator('#dev-profiler-capture').click();assert.match(await page.locator('#dev-profiler-status').textContent(),/Captured/);
+  await page.waitForTimeout(650);assert.equal(await page.evaluate(()=>localStorage.getItem('besidevalley-dungeons/save')),oldSave);
+  await page.locator('#dev-close').click();await page.locator('#dev-mode[hidden]').waitFor({state:'attached',timeout:5000});
+  assert.equal(errors.length,0,'uncaught browser errors: '+errors.join('\n'));
+  process.stdout.write(JSON.stringify({status:'passed',browser:browser.version(),profile:{download:true,schemaVersion:json.schemaVersion},devMode:{wrongCodeRejected:true,validCodeAccepted:true,systems:14,enemySpawnCleanup:true,lootPreview:true,profiler:true,saveIsolation:true},pageErrors:errors},null,2)+'\n');
+  await context.close();
+ }catch(e){process.stderr.write((e&&e.stack)||String(e)+'\n');process.exitCode=1;}finally{if(browser)await browser.close();}
+})();

@@ -277,3 +277,10 @@ A cohesive smooth-toon adventure game that is readable, responsive and stable on
 ### Stage 31A — profiler reliability
 - Added visible capture/export/runtime error feedback, clipboard copy, a runtime enable API and schema v2 exports with the current build ID.
 - Physical Android validation and real GPU timing remain separate from Chromium/SwiftShader CI.
+
+
+### Stage 31B — in-game Developer Mode
+- Added session-only QA tabs for world/time/teleport, player/camera, enemy/boss, item generation/validation, render presets, effects, minimap/UI and profiling.
+- QA actors can be released into gameplay and are cleaned through scoped references, without clearing natural mobs.
+- Developer sessions suppress save writes and restore baseline player/inventory/equipment and presentation settings on close.
+- Access code is a client-side convenience gate only; no arbitrary code execution. Browser tests cover access rejection/acceptance and core QA controls. Android device validation remains outstanding.

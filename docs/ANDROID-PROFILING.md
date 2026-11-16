@@ -75,3 +75,10 @@ This runbook is updated with build token `20261115-performance-profile-v30`. The
 - Capture, export, clipboard and runtime failures are surfaced in the panel.
 - JSON schema v2 includes the current build identifier. Clipboard copy supplements the local download path.
 - In-game Developer Mode can enable the same bounded profiler without adding instrumentation to ordinary gameplay.
+
+
+## In-game Developer Mode
+- Open Settings → Chế độ nhà phát triển and enter the local QA code. The panel contains world/time/teleport, camera/player, enemy/boss, item-preview, graphics/effects, map/UI and diagnostics/profiler tools.
+- QA-created actors are tracked separately. Close Developer Mode to let their AI run; reopen it to clear only those QA actors.
+- The session restores player, inventory/equipment, camera, render presets, world time and map state; save writes are blocked while the QA panel is open.
+- The access code is only a convenience gate in this public client, not server authentication. The module does not execute arbitrary JavaScript.

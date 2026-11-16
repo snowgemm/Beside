@@ -281,3 +281,12 @@ Stage 16 (hidden-page simulation and audio lifecycle; 2026-11-04):
 - Corrected the exported build identifier so captures identify the current v30 assets/cache rather than the stale v28 label.
 - Added source-level regression coverage and updated the Android profiling runbook.
 - Evidence boundary: renderer submission time is not GPU completion time. No new device capture, FPS gain, GPU timing, or thermal/battery claim is made. The local `game-dev` CLI is unavailable in this environment; collect the JSON on the actual phone before selecting the next optimization.
+
+
+## Stage 31B — in-game Developer Mode (2026-11-16)
+- Added Settings entry and a SHA-256 local unlock panel with World, Player/Camera, Enemies/Boss, Items, Graphics, UI and QA/Profiler areas.
+- QA includes draw-distance/time controls, world teleport/dungeon-gate navigation, camera/FOV, temporary HP/hit reaction checks, tracked enemy/boss spawning and cleanup, loot/item validation preview, renderer presets/FPS cap/particles, visual effects, map toggles and system checks.
+- Test enemies can be left active for gameplay AI/combat validation and can later be cleaned by tracked reference; natural mobs are not removed.
+- Developer sessions restore player position/health/equipment/inventory, camera, world/render settings and map state. Save requests are suppressed while the panel is open.
+- Access code is only a client-side convenience gate, not server authentication. No arbitrary JS execution/eval/dynamic Function.
+- Added browser regression for wrong/right access code, profiler JSON download, system checks, enemy spawn/cleanup, loot preview, profiler enable and save isolation. Physical Android behavior remains to be verified.

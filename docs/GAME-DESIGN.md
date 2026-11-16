@@ -307,3 +307,10 @@ Các tài liệu này hỗ trợ những giới hạn nền tảng cần giữ k
 ---
 
 **Quy tắc cập nhật GDD:** khi gameplay thay đổi, cập nhật trạng thái trong tài liệu và đối chiếu code trước khi mô tả tính năng là “đã có”. Không dùng kế hoạch này làm bằng chứng rằng tính năng đã được triển khai hoặc đã qua playtest trên thiết bị thật.
+
+
+## QA / Developer Mode
+- Settings exposes a code-gated, session-only test panel for world/time/teleport/dungeon navigation, player/camera, enemies/boss, loot preview/validation, graphics/effects, map/UI and diagnostics.
+- QA actors can be released into gameplay for AI/combat checks and then removed through scoped QA cleanup.
+- Temporary player/equipment/inventory and presentation changes are restored on close; save writes are suppressed while Dev Mode is open.
+- The access code is a convenience gate in the browser, not server authentication. It does not execute arbitrary JavaScript.

@@ -126,6 +126,7 @@
     S = { state: 'idle', t: 0, cd: 2, n: 0 }; B.active = true;
     lastPw = -1; lastEnr = false; bar.classList.remove('enr'); nameEl.textContent = DEF.name; fill.style.width = '100%'; bar.style.display = 'block';
     G.audio.play('boss');
+    return e;
   };
   B.cleanup = function () {
     killTele();

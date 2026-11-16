@@ -1,6 +1,6 @@
 (function () {
   var G = window.Game = window.Game || {};
-  var BUILD_ID = '20261116-profiler-fix-v31';
+  var BUILD_ID = '20261116-devtools-profile-v32';
   var touch = G.input.isTouch;
   var renderer = new THREE.WebGLRenderer({ antialias: !touch, powerPreference: 'high-performance' });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, touch ? 1.35 : 1.65));

@@ -1,6 +1,6 @@
 (function () {
   var G = window.Game = window.Game || {};
-  var KEY = 'besidevalley-dungeons/save', VER = 1, mods = {}, mem = null, timer = null, resetting = false;
+  var KEY = 'besidevalley-dungeons/save', VER = 1, mods = {}, mem = null, timer = null, resetting = false, devSandbox = false;
   var S = G.save = {};
 
   function read() {
@@ -22,12 +22,16 @@
     Object.keys(mods).forEach(function (k) { try { o.mods[k] = mods[k].ser(); } catch (e) {} });
     return o;
   };
+  S.setDevSandbox = function (enabled) {
+    devSandbox = !!enabled;
+    if (devSandbox && timer) { clearTimeout(timer); timer = null; }
+  };
   S.saveNow = function () {
-    if (resetting || !G.player || !G.player.pos || G.player.dead) return;
+    if (devSandbox || resetting || !G.player || !G.player.pos || G.player.dead) return;
     try { write(S.collect()); } catch (e) {}
   };
   S.request = function () {
-    if (timer) return;
+    if (devSandbox || timer) return;
     timer = setTimeout(function () { timer = null; S.saveNow(); }, 400);
   };
   S.load = function () {
