@@ -346,3 +346,22 @@ body.map-expanded #btn-view,body.map-expanded #btn-attack,body.map-expanded #btn
 .dev-check{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #2a3b31;font-size:11px}.dev-check b{color:#8ee2ae}.dev-check b.fail{color:#ff9b91}
 .dev-output{max-height:150px;overflow:auto;padding:8px;border-radius:6px;background:#0b130e;color:#b4d8c2;font-size:11px;white-space:pre-wrap;overflow-wrap:anywhere}
 @media(max-width:560px){.dev-grid{grid-template-columns:1fr}.dev-head{padding:8px 10px}.dev-content{padding:8px}.dev-card{padding:9px}.dev-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+
+/* Reset the global fixed HUD-button positioning inside flex-based toolbars and modal panels. */
+#profile-tools button,
+#dev-mode button {
+  position:relative;
+  z-index:auto;
+  inset:auto;
+  left:auto;
+  right:auto;
+  top:auto;
+  bottom:auto;
+  width:auto;
+  height:auto;
+  margin:0;
+  max-width:100%;
+  text-shadow:none;
+}
+#dev-mode .dev-lock button{width:100%}
