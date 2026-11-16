@@ -17,8 +17,8 @@ const args=['--enable-webgl','--ignore-gpu-blocklist','--use-gl=angle','--use-an
   await page.locator('#profile-capture').click();
   const status=await page.locator('#profile-status').textContent();
   assert.match(status,/Mẫu 1/);
-  const sampleMatch=status.match(/(\\d+)\\/120 frame/);
-  assert.ok(sampleMatch&&Number(sampleMatch[1])>=24,'profile should contain at least 24 real CPU timing samples: '+status);
+  const sampleCount=Number(status.split('·')[1].trim().split('/')[0]);
+  assert.ok(Number.isFinite(sampleCount)&&sampleCount>=24,'profile should contain at least 24 real CPU timing samples: '+status);
   const downloadPromise=page.waitForEvent('download');await page.locator('#profile-export').click();
   const file=await downloadPromise,path=await file.path();assert.ok(path);
   const json=JSON.parse(fs.readFileSync(path,'utf8'));assert.equal(json.schemaVersion,2);assert.equal(json.snapshots.length,1);assert.ok(json.snapshots[0].timings.sampleCount>=24,'downloaded profile must preserve CPU frame sample count');
