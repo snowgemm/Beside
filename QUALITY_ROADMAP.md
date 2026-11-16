@@ -290,3 +290,6 @@ A cohesive smooth-toon adventure game that is readable, responsive and stable on
 
 
 - Developer Mode restore follow-up: inventory renderer is exposed via `G.inventory.refresh()` for safe rollback; acceptance includes the inventory API readiness check, and cache token is v34.
+
+
+- QA spawn quota allows up to three tracked test actors beyond the natural-world 20-enemy cap (combined runtime cap 23), so a full world population does not block test spawning; natural mobs are not removed.

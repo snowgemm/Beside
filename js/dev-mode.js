@@ -111,7 +111,7 @@ function nearestGate(){
 }
 function spawnEnemies(){
  var type=$('dev-enemy-type').value,n=Math.max(1,Math.min(3,+$('dev-enemy-count').value|0));
- if(!G.enemies.types[type]||G.enemies.list.length+n>20){status('Enemy type invalid or 20-enemy cap reached.',true);return;}
+ if(!G.enemies.types[type]||G.enemies.list.length+n>23||qaActors.length+n>3){status('Enemy type invalid or QA actor limit reached (3 test actors; 23 total).',true);return;}
  var p=G.player.pos,made=0;
  for(var i=0;i<n;i++){var a=i*6.283/n,x=p.x+Math.cos(a)*10,z=p.z+Math.sin(a)*10,y=G.dungeon.active?p.y:G.world.getHeight(x,z);if(!isFinite(y))continue;
   var e=G.enemies.spawn(type,x,y+.02,z);if(e){qaActors.push(e);made++;}}

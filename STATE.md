@@ -296,3 +296,6 @@ Stage 16 (hidden-page simulation and audio lifecycle; 2026-11-04):
 
 
 - Developer Mode restore API follow-up (build `20261116-devtools-profile-v34`): `G.inventory.refresh()` now exposes the existing inventory renderer so QA rollback can safely redraw the restored equipment/inventory state. Service Worker cache bumped to v34.
+
+
+- Developer test actor quota (build `20261116-devtools-profile-v35`): up to three tracked QA actors may be added beyond the natural-world enemy cap, with a combined hard limit of 23. No naturally spawned enemy is removed to make room.
