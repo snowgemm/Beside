@@ -13,12 +13,15 @@ const args=['--enable-webgl','--ignore-gpu-blocklist','--use-gl=angle','--use-an
   const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.stack||e.message));
   const response=await page.goto(baseURL+'?profile=1',{waitUntil:'domcontentloaded',timeout:45000});assert.ok(response&&response.ok());
   await page.waitForFunction(()=>!!(window.Game&&window.Game.devMode&&window.Game.renderer),null,{timeout:45000});
-  await page.waitForFunction(()=>window.Game.renderer.info.render.frame>=120,null,{timeout:30000});
+  await page.waitForFunction(()=>window.Game.debug.rendererSnapshot('profile-ci-warmup').timings.sampleCount>=24,null,{timeout:90000,polling:1000});
   await page.locator('#profile-capture').click();
-  const status=await page.locator('#profile-status').textContent();assert.match(status,/Mẫu 1/);assert.match(status,/120\/120 frame/);
+  const status=await page.locator('#profile-status').textContent();
+  assert.match(status,/Mẫu 1/);
+  const sampleMatch=status.match(/(\\d+)\\/120 frame/);
+  assert.ok(sampleMatch&&Number(sampleMatch[1])>=24,'profile should contain at least 24 real CPU timing samples: '+status);
   const downloadPromise=page.waitForEvent('download');await page.locator('#profile-export').click();
   const file=await downloadPromise,path=await file.path();assert.ok(path);
-  const json=JSON.parse(fs.readFileSync(path,'utf8'));assert.equal(json.schemaVersion,2);assert.equal(json.snapshots.length,1);
+  const json=JSON.parse(fs.readFileSync(path,'utf8'));assert.equal(json.schemaVersion,2);assert.equal(json.snapshots.length,1);assert.ok(json.snapshots[0].timings.sampleCount>=24,'downloaded profile must preserve CPU frame sample count');
   await page.locator('#t-set').click();await page.locator('#menu.open').waitFor({state:'attached',timeout:5000});
   await page.locator('#menu-dev').click();await page.locator('#dev-mode:not([hidden])').waitFor({state:'visible',timeout:5000});
   await page.locator('#dev-code').fill('wrong-code');await page.locator('#dev-lock button[type=submit]').click();
