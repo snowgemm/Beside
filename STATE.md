@@ -290,3 +290,6 @@ Stage 16 (hidden-page simulation and audio lifecycle; 2026-11-04):
 - Developer sessions restore player position/health/equipment/inventory, camera, world/render settings and map state. Save requests are suppressed while the panel is open.
 - Access code is only a client-side convenience gate, not server authentication. No arbitrary JS execution/eval/dynamic Function.
 - Added browser regression for wrong/right access code, profiler JSON download, system checks, enemy spawn/cleanup, loot preview, profiler enable and save isolation. Physical Android behavior remains to be verified.
+
+
+- Final cache-bust follow-up: build token `20261116-devtools-profile-v33`; Service Worker shell cache bumped to `besidevalley-shell-v33` so returning users refresh the CSS button-layout fix and Developer Mode assets.

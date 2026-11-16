@@ -284,3 +284,6 @@ A cohesive smooth-toon adventure game that is readable, responsive and stable on
 - QA actors can be released into gameplay and are cleaned through scoped references, without clearing natural mobs.
 - Developer sessions suppress save writes and restore baseline player/inventory/equipment and presentation settings on close.
 - Access code is a client-side convenience gate only; no arbitrary code execution. Browser tests cover access rejection/acceptance and core QA controls. Android device validation remains outstanding.
+
+
+- Cache-bust follow-up: build `20261116-devtools-profile-v33` and Service Worker cache `besidevalley-shell-v33` invalidate previously cached CSS/JS assets for the Dev Mode/profiler layout repair.
