@@ -597,7 +597,7 @@ check('keyboard focus is visible on map and button controls',
   styleSource.includes('button:focus-visible,#minimap:focus-visible{outline:2px solid var(--hi)') &&
   styleSource.includes('.menu-row select:focus-visible'));
 check('offline cache is bumped and versioned local assets prevent stale code from loading',
-  swSource.includes("CACHE_NAME = 'besidevalley-shell-v30'") &&
+  swSource.includes("CACHE_NAME = 'besidevalley-shell-v32'") &&
   swSource.includes("url.searchParams.get('v')") &&
   swSource.includes('function fallbackCacheKey(requestUrl)') &&
   swSource.includes('cache.match(fallbackKey)') &&

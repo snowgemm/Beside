@@ -58,8 +58,9 @@ function capture(){
   profiling:G.debug.isProfilingEnabled()};
 }
 function clearActors(){
- if(G.boss.active&&qaActors.some(function(a){return a.type==='boss';}))G.boss.cleanup();
- for(var i=qaActors.length-1;i>=0;i--)G.enemies.remove(qaActors[i]);
+ var hasLiveBoss=G.boss.active&&qaActors.some(function(a){return a.type==='boss'&&G.enemies.list.indexOf(a)>=0;});
+ if(hasLiveBoss)G.boss.cleanup();
+ for(var i=qaActors.length-1;i>=0;i--)if(G.enemies.list.indexOf(qaActors[i])>=0)G.enemies.remove(qaActors[i]);
  qaActors.length=0;$('dev-actor-count').textContent='0 QA actors.';
 }
 function restore(){
