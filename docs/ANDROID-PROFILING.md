@@ -82,3 +82,6 @@ This runbook is updated with build token `20261115-performance-profile-v30`. The
 - QA-created actors are tracked separately. Close Developer Mode to let their AI run; reopen it to clear only those QA actors.
 - The session restores player, inventory/equipment, camera, render presets, world time and map state; save writes are blocked while the QA panel is open.
 - The access code is only a convenience gate in this public client, not server authentication. The module does not execute arbitrary JavaScript.
+
+
+Developer Mode's restore path also refreshes the inventory UI after restoring equipment and inventory state.

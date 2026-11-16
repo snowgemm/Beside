@@ -287,3 +287,6 @@ A cohesive smooth-toon adventure game that is readable, responsive and stable on
 
 
 - Cache-bust follow-up: build `20261116-devtools-profile-v33` and Service Worker cache `besidevalley-shell-v33` invalidate previously cached CSS/JS assets for the Dev Mode/profiler layout repair.
+
+
+- Developer Mode restore follow-up: inventory renderer is exposed via `G.inventory.refresh()` for safe rollback; acceptance includes the inventory API readiness check, and cache token is v34.

@@ -293,3 +293,6 @@ Stage 16 (hidden-page simulation and audio lifecycle; 2026-11-04):
 
 
 - Final cache-bust follow-up: build token `20261116-devtools-profile-v33`; Service Worker shell cache bumped to `besidevalley-shell-v33` so returning users refresh the CSS button-layout fix and Developer Mode assets.
+
+
+- Developer Mode restore API follow-up (build `20261116-devtools-profile-v34`): `G.inventory.refresh()` now exposes the existing inventory renderer so QA rollback can safely redraw the restored equipment/inventory state. Service Worker cache bumped to v34.

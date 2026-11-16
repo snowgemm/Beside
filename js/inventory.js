@@ -100,6 +100,8 @@
     if (o) { if (document.exitPointerLock) document.exitPointerLock(); render(); }
     else { hoverKey = null; newBtn.textContent = 'Chơi mới'; clearTimeout(newTimer); newTimer = null; }
   }
+  // Expose the existing renderer for controlled QA state restoration.
+  Inv.refresh = render;
   Inv.update = function () {
     var I = G.input;
     if (I.invToggle) {
