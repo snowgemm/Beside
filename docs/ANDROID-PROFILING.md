@@ -68,3 +68,10 @@ The runtime starts with mobile draw distance 3, but `Game.menu.apply()` restores
 ## Versioning
 
 This runbook is updated with build token `20261115-performance-profile-v30`. The opt-in panel performs no timing instrumentation when the query parameter is absent.
+
+
+## Profiler reliability update
+- Wait for 120/120 frames before interpreting p95; the panel reports the timing-window fill level.
+- Capture, export, clipboard and runtime failures are surfaced in the panel.
+- JSON schema v2 includes the current build identifier. Clipboard copy supplements the local download path.
+- In-game Developer Mode can enable the same bounded profiler without adding instrumentation to ordinary gameplay.

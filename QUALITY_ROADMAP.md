@@ -272,3 +272,8 @@ A cohesive smooth-toon adventure game that is readable, responsive and stable on
 - Treat `renderer.render()` duration as synchronous CPU submission time, never as GPU completion time.
 - Use the next real-device capture to choose a single measured bottleneck before tuning quality thresholds, chunk generation, water animation or model batching.
 - Acceptance: profile captures identify build SHA, scene and draw counters; comparisons use the same Android device, browser, orientation, quality preset and scene. No performance improvement is claimed by instrumentation alone.
+
+
+### Stage 31A — profiler reliability
+- Added visible capture/export/runtime error feedback, clipboard copy, a runtime enable API and schema v2 exports with the current build ID.
+- Physical Android validation and real GPU timing remain separate from Chromium/SwiftShader CI.

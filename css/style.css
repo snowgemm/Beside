@@ -324,3 +324,5 @@ body.map-expanded #btn-view,body.map-expanded #btn-attack,body.map-expanded #btn
 #profile-tools button:active{background:#3dba7a;color:#101612}
 #profile-status{min-width:44px;text-align:center;font-variant-numeric:tabular-nums}
 @media(max-width:420px){#profile-tools{gap:3px;padding:4px}#profile-tools button{padding:0 7px;font-size:10px}}
+
+#profile-status[data-state="error"]{color:#ffaaa0}

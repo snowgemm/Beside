@@ -1,6 +1,6 @@
 (function () {
   var G = window.Game = window.Game || {};
-  var BUILD_ID = '20261115-performance-profile-v30';
+  var BUILD_ID = '20261116-profiler-fix-v31';
   var touch = G.input.isTouch;
   var renderer = new THREE.WebGLRenderer({ antialias: !touch, powerPreference: 'high-performance' });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, touch ? 1.35 : 1.65));
@@ -76,7 +76,8 @@
   var last = performance.now(), accT = 0, accN = 0, hudT = 0, fps = 0, slowT = 0, lowered = 0, adaptiveSlowT = 0, adaptiveFastT = 0;
   // Profiling is opt-in; normal gameplay does not pay for per-frame timing calls.
   var profileTools = document.getElementById('profile-tools');
-  var profilingEnabled = !!(profileTools && new URLSearchParams(window.location.search).get('profile') === '1');
+  var profileQueryEnabled = !!(profileTools && new URLSearchParams(window.location.search).get('profile') === '1');
+  var profilingEnabled = profileQueryEnabled;
   var FRAME_SAMPLE_LIMIT = 120;
   var frameTiming = {
     interval: new Float32Array(FRAME_SAMPLE_LIMIT),
@@ -164,66 +165,116 @@
     rendererHistory.length = 0;
     return true;
   };
+  G.debug.setProfilingEnabled = function (enabled) {
+    var next = !!enabled;
+    if (profilingEnabled === next) return profilingEnabled;
+    profilingEnabled = next;
+    frameTimingCount = 0; frameTimingCursor = 0; rendererHistory.length = 0;
+    frameTiming.interval.fill(0); frameTiming.simulation.fill(0); frameTiming.environment.fill(0);
+    frameTiming.world.fill(0); frameTiming.renderSubmit.fill(0);
+    return profilingEnabled;
+  };
+  G.debug.isProfilingEnabled = function () { return profilingEnabled; };
 
-  // The on-device capture panel is opt-in and has no frame-loop work.
-  if (profilingEnabled) {
-    var profileCapture = document.getElementById('profile-capture');
-    var profileExport = document.getElementById('profile-export');
-    var profileClear = document.getElementById('profile-clear');
-    var profileStatus = document.getElementById('profile-status');
-    profileTools.hidden = false;
-
-    function updateProfileStatus(message) {
-      if (profileStatus) profileStatus.textContent = message;
-    }
-    function profileCount() {
-      return G.debug.getRendererHistory().length;
-    }
-    if (profileCapture) profileCapture.addEventListener('click', function () {
-      var next = profileCount() + 1;
-      G.debug.captureRendererSnapshot('manual-' + String(next).padStart(2, '0'));
-      updateProfileStatus('Đã lưu ' + next + ' mẫu');
-    });
-    if (profileClear) profileClear.addEventListener('click', function () {
-      G.debug.clearRendererHistory();
-      updateProfileStatus('Đã xóa mẫu');
-    });
-    if (profileExport) profileExport.addEventListener('click', function () {
-      var snapshots = G.debug.getRendererHistory();
-      if (!snapshots.length) {
-        updateProfileStatus('Chưa có mẫu');
-        return;
-      }
-      var payload = {
-        schemaVersion: 1,
-        build: BUILD_ID,
-        exportedAt: new Date().toISOString(),
-        environment: {
-          viewport: { width: window.innerWidth, height: window.innerHeight },
-          screen: { width: screen.width, height: screen.height },
-          devicePixelRatio: window.devicePixelRatio || 1,
-          touch: !!(navigator.maxTouchPoints > 0),
-          profilingEnabled: profilingEnabled
-        },
-        interpretation: {
-          fps: 'Observed main-loop frame cadence; not isolated GPU render time.',
-          cpuTimings: 'p50/p95 over the latest 120 frames. Phase timings measure synchronous JavaScript time; renderSubmitCpuMs does not measure asynchronous GPU completion.',
-          rendererMemory: 'Three.js geometry and texture object counts, not byte totals or authoritative VRAM.'
-        },
-        snapshots: snapshots
-      };
-      var blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-      var objectUrl = URL.createObjectURL(blob);
-      var link = document.createElement('a');
+  // The on-device capture panel is opt-in; normal gameplay has no frame-loop timing calls.
+  var profileStatus = document.getElementById('profile-status');
+  function updateProfileStatus(message, isError) {
+    if (!profileStatus) return;
+    profileStatus.textContent = message;
+    profileStatus.setAttribute('data-state', isError ? 'error' : 'normal');
+  }
+  function buildProfilePayload() {
+    return {
+      schemaVersion: 2,
+      build: BUILD_ID,
+      exportedAt: new Date().toISOString(),
+      environment: {
+        viewport: { width: window.innerWidth, height: window.innerHeight },
+        screen: { width: window.screen ? window.screen.width : null, height: window.screen ? window.screen.height : null },
+        devicePixelRatio: window.devicePixelRatio || 1,
+        touch: !!(navigator.maxTouchPoints > 0),
+        profilingEnabled: profilingEnabled
+      },
+      interpretation: {
+        fps: 'Observed main-loop frame cadence; not isolated GPU render time.',
+        cpuTimings: 'p50/p95 over the latest 120 rendered frames. Phase timings measure synchronous JavaScript time; renderSubmitCpuMs does not measure asynchronous GPU completion.',
+        rendererMemory: 'Three.js geometry and texture object counts, not byte totals or authoritative VRAM.'
+      },
+      snapshots: G.debug.getRendererHistory()
+    };
+  }
+  function makeProfileJson() { return JSON.stringify(buildProfilePayload(), null, 2); }
+  function downloadProfileJson() {
+    var objectUrl = null, link = null;
+    try {
+      var blob = new Blob([makeProfileJson()], { type: 'application/json' });
+      if (!window.URL || !URL.createObjectURL) throw new Error('Trình duyệt không hỗ trợ tạo tệp JSON.');
+      objectUrl = URL.createObjectURL(blob);
+      link = document.createElement('a');
       link.href = objectUrl;
       link.download = 'besidevalley-profile-' + new Date().toISOString().replace(/[:.]/g, '-') + '.json';
+      link.style.display = 'none';
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      setTimeout(function () { URL.revokeObjectURL(objectUrl); }, 1000);
-      updateProfileStatus('Đã xuất ' + snapshots.length + ' mẫu');
+      link = null;
+      window.setTimeout(function () { try { URL.revokeObjectURL(objectUrl); } catch (_) {} }, 1500);
+      updateProfileStatus('Đã yêu cầu xuất JSON · ' + G.debug.getRendererHistory().length + ' mẫu');
+      return true;
+    } catch (error) {
+      if (link && link.parentNode) link.parentNode.removeChild(link);
+      updateProfileStatus('Lỗi xuất JSON: ' + String(error && error.message || error).slice(0, 180), true);
+      return false;
+    }
+  }
+  function reportProfileError(message) {
+    if (!profileQueryEnabled || !profileTools || profileTools.hidden) return;
+    updateProfileStatus('Lỗi runtime: ' + String(message || 'Không rõ nguyên nhân').slice(0, 180), true);
+  }
+  window.addEventListener('error', function (event) {
+    reportProfileError(event && (event.message || (event.error && event.error.message)));
+  });
+  window.addEventListener('unhandledrejection', function (event) {
+    var reason = event && event.reason;
+    reportProfileError(reason && reason.message ? reason.message : reason);
+  });
+  if (profileQueryEnabled && profileTools) {
+    var profileCapture = document.getElementById('profile-capture');
+    var profileExport = document.getElementById('profile-export');
+    var profileCopy = document.getElementById('profile-copy');
+    var profileClear = document.getElementById('profile-clear');
+    profileTools.hidden = false;
+    if (profileCapture) profileCapture.addEventListener('click', function () {
+      try {
+        if (!G.debug || typeof G.debug.captureRendererSnapshot !== 'function') throw new Error('Profiler chưa khởi tạo.');
+        var next = rendererHistory.length + 1;
+        var snap = G.debug.captureRendererSnapshot('manual-' + String(next).padStart(2, '0'));
+        updateProfileStatus('Mẫu ' + next + ' · ' + snap.timings.sampleCount + '/120 frame · ' + (snap.fps || '--') + ' FPS');
+      } catch (error) {
+        updateProfileStatus('Lỗi chụp mẫu: ' + String(error && error.message || error).slice(0, 180), true);
+      }
     });
-    updateProfileStatus('0 mẫu');
+    if (profileClear) profileClear.addEventListener('click', function () {
+      try { G.debug.clearRendererHistory(); updateProfileStatus('Đã xóa toàn bộ mẫu.'); }
+      catch (error) { updateProfileStatus('Lỗi xóa mẫu: ' + String(error && error.message || error).slice(0, 180), true); }
+    });
+    if (profileExport) profileExport.addEventListener('click', function () {
+      if (!rendererHistory.length) { updateProfileStatus('Chưa có mẫu để xuất.', true); return; }
+      downloadProfileJson();
+    });
+    if (profileCopy) profileCopy.addEventListener('click', function () {
+      if (!rendererHistory.length) { updateProfileStatus('Chưa có mẫu để sao chép.', true); return; }
+      if (!navigator.clipboard || typeof navigator.clipboard.writeText !== 'function') {
+        updateProfileStatus('Clipboard không khả dụng. Hãy dùng nút Xuất JSON.', true);
+        return;
+      }
+      navigator.clipboard.writeText(makeProfileJson()).then(function () {
+        updateProfileStatus('Đã sao chép JSON vào clipboard.');
+      }).catch(function (error) {
+        updateProfileStatus('Không thể sao chép: ' + String(error && error.message || error).slice(0, 140) + ' · Hãy Xuất JSON.', true);
+      });
+    });
+    updateProfileStatus('Profiler sẵn sàng · chờ đủ 120 frame để đọc p95.');
   }
 
   var contextLost = false, recoveryNotice = null;
